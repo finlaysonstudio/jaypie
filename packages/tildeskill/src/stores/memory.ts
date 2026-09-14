@@ -1,7 +1,11 @@
-import type { ListFilter, SkillRecord, SkillStore } from "../types";
-
 import { normalizeAlias } from "../core/normalize";
-import { getAlternativeSpellings } from "../core/spellings";
+import {
+  filterByNickname,
+  filterSkills,
+  findWithFallback,
+  searchSkills,
+} from "../core/records";
+import type { ListFilter, SkillRecord, SkillStore } from "../types";
 
 /**
  * Create an in-memory skill store, useful for testing
@@ -17,53 +21,27 @@ export function createMemoryStore(initial?: SkillRecord[]): SkillStore {
     }
   }
 
+  async function get(alias: string): Promise<SkillRecord | null> {
+    return store.get(normalizeAlias(alias)) ?? null;
+  }
+
   return {
-    async find(alias: string): Promise<SkillRecord | null> {
-      const normalized = normalizeAlias(alias);
-      const exact = store.get(normalized);
-      if (exact) return exact;
-      for (const alt of getAlternativeSpellings(normalized)) {
-        const candidate = store.get(alt);
-        if (candidate) return candidate;
-      }
-      return null;
+    async delete(alias: string): Promise<boolean> {
+      return store.delete(normalizeAlias(alias));
     },
 
-    async get(alias: string): Promise<SkillRecord | null> {
-      const normalized = normalizeAlias(alias);
-      return store.get(normalized) ?? null;
+    async find(alias: string): Promise<SkillRecord | null> {
+      return findWithFallback(alias, { get });
     },
+
+    get,
 
     async getByNickname(nickname: string): Promise<SkillRecord[]> {
-      const normalized = normalizeAlias(nickname);
-      const matches: SkillRecord[] = [];
-      for (const record of store.values()) {
-        if (record.nicknames?.map(normalizeAlias).includes(normalized)) {
-          matches.push(record);
-        }
-      }
-      return matches.sort((a, b) => a.alias.localeCompare(b.alias));
+      return filterByNickname({ nickname, records: [...store.values()] });
     },
 
     async list(filter?: ListFilter): Promise<SkillRecord[]> {
-      let records = Array.from(store.values());
-
-      if (filter?.namespace) {
-        // Remove trailing "*" if present for prefix matching
-        const prefix = filter.namespace.endsWith("*")
-          ? filter.namespace.slice(0, -1)
-          : filter.namespace;
-        records = records.filter((r) => r.alias.startsWith(prefix));
-      }
-
-      if (filter?.tag) {
-        const normalizedTag = normalizeAlias(filter.tag);
-        records = records.filter((r) =>
-          r.tags?.map(normalizeAlias).includes(normalizedTag),
-        );
-      }
-
-      return records.sort((a, b) => a.alias.localeCompare(b.alias));
+      return filterSkills({ filter, records: [...store.values()] });
     },
 
     async put(record: SkillRecord): Promise<SkillRecord> {
@@ -74,40 +52,7 @@ export function createMemoryStore(initial?: SkillRecord[]): SkillStore {
     },
 
     async search(term: string): Promise<SkillRecord[]> {
-      const normalizedTerm = term.toLowerCase();
-      const results: SkillRecord[] = [];
-
-      for (const record of store.values()) {
-        // Search in alias
-        if (record.alias.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in name
-        if (record.name?.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in description
-        if (record.description?.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in content
-        if (record.content.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in tags
-        if (
-          record.tags?.some((tag) => tag.toLowerCase().includes(normalizedTerm))
-        ) {
-          results.push(record);
-          continue;
-        }
-      }
-
-      return results.sort((a, b) => a.alias.localeCompare(b.alias));
+      return searchSkills({ records: [...store.values()], term });
     },
   };
 }

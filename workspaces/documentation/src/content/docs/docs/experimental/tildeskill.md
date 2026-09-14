@@ -24,20 +24,26 @@ npm install @jaypie/tildeskill
 | Export | Purpose |
 |--------|---------|
 | `createSkillService` | Fabric service factory for skill lookup |
+| `createDynamoDbStore` | DynamoDB store (import from `@jaypie/tildeskill/dynamodb`) |
 | `createLayeredStore` | Compose multiple stores with namespace prefixes |
 | `createMarkdownStore` | File-based store (reads .md files) |
 | `createMemoryStore` | In-memory store (for testing) |
 | `expandIncludes` | Expand included skills into content |
+| `hashSkill` | sha256 hash of a skill record for change detection |
 | `isValidAlias` | Check if alias is valid |
 | `validateAlias` | Validate and normalize alias (throws on invalid) |
 | `normalizeAlias` | Normalize alias to lowercase |
+| `registerSkillModel` | Register the `skill` model and its category index |
+| `syncSkills` | Copy one store into another |
 
 ### Types
 
 | Type | Description |
 |------|-------------|
 | `SkillRecord` | Skill document with alias, content, description, includes, name, nicknames, related, tags |
-| `SkillStore` | Store interface with find, get, getByNickname, list, put, search methods |
+| `SkillStore` | Store interface with delete, find, get, getByNickname, list, put, search methods |
+| `DynamoDbStoreOptions` | Options for createDynamoDbStore (category) |
+| `SyncSkillsResult` | Aliases added, removed, unchanged, and updated by syncSkills |
 | `ListFilter` | Filter options for list (namespace, tag) |
 | `LayeredStoreLayer` | Layer definition with namespace and store |
 | `LayeredStoreOptions` | Options for createLayeredStore |
@@ -83,6 +89,67 @@ const store = createMemoryStore([
 const skill = await store.get("test");
 await store.put({ alias: "new", content: "# New Skill" });
 ```
+
+## DynamoDB Store
+
+```typescript
+import { initClient } from "@jaypie/dynamodb";
+import { createSkillService } from "@jaypie/tildeskill";
+import { createDynamoDbStore } from "@jaypie/tildeskill/dynamodb";
+
+initClient();
+const store = createDynamoDbStore({ category: "jaypie" });
+const skillService = createSkillService(store);
+```
+
+`@jaypie/dynamodb` is an optional peer dependency. Only the
+`@jaypie/tildeskill/dynamodb` subpath imports it, so markdown-only consumers
+never load it. Call `initClient()` before using the store.
+
+- Records are `skill` entities at APEX scope. `category` is the store
+  namespace; `alias` is unqualified.
+- Ids are deterministic: `uuidv5("<category>:<alias>", SKILL_NAMESPACE)`.
+  `SKILL_NAMESPACE` is exported from the subpath and never changes.
+- `metadata.hash` holds `hashSkill(record)` (sha256) for change detection.
+- `includes`, `nicknames`, and `related` are stored in `metadata`, since
+  `related` is reserved for entity references.
+- `list`, `getByNickname`, and `search` query `indexModelCategory`.
+  `createDynamoDbStore` calls `registerSkillModel()`; declare the index in CDK
+  by calling `registerSkillModel()` before `getAllRegisteredIndexes()`.
+- `find` keeps the plural/singular fallback.
+- `delete` soft deletes with `deleteEntity`. Reads skip archived and deleted
+  entities, and a later `put` restores the same id.
+
+## Syncing Stores
+
+```typescript
+import { createMarkdownStore, syncSkills } from "@jaypie/tildeskill";
+
+const result = await syncSkills({
+  from: createMarkdownStore({ path: "./skills" }),
+  to: store,
+});
+// { added: ["aws"], removed: ["retired"], unchanged: ["tests"], updated: [] }
+```
+
+`syncSkills` makes `to` match `from`. It puts records missing from `to`
+(`added`) or whose `hashSkill` differs (`updated`), skips records whose hash
+matches (`unchanged`), and deletes records missing from `from` (`removed`).
+Each list holds aliases sorted alphabetically. An empty `from` removes every
+record in `to`; a markdown store pointed at a missing directory lists nothing.
+
+## Deleting Records
+
+Every store implements `delete(alias)`. It matches the exact alias (no
+plural/singular fallback) and returns `true` when a record was removed and
+`false` when none existed.
+
+| Store | `delete` behavior |
+|-------|-------------------|
+| memory | Removes the record from the map |
+| markdown | Removes `<alias>.md`; throws `BadRequestError` for an invalid alias |
+| layered | Requires a namespace-qualified alias and delegates to that layer; throws `ConfigurationError` when unqualified |
+| dynamodb | Soft deletes the entity; reads skip it and `put` restores it |
 
 ## Include Expansion
 

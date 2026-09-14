@@ -4,7 +4,13 @@ import * as path from "node:path";
 import { parseFrontmatter, stringifyFrontmatter } from "@jaypie/kit";
 
 import { normalizeAlias, parseList } from "../core/normalize";
-import { getAlternativeSpellings } from "../core/spellings";
+import {
+  filterByNickname,
+  filterSkills,
+  findWithFallback,
+  searchSkills,
+} from "../core/records";
+import { validateAlias } from "../core/validate";
 import type {
   ListFilter,
   MarkdownStoreOptions,
@@ -41,14 +47,19 @@ async function parseSkillFile(filePath: string): Promise<SkillRecord> {
   };
 }
 
+const MISSING_FILE_CODE = "ENOENT";
+
 /**
- * Create a markdown file-based skill store
+ * Create a markdown file-based skill store.
+ *
+ * `delete` removes the `<alias>.md` file. It validates the alias first and
+ * throws `BadRequestError` for path traversal or invalid characters.
  */
 export function createMarkdownStore({
   path: storePath,
 }: MarkdownStoreOptions): SkillStore {
-  async function readByAlias(alias: string): Promise<SkillRecord | null> {
-    const filePath = path.join(storePath, `${alias}.md`);
+  async function get(alias: string): Promise<SkillRecord | null> {
+    const filePath = path.join(storePath, `${normalizeAlias(alias)}.md`);
     try {
       return await parseSkillFile(filePath);
     } catch {
@@ -56,59 +67,44 @@ export function createMarkdownStore({
     }
   }
 
+  async function listAll(): Promise<SkillRecord[]> {
+    try {
+      const files = await fs.readdir(storePath);
+      const mdFiles = files.filter((file) => file.endsWith(".md"));
+      return await Promise.all(
+        mdFiles.map((file) => parseSkillFile(path.join(storePath, file))),
+      );
+    } catch {
+      return [];
+    }
+  }
+
   return {
-    async find(alias: string): Promise<SkillRecord | null> {
-      const normalized = normalizeAlias(alias);
-      const exact = await readByAlias(normalized);
-      if (exact) return exact;
-      for (const alt of getAlternativeSpellings(normalized)) {
-        const candidate = await readByAlias(alt);
-        if (candidate) return candidate;
+    async delete(alias: string): Promise<boolean> {
+      const normalized = validateAlias(alias);
+      try {
+        await fs.unlink(path.join(storePath, `${normalized}.md`));
+        return true;
+      } catch (error) {
+        if ((error as { code?: string }).code === MISSING_FILE_CODE) {
+          return false;
+        }
+        throw error;
       }
-      return null;
     },
 
-    async get(alias: string): Promise<SkillRecord | null> {
-      const normalized = normalizeAlias(alias);
-      return readByAlias(normalized);
+    async find(alias: string): Promise<SkillRecord | null> {
+      return findWithFallback(alias, { get });
     },
+
+    get,
 
     async getByNickname(nickname: string): Promise<SkillRecord[]> {
-      const normalized = normalizeAlias(nickname);
-      const allSkills = await this.list();
-      return allSkills.filter((record) =>
-        record.nicknames?.map(normalizeAlias).includes(normalized),
-      );
+      return filterByNickname({ nickname, records: await listAll() });
     },
 
     async list(filter?: ListFilter): Promise<SkillRecord[]> {
-      try {
-        const files = await fs.readdir(storePath);
-        const mdFiles = files.filter((file) => file.endsWith(".md"));
-
-        let skills = await Promise.all(
-          mdFiles.map((file) => parseSkillFile(path.join(storePath, file))),
-        );
-
-        if (filter?.namespace) {
-          // Remove trailing "*" if present for prefix matching
-          const prefix = filter.namespace.endsWith("*")
-            ? filter.namespace.slice(0, -1)
-            : filter.namespace;
-          skills = skills.filter((r) => r.alias.startsWith(prefix));
-        }
-
-        if (filter?.tag) {
-          const normalizedTag = normalizeAlias(filter.tag);
-          skills = skills.filter((r) =>
-            r.tags?.map(normalizeAlias).includes(normalizedTag),
-          );
-        }
-
-        return skills.sort((a, b) => a.alias.localeCompare(b.alias));
-      } catch {
-        return [];
-      }
+      return filterSkills({ filter, records: await listAll() });
     },
 
     async put(record: SkillRecord): Promise<SkillRecord> {
@@ -150,41 +146,7 @@ export function createMarkdownStore({
     },
 
     async search(term: string): Promise<SkillRecord[]> {
-      const normalizedTerm = term.toLowerCase();
-      const allSkills = await this.list();
-      const results: SkillRecord[] = [];
-
-      for (const record of allSkills) {
-        // Search in alias
-        if (record.alias.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in name
-        if (record.name?.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in description
-        if (record.description?.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in content
-        if (record.content.toLowerCase().includes(normalizedTerm)) {
-          results.push(record);
-          continue;
-        }
-        // Search in tags
-        if (
-          record.tags?.some((tag) => tag.toLowerCase().includes(normalizedTerm))
-        ) {
-          results.push(record);
-          continue;
-        }
-      }
-
-      return results.sort((a, b) => a.alias.localeCompare(b.alias));
+      return searchSkills({ records: await listAll(), term });
     },
   };
 }

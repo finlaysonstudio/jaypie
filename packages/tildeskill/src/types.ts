@@ -35,6 +35,11 @@ export interface ListFilter {
  */
 export interface SkillStore {
   /**
+   * Remove a skill by exact alias (no plural/singular fallback).
+   * Returns true when a record was removed, false when none existed.
+   */
+  delete(alias: string): Promise<boolean>;
+  /**
    * Retrieve a skill by alias, trying alternative plural/singular spellings
    * when an exact match is not found. Returns null if nothing resolves.
    */
@@ -81,6 +86,38 @@ export interface LayeredStoreOptions {
   layers: LayeredStoreLayer[];
   /** Separator between namespace and inner alias; defaults to ":" */
   separator?: string;
+}
+
+/**
+ * Options for creating a DynamoDB skill store
+ */
+export interface DynamoDbStoreOptions {
+  /** Namespace for this store's skills, stored as the entity `category` */
+  category: string;
+}
+
+/**
+ * Options for syncSkills
+ */
+export interface SyncSkillsOptions {
+  /** Source store; its records are the desired state */
+  from: SkillStore;
+  /** Destination store; receives puts and deletes */
+  to: SkillStore;
+}
+
+/**
+ * Aliases affected by syncSkills, each sorted
+ */
+export interface SyncSkillsResult {
+  /** Aliases put because they were missing from `to` */
+  added: string[];
+  /** Aliases deleted from `to` because they were missing from `from` */
+  removed: string[];
+  /** Aliases whose hash matched; not written */
+  unchanged: string[];
+  /** Aliases put because their hash differed */
+  updated: string[];
 }
 
 /**

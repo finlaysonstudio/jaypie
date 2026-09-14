@@ -9,6 +9,8 @@ This package provides a storage abstraction for skill/vocabulary documents with 
 - Loading skills from markdown files with YAML frontmatter
 - In-memory storage for testing
 - Layered composition of multiple stores with namespace prefixes
+- DynamoDB storage through the `@jaypie/tildeskill/dynamodb` subpath
+- Store-to-store sync with `syncSkills`
 - Consistent alias normalization and validation
 - Filtering by namespace and tags
 - Searching across alias, name, description, content, and tags
@@ -21,23 +23,35 @@ This package provides a storage abstraction for skill/vocabulary documents with 
 packages/tildeskill/
 ├── src/
 │   ├── __tests__/           # Unit tests
-│   │   ├── stores/          # Store-specific tests
-│   │   │   ├── markdown.spec.ts
-│   │   │   └── memory.spec.ts
+│   │   ├── stores/          # Store-specific tests (delete, dynamodb, layered, markdown, memory)
 │   │   ├── expandIncludes.spec.ts
+│   │   ├── index.spec.ts
 │   │   ├── normalize.spec.ts
-│   │   ├── validate.spec.ts
-│   │   └── index.spec.ts
+│   │   ├── service.spec.ts
+│   │   ├── spellings.spec.ts
+│   │   ├── syncSkills.spec.ts
+│   │   ├── uuidv5.spec.ts
+│   │   └── validate.spec.ts
 │   ├── core/                # Core utilities
 │   │   ├── expandIncludes.ts  # Include expansion utility
 │   │   ├── normalize.ts       # normalizeAlias, parseList
+│   │   ├── records.ts         # compactSkill, hashSkill, filter/search/find helpers shared by stores
+│   │   ├── spellings.ts       # getAlternativeSpellings
+│   │   ├── uuidv5.ts          # RFC 4122 v5 ids on node:crypto
 │   │   └── validate.ts        # isValidAlias, validateAlias
+│   ├── dynamodb/
+│   │   └── index.ts         # @jaypie/tildeskill/dynamodb subpath entry
+│   ├── models/
+│   │   └── skill.ts         # SKILL_MODEL, SKILL_MODEL_NAME, registerSkillModel
 │   ├── stores/              # Storage backends
+│   │   ├── dynamodb.ts      # createDynamoDbStore (subpath only)
+│   │   ├── layered.ts       # createLayeredStore
 │   │   ├── markdown.ts      # createMarkdownStore
 │   │   └── memory.ts        # createMemoryStore
 │   ├── service.ts           # createSkillService factory
+│   ├── sync.ts              # syncSkills
 │   ├── types.ts             # TypeScript interfaces
-│   └── index.ts             # Main exports
+│   └── index.ts             # Main exports (never imports @jaypie/dynamodb)
 └── dist/                    # Built output
 ```
 
@@ -63,6 +77,7 @@ interface ListFilter {
 }
 
 interface SkillStore {
+  delete(alias: string): Promise<boolean>;
   find(alias: string): Promise<SkillRecord | null>;
   get(alias: string): Promise<SkillRecord | null>;
   getByNickname(nickname: string): Promise<SkillRecord[]>;
@@ -103,6 +118,67 @@ const layered = createLayeredStore({
 });
 ```
 
+### DynamoDB Store
+
+```typescript
+import { initClient } from "@jaypie/dynamodb";
+import { createSkillService } from "@jaypie/tildeskill";
+import { createDynamoDbStore } from "@jaypie/tildeskill/dynamodb";
+
+initClient();
+const store = createDynamoDbStore({ category: "jaypie" });
+const skillService = createSkillService(store);
+```
+
+`@jaypie/dynamodb` is an optional peer dependency. Only the
+`@jaypie/tildeskill/dynamodb` subpath imports it, so markdown-only consumers
+never load it. Call `initClient()` before using the store.
+
+- Records are `skill` entities at APEX scope. `category` is the store
+  namespace; `alias` is unqualified.
+- Ids are deterministic: `uuidv5("<category>:<alias>", SKILL_NAMESPACE)`.
+  `SKILL_NAMESPACE` is exported from the subpath and never changes.
+- `metadata.hash` holds `hashSkill(record)` (sha256) for change detection.
+- `includes`, `nicknames`, and `related` are stored in `metadata`, since
+  `related` is reserved for entity references.
+- `list`, `getByNickname`, and `search` query `indexModelCategory`.
+  `createDynamoDbStore` calls `registerSkillModel()`; declare the index in CDK
+  by calling `registerSkillModel()` before `getAllRegisteredIndexes()`.
+- `find` keeps the plural/singular fallback.
+- `delete` soft deletes with `deleteEntity`. Reads skip archived and deleted
+  entities, and a later `put` restores the same id.
+
+### Syncing Stores
+
+```typescript
+import { createMarkdownStore, syncSkills } from "@jaypie/tildeskill";
+
+const result = await syncSkills({
+  from: createMarkdownStore({ path: "./skills" }),
+  to: store,
+});
+// { added: ["aws"], removed: ["retired"], unchanged: ["tests"], updated: [] }
+```
+
+`syncSkills` makes `to` match `from`. It puts records missing from `to`
+(`added`) or whose `hashSkill` differs (`updated`), skips records whose hash
+matches (`unchanged`), and deletes records missing from `from` (`removed`).
+Each list holds aliases sorted alphabetically. An empty `from` removes every
+record in `to`; a markdown store pointed at a missing directory lists nothing.
+
+### Deleting Records
+
+Every store implements `delete(alias)`. It matches the exact alias (no
+plural/singular fallback) and returns `true` when a record was removed and
+`false` when none existed.
+
+| Store | `delete` behavior |
+|-------|-------------------|
+| memory | Removes the record from the map |
+| markdown | Removes `<alias>.md`; throws `BadRequestError` for an invalid alias |
+| layered | Requires a namespace-qualified alias and delegates to that layer; throws `ConfigurationError` when unqualified |
+| dynamodb | Soft deletes the entity; reads skip it and `put` restores it |
+
 ### Skill Service Factory
 
 ```typescript
@@ -131,7 +207,7 @@ Features:
 - Automatic `expandIncludes` on every lookup
 - Plural/singular fallback via `find()` with `<!-- resolved: -->` annotation
 - Index listing filters out `"index"` entries
-- Works with any `SkillStore` (memory, markdown, layered)
+- Works with any `SkillStore` (dynamodb, layered, markdown, memory)
 
 ### Include Expansion
 
@@ -323,5 +399,14 @@ npm run format     # eslint --fix
 
 ## Dependencies
 
+- `@jaypie/dynamodb` - Optional peer dependency; imported only by the `./dynamodb` subpath
 - `@jaypie/errors` - Error types for validation failures
+- `@jaypie/fabric` - `fabricService` and the `skill` model registration
 - `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`, `stringifyFrontmatter`)
+
+## Build
+
+Rollup builds two entries: `src/index.ts` (`@jaypie/tildeskill`) and
+`src/dynamodb/index.ts` (`@jaypie/tildeskill/dynamodb`). The main entry must
+never import `@jaypie/dynamodb`; verify with
+`grep @jaypie/dynamodb dist/esm/index.js` after a build.

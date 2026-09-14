@@ -4,11 +4,34 @@ import {
   createMockReturnedFunction,
 } from "./utils";
 
-import type { SkillRecord, SkillStore } from "@jaypie/tildeskill";
+import type { ModelSchema } from "@jaypie/fabric";
+import type {
+  SkillRecord,
+  SkillStore,
+  SyncSkillsResult,
+} from "@jaypie/tildeskill";
+
+// Constants
+export const SKILL_MODEL_NAME = "skill";
+export const SKILL_MODEL: ModelSchema = {
+  indexes: [
+    {
+      name: "indexModelCategory",
+      pk: ["model", "category"],
+      sk: ["scope", "updatedAt"],
+      sparse: true,
+    },
+  ],
+  model: SKILL_MODEL_NAME,
+};
+export const SKILL_NAMESPACE = "98937fbc-3f72-4d4d-8b56-44dad0ac7242";
 
 // Core utilities
 export const expandIncludes = createMockFunction(
   async (_store: SkillStore, record: SkillRecord) => record.content,
+);
+export const hashSkill = createMockReturnedFunction(
+  "0000000000000000000000000000000000000000000000000000000000000000",
 );
 export const isValidAlias = createMockReturnedFunction(true);
 export const getAlternativeSpellings = createMockFunction((alias: string) => {
@@ -35,9 +58,23 @@ export const validateAlias = createMockFunction((alias: string) =>
   alias.toLowerCase().trim(),
 );
 
+// Models
+export const registerSkillModel = createMockFunction(() => {
+  // No-op in mock
+});
+
+// Sync
+export const syncSkills = createMockResolvedFunction({
+  added: [],
+  removed: [],
+  unchanged: [],
+  updated: [],
+} as SyncSkillsResult);
+
 // Store factories
 function createMockStore(): SkillStore {
   return {
+    delete: createMockResolvedFunction(false),
     find: createMockResolvedFunction(null),
     get: createMockResolvedFunction(null),
     getByNickname: createMockResolvedFunction([] as SkillRecord[]),
@@ -50,6 +87,7 @@ function createMockStore(): SkillStore {
   };
 }
 
+export const createDynamoDbStore = createMockFunction(() => createMockStore());
 export const createLayeredStore = createMockFunction(() => createMockStore());
 export const createSkillService = createMockFunction(() => {
   const service = createMockResolvedFunction("# Mock Skill Content");
