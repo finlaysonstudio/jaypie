@@ -16,15 +16,15 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gt } from "semver";
 
-import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "../../assets.js";
+import {
+  getMcpAssetPaths,
+  getMcpBuildInfo,
+  MCP_ASSET_DIRECTORY,
+} from "../../assets.js";
 import { RELEASE_NOTES_HELP } from "./help.js";
 
 // Build-time constants
-declare const __BUILD_VERSION_STRING__: string;
-const BUILD_VERSION_STRING =
-  typeof __BUILD_VERSION_STRING__ !== "undefined"
-    ? __BUILD_VERSION_STRING__
-    : "@jaypie/mcp@0.0.0";
+const BUILD_VERSION_STRING = getMcpBuildInfo().versionString;
 
 // =============================================================================
 // ASSET PATHS

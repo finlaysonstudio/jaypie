@@ -134,6 +134,17 @@ Each directory resolves to the first match: its environment variable, the instal
 | `MCP_RELEASE_NOTES_PATH` | Release notes directory |
 | `MCP_SKILLS_PATH` | Client skills directory layered over the Jaypie skills (namespace `local`) |
 
+`getMcpBuildInfo` from `@jaypie/mcp/assets` returns `{ commit, version, versionString }` of the build that packed the markdown, the same values the `version` tool reports. A consumer that syncs the copied directories reads it from the same package without a registry call.
+
+```typescript
+import { getMcpBuildInfo } from "@jaypie/mcp/assets";
+
+const { commit, version, versionString } = getMcpBuildInfo();
+// versionString: "@jaypie/mcp@0.8.159#460f95c3"
+```
+
+`commit` is the first 8 characters of `PROJECT_COMMIT` at build time and is empty when it was unset. Unbuilt source returns version `0.0.0`.
+
 ### SDK Transport (`mcpExpressHandler`)
 
 `mcpExpressHandler` from `@jaypie/mcp` wraps the SDK's `StreamableHTTPServerTransport` with optional sessions. It suits a long-running Express server, not Lambda.
