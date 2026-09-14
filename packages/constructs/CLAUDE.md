@@ -636,7 +636,11 @@ new JaypieSecret(this, "DbPassword", {
 
 `JaypieEnvSecret` extends `JaypieSecret` and is accepted anywhere a `JaypieSecret` is (including `JaypieLambda` `secrets`). `JaypieEnvSecret` is deprecated and will be removed in 2.0.
 
-Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty — `{ value: process.env.MISSING }` fails at synth. A construct with no declared source still creates an empty secret, preserving the placeholder pattern. `JaypieEnvSecret` skips the guard in consumer environments, where the secret is imported.
+Synth throws `ConfigurationError` whenever a declared secret source produces no secret string, so a blank credential never defers to runtime. A source is declared by `envKey` or by passing a `value` key, and an empty string counts as empty — `{ value: process.env.MISSING }` fails at synth. A construct with no declared source still creates a secret with a CDK-generated value, preserving the placeholder pattern. `JaypieEnvSecret` skips the guard in consumer environments, where the secret is imported.
+
+`external: true` creates an empty secret: no `SecretString`, and the `GenerateSecretString` CDK adds by default is removed with a property deletion override. The value never enters the template, assets bucket, `cdk.out`, or `cdk diff`. `envKey` still names the runtime variable but is never read. A `CfnOutput` (`ExternalArn`) described by the `envKey` (or id) carries the ARN for a CI `put-secret-value` step. Combining with `value` or `generateSecretString` throws. `createSecret` holds the shared create path for `JaypieSecret` and `JaypieEnvSecret` (#551).
+
+`JaypieSsoSyncApplication` accepts `googleCredentialsSecret` and `scimEndpointAccessTokenSecret` together and deploys SSOSync as "App only". It creates value secrets for admin email, SCIM URL, region, and identity store ID, and passes six complete ARNs in `CrossStackConfig` in the order SSOSync reads them: credentials, admin email, SCIM URL, SCIM token, region, identity store ID. A secret without `secretFullArn` throws. The literal path stays and warns `@jaypie/constructs:ssoSyncLiteralCredentials`. The SSOSync 2.3.3 `CrossApp` rule checks `App` rather than `App only`, so the SAR template does not validate these parameters (#551).
 
 ### Lambda with Non-Secret Variables
 

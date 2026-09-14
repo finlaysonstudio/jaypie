@@ -444,8 +444,18 @@ Synth throws `ConfigurationError` whenever a declared secret source produces no 
 ```typescript
 new JaypieSecret(this, "ApiKey", { value: process.env.MISSING }); // throws
 new JaypieSecret(this, "ApiKey", { envKey: "MISSING" });          // throws
-new JaypieSecret(this, "Placeholder");                            // empty secret
+new JaypieSecret(this, "Placeholder");                            // generated value
 ```
+
+### External Secrets
+
+`external: true` creates an empty secret, so the value never enters the template, the CDK assets bucket, `cdk.out`, or `cdk diff`. CI sets the value after deploy with `aws secretsmanager put-secret-value`, using the ARN output described by the `envKey`. `envKey` still names the runtime variable.
+
+```typescript
+new JaypieSecret(this, "ANTHROPIC_API_KEY", { external: true });
+```
+
+`JaypieSsoSyncApplication` accepts `googleCredentialsSecret` and `scimEndpointAccessTokenSecret` to deploy SSOSync without credentials in the template.
 
 ## JaypieEnvSecret
 
