@@ -48,7 +48,7 @@ packages/constructs/
 
 | Construct | Description |
 |-----------|-------------|
-| `JaypieStack` | Base stack with automatic naming and tagging |
+| `JaypieStack` | Base stack with automatic naming and tagging; warns at synth on a non-hex `PROJECT_NONCE` |
 | `JaypieAppStack` | Application stack (default key: "app") |
 | `JaypieInfrastructureStack` | Infrastructure stack (default key: "infra") |
 
@@ -136,7 +136,7 @@ Required by various constructs:
 | `PROJECT_ENV` | Environment (production, sandbox, personal, etc.) |
 | `PROJECT_KEY` | Project identifier |
 | `PROJECT_SPONSOR` | Organization/sponsor name |
-| `PROJECT_NONCE` | Unique deployment identifier |
+| `PROJECT_NONCE` | 8 lowercase hex characters, unique per environment |
 | `PROJECT_COMMIT` | Git commit hash |
 | `PROJECT_VERSION` | Package version |
 | `PROJECT_SERVICE` | Service name (passed through to Lambdas from process.env; `serviceTag` prop sets `DD_SERVICE` instead) |

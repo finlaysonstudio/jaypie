@@ -64,6 +64,45 @@ export default [
     ],
     external,
   },
+  // ES modules version - dynamodb subpath
+  // NOTE: declaration: false because the dts builds below emit bundled types
+  {
+    input: "src/dynamodb/index.ts",
+    output: {
+      dir: "dist/esm/dynamodb",
+      format: "es",
+      sourcemap: true,
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/esm/dynamodb",
+      }),
+    ],
+    external,
+  },
+  // CommonJS version - dynamodb subpath
+  {
+    input: "src/dynamodb/index.ts",
+    output: {
+      dir: "dist/cjs/dynamodb",
+      format: "cjs",
+      sourcemap: true,
+      exports: "named",
+      entryFileNames: "[name].cjs",
+    },
+    onwarn,
+    plugins: [
+      typescript({
+        tsconfig: "./tsconfig.json",
+        declaration: false,
+        outDir: "dist/cjs/dynamodb",
+      }),
+    ],
+    external,
+  },
   // Type definitions (ESM): bundled to a single self-contained declaration file.
   {
     input: "src/index.ts",
@@ -76,6 +115,20 @@ export default [
   {
     input: "src/index.ts",
     output: { file: "dist/cjs/index.d.cts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+  // Type definitions for the ./dynamodb subpath (ESM)
+  {
+    input: "src/dynamodb/index.ts",
+    output: { file: "dist/esm/dynamodb/index.d.ts", format: "es" },
+    plugins: [dts()],
+    external: dtsExternal,
+  },
+  // Type definitions for the ./dynamodb subpath (CommonJS)
+  {
+    input: "src/dynamodb/index.ts",
+    output: { file: "dist/cjs/dynamodb/index.d.cts", format: "es" },
     plugins: [dts()],
     external: dtsExternal,
   },

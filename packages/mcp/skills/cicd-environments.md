@@ -12,6 +12,9 @@ GitHub Environments provide deployment-specific variables for Jaypie CDK workflo
 | Variable | Description |
 |----------|-------------|
 | `AWS_ROLE_ARN` | OIDC role ARN for assuming AWS credentials |
+| `PROJECT_NONCE` | 8 lowercase hex characters, unique per environment |
+
+Generate `PROJECT_NONCE` once per environment with `openssl rand -hex 4`. It scopes stack names, S3 bucket names, and SSM paths, so a new value deploys a new install and strands the old one. `setup-environment` fails when it is missing (see `skill("cicd-actions")`).
 
 ## Optional Variables
 
@@ -21,7 +24,6 @@ GitHub Environments provide deployment-specific variables for Jaypie CDK workflo
 | `LOG_LEVEL` | `trace` (sandbox) / `info` (production) | Application log level |
 | `PROJECT_CHAOS` | `full` (sandbox) / `none` (production) | Chaos engineering mode |
 | `PROJECT_ENV` | Environment name | Environment identifier |
-| `PROJECT_NONCE` | Branch name or `prod` | Unique identifier for resources |
 
 ## Environment Setup
 
@@ -43,6 +45,7 @@ GitHub Environments provide deployment-specific variables for Jaypie CDK workflo
 AWS_ROLE_ARN      = arn:aws:iam::123456789012:role/GitHubActions-Sandbox
 AWS_REGION        = us-east-1
 PROJECT_ENV       = sandbox
+PROJECT_NONCE     = 3f9c21ab
 LOG_LEVEL         = trace
 PROJECT_CHAOS     = full
 ```
@@ -53,6 +56,7 @@ PROJECT_CHAOS     = full
 AWS_ROLE_ARN      = arn:aws:iam::123456789012:role/GitHubActions-Production
 AWS_REGION        = us-east-1
 PROJECT_ENV       = production
+PROJECT_NONCE     = ba342b91
 LOG_LEVEL         = info
 PROJECT_CHAOS     = none
 ```

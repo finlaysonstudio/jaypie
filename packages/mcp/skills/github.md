@@ -260,7 +260,7 @@ jobs:
 
 - Deploy jobs declare `permissions` with `contents: read` and `id-token: write`
 - Composite actions under `.github/actions` receive every value through `inputs` and never reference `vars.*` or `secrets.*`
-- `setup-environment` supplies fallback defaults when an input is empty
+- `setup-environment` supplies fallback defaults when an input is empty, except `project-nonce`, which fails the job
 - The OIDC subject for an environment job is `repo:<org>/<repo>:environment:<env>` (see ~cicd-environments for the trust policy)
 
 ## Audit

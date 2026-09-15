@@ -14,7 +14,7 @@ This package serves three purposes:
 ```
 packages/mcp/
 ├── src/
-│   ├── assets.ts             # @jaypie/mcp/assets entry: getMcpAssetPaths for build scripts
+│   ├── assets.ts             # @jaypie/mcp/assets entry: getMcpAssetPaths, getMcpBuildInfo for build scripts
 │   ├── index.ts              # CLI entrypoint, exports createMcpServer and mcpExpressHandler
 │   ├── createMcpServer.ts    # MCP server factory using ServiceSuite
 │   ├── suite.ts              # ServiceSuite registration (simplified)
@@ -39,9 +39,14 @@ packages/mcp/
 import { createMcpServer, mcpExpressHandler } from "@jaypie/mcp";
 import type { CreateMcpServerOptions, McpExpressHandlerOptions } from "@jaypie/mcp";
 
-// Build scripts only: absolute skills/ and release-notes/ paths to copy beside a bundle
-import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "@jaypie/mcp/assets";
-import type { McpAssetPaths } from "@jaypie/mcp/assets";
+// Build scripts only: absolute skills/ and release-notes/ paths to copy beside a bundle,
+// and { commit, version, versionString } of the build that packed them
+import {
+  getMcpAssetPaths,
+  getMcpBuildInfo,
+  MCP_ASSET_DIRECTORY,
+} from "@jaypie/mcp/assets";
+import type { McpAssetPaths, McpBuildInfo } from "@jaypie/mcp/assets";
 
 // Loads @jaypie/express, never @modelcontextprotocol/sdk
 import {
@@ -79,8 +84,10 @@ The MCP server provides 4 unified router-style tools:
 
 - **`release_notes`** - Browse package release notes
   - `release_notes()` or `release_notes("help")` - Show help
-  - `release_notes("list")` - List all release notes
+  - `release_notes("list")` - First page of release notes (package ascending, then version descending)
+  - `release_notes("list", { limit: 20 })` - Page size (default 50, maximum 200)
   - `release_notes("list", { package: "mcp" })` - Filter by package
+  - `release_notes("list", { cursor: "..." })` - Next page; the `Next page` footer prints this call only when more notes exist. The cursor carries `package`, `since_version`, and `limit`
   - `release_notes("read", { package: "mcp", version: "0.5.0" })` - Read specific note
 
 ### Datadog Tool (requires DATADOG_API_KEY and DATADOG_APP_KEY)
@@ -161,9 +168,10 @@ When adding new skills:
 3. Skills are immediately available via `skill(alias)` — no rebuild needed
 
 Skills and release notes are read from the **package root**, not `dist/`. The
-docs suite resolves `../../../skills` from `dist/suites/docs/`, and `files` in
-`package.json` ships both directories alongside `dist`. Only the per-suite
-`help.md` files are copied into `dist` by rollup.
+docs suite resolves both directories with `getMcpAssetPaths()` from
+`src/assets.ts`, and `files` in `package.json` ships both alongside `dist`.
+Rollup copies no files into `dist`. Suite help text is a string constant in
+`help.ts`, inlined into the build.
 
 **Important**: Keep the skill category listings in sync across `skills/skills.md`, `skills/agents.md`, and the root `CLAUDE.md` Skills section. When adding or removing a skill alias, update all three.
 
@@ -210,7 +218,7 @@ When adding release notes:
 
 ## Build Configuration
 
-Uses Rollup with TypeScript. Help markdown files are copied to dist via `rollup-plugin-copy`.
+Uses Rollup with TypeScript (`@rollup/plugin-typescript`), `@rollup/plugin-replace` for the build-time version constants, and `rollup-plugin-dts` for one declaration bundle per entry point. No files are copied into `dist`.
 
 ## Commands
 
@@ -232,8 +240,7 @@ npm run format     # eslint --fix
 - `@jaypie/logger` (optional peer) - Logging for `@jaypie/mcp/http`
 - `@jaypie/kit` - YAML frontmatter parsing (`parseFrontmatter`) for release notes
 - `commander` - CLI argument parsing
-- `semver` - Version comparison for release notes filtering
-- `rollup-plugin-copy` - Copy help.md files to dist
+- `semver` - Version comparison for release notes filtering and ordering
 
 ## Architecture
 
@@ -253,7 +260,7 @@ skill files as a dependency.
 
 Each local suite directory contains:
 - `index.ts` - Unified service with command router
-- `help.md` - Documentation returned when command is omitted
+- `help.ts` - Documentation string returned when command is omitted
 - `<domain>.ts` - Implementation functions (for testability)
 
 Suites throw Jaypie errors from `@jaypie/errors`, never a vanilla `Error`.

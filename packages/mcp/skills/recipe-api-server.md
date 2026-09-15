@@ -178,7 +178,8 @@ See `skill("apikey")` for full key generation/validation/hashing documentation.
 
 ```bash
 # First deploy creates secrets and table
-PROJECT_ENV=sandbox PROJECT_NONCE=dev npx cdk deploy
+# PROJECT_NONCE is the environment's 8-hex nonce (see skill("cicd-environments"))
+PROJECT_ENV=sandbox PROJECT_NONCE=3f9c21ab npx cdk deploy
 ```
 
 No workflow secrets needed for generated values — CloudFormation creates them on first deploy and preserves them on subsequent deploys.

@@ -376,7 +376,7 @@ Variables are configured at different levels in GitHub Settings:
 | `AWS_ROLE_ARN` | IAM role ARN for OIDC | Yes |
 | `DATADOG_API_KEY_ARN` | Datadog API key ARN in Secrets Manager | No |
 | `PROJECT_ENV` | Environment identifier | Yes |
-| `PROJECT_NONCE` | Unique resource identifier | No |
+| `PROJECT_NONCE` | 8 lowercase hex characters, unique per environment (`openssl rand -hex 4`) | Yes |
 
 ### Auto-Generated Variables
 

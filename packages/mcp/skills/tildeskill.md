@@ -1,6 +1,6 @@
 ---
 description: Skill/vocabulary storage with pluggable backends (pre-1.0)
-related: fabric, mcp
+related: dynamodb, fabric, mcp
 ---
 
 # @jaypie/tildeskill
@@ -14,6 +14,8 @@ This package provides a storage abstraction for skill/vocabulary documents with 
 - Loading skills from markdown files with YAML frontmatter
 - In-memory storage for testing
 - Layered composition of multiple stores with namespace prefixes
+- DynamoDB storage through the `@jaypie/tildeskill/dynamodb` subpath
+- Store-to-store sync with `syncSkills`
 - Consistent alias normalization and validation
 - Filtering by namespace and tags
 - Searching across alias, name, description, content, and tags
@@ -46,6 +48,7 @@ interface ListFilter {
 }
 
 interface SkillStore {
+  delete(alias: string): Promise<boolean>;
   find(alias: string): Promise<SkillRecord | null>;
   get(alias: string): Promise<SkillRecord | null>;
   getByNickname(nickname: string): Promise<SkillRecord[]>;
@@ -87,6 +90,71 @@ const store = createMemoryStore([
 const skill = await store.get("test");
 ```
 
+## DynamoDB Store
+
+```typescript
+import { initClient } from "@jaypie/dynamodb";
+import { createSkillService } from "@jaypie/tildeskill";
+import { createDynamoDbStore } from "@jaypie/tildeskill/dynamodb";
+
+initClient();
+const store = createDynamoDbStore({ category: "jaypie" });
+const skillService = createSkillService(store);
+```
+
+`@jaypie/dynamodb` is an optional peer dependency. Only the
+`@jaypie/tildeskill/dynamodb` subpath imports it, so markdown-only consumers
+never load it. The store loads it with a dynamic import on first use, so a
+CJS consumer shares the host's initialized client. Call `initClient()` before
+using the store.
+
+- Records are `skill` entities at APEX scope. `category` is the store
+  namespace; `alias` is unqualified.
+- Ids are deterministic: `uuidv5("<category>:<alias>", SKILL_NAMESPACE)`.
+  `SKILL_NAMESPACE` is exported from the subpath and never changes.
+- `metadata.hash` holds `hashSkill(record)` (sha256) for change detection.
+- `includes`, `nicknames`, and `related` are stored in `metadata`, since
+  `related` is reserved for entity references.
+- `list`, `getByNickname`, and `search` query `indexModelCategory`.
+  `createDynamoDbStore` calls `registerSkillModel()`; declare the index in CDK
+  by calling `registerSkillModel()` before `getAllRegisteredIndexes()`.
+- `find` keeps the plural/singular fallback.
+- `delete` soft deletes with `deleteEntity`. Reads skip archived and deleted
+  entities, and a later `put` restores the same id.
+
+## Syncing Stores
+
+```typescript
+import { createMarkdownStore, syncSkills } from "@jaypie/tildeskill";
+
+const result = await syncSkills({
+  from: createMarkdownStore({ path: "./skills" }),
+  to: store,
+});
+// { added: ["aws"], removed: ["retired"], unchanged: ["tests"], updated: [] }
+```
+
+`syncSkills` makes `to` match `from`. It puts records missing from `to`
+(`added`) or whose `hashSkill` differs (`updated`), skips records whose hash
+matches (`unchanged`), and deletes records missing from `from` (`removed`).
+Each list holds aliases sorted alphabetically. An empty `from` with a
+non-empty `to` throws `ConfigurationError` before writing, since a markdown
+store pointed at a missing directory lists nothing. Pass
+`allowEmptySource: true` to empty `to` on purpose.
+
+## Deleting Records
+
+Every store implements `delete(alias)`. It matches the exact alias (no
+plural/singular fallback) and returns `true` when a record was removed and
+`false` when none existed.
+
+| Store | `delete` behavior |
+|-------|-------------------|
+| memory | Removes the record from the map |
+| markdown | Removes `<alias>.md`; throws `BadRequestError` for an invalid alias |
+| layered | Requires a namespace-qualified alias and delegates to that layer; throws `ConfigurationError` when unqualified |
+| dynamodb | Soft deletes the entity; reads skip it and `put` restores it |
+
 ## Skill Service Factory
 
 ```typescript
@@ -102,6 +170,8 @@ const skillService = createSkillService(store);
 await skillService({ alias: "aws" }); // → skill content (with expandIncludes)
 await skillService({ alias: "index" }); // → formatted listing
 await skillService(); // → same as "index"
+await skillService({ alias: "missing" }); // throws NotFoundError
+await skillService({ alias: "../bad" }); // throws BadRequestError
 
 // Use with fabricTool for Llm.operate toolkits
 import { fabricTool } from "@jaypie/fabric/llm";
@@ -159,10 +229,15 @@ const layered = createLayeredStore({
 
 await layered.get("aws"); // → { alias: "local:aws", ... }
 await layered.get("jaypie:aws"); // → { alias: "jaypie:aws", ... }
-await layered.find("skills"); // per-layer plural fallback
+await layered.find("skills"); // exact alias in any layer, then fallback
 await layered.list(); // prefixed aliases from every layer
 await layered.put({ alias: "local:new", content: "# New" }); // must be qualified
 ```
+
+`find` checks every layer for an exact alias before it tries plural/singular
+fallback in any layer. With `local:test` and `jaypie:tests`, `find("tests")`
+returns `jaypie:tests`, so a local skill cannot shadow a Jaypie skill under a
+different spelling. Namespace-qualified aliases search only their own layer.
 
 The MCP server itself uses `createLayeredStore` to place `MCP_SKILLS_PATH`
 (the client's local library, namespace `local`) over the bundled Jaypie

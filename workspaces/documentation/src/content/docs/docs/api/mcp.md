@@ -98,14 +98,17 @@ Takes no input.
 
 | Command | Description | Parameters |
 |---------|-------------|------------|
-| `list` | List release notes | `package`, `since_version` (both optional) |
+| `list` | List release notes, one page at a time | `package`, `since_version`, `limit`, `cursor` (all optional) |
 | `read` | Read one release note | `package`, `version` (both required) |
 
 ```
 release_notes()                                              # Show help
 release_notes("list", { package: "mcp" })                    # Filter by package
+release_notes("list", { cursor: "..." })                     # Next page
 release_notes("read", { package: "mcp", version: "0.5.0" })  # Read one note
 ```
+
+`list` sorts by package ascending, then version descending. `limit` defaults to 50 and caps at 200. When more notes exist, the last line reads `Next page: release_notes("list", { cursor: "..." })`. The cursor carries `package`, `since_version`, and `limit`. Passing a `package` or `since_version` that differs from the cursor is an error.
 
 ### datadog
 

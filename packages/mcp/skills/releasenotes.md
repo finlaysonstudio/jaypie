@@ -9,11 +9,14 @@ How to access and write release notes for Jaypie packages.
 ## MCP Tools
 
 ```
-mcp__jaypie__list_release_notes()
-mcp__jaypie__list_release_notes(package: "mcp")
-mcp__jaypie__list_release_notes(package: "jaypie", since_version: "1.0.0")
-mcp__jaypie__read_release_note(package: "mcp", version: "0.3.4")
+release_notes("list")
+release_notes("list", { package: "mcp" })
+release_notes("list", { package: "jaypie", since_version: "1.0.0" })
+release_notes("list", { cursor: "..." })
+release_notes("read", { package: "mcp", version: "0.3.4" })
 ```
+
+`list` returns 50 notes per page by default (`limit`, maximum 200). When more notes exist, the last line is a `Next page` footer with a `cursor` that continues the same listing.
 
 ## Directory Structure
 

@@ -1,8 +1,8 @@
+import { NotFoundError } from "@jaypie/errors";
 import { fabricService } from "@jaypie/fabric";
 
 import { expandIncludes } from "./core/expandIncludes";
-import { normalizeAlias } from "./core/normalize";
-import { isValidAlias } from "./core/validate";
+import { validateAlias } from "./core/validate";
 import type { SkillRecord, SkillStore } from "./types";
 
 function formatSkillListItem(skill: SkillRecord): string {
@@ -19,6 +19,8 @@ function formatSkillListItem(skill: SkillRecord): string {
  * - `"index"` or omitted → formatted listing of all skills
  * - Any other alias → skill content via `find()` with plural/singular fallback
  *   and automatic `expandIncludes`
+ * - An invalid alias throws `BadRequestError`; a missing skill throws
+ *   `NotFoundError`
  *
  * Compatible with `fabricTool()` for Llm.operate toolkits and
  * `suite.register()` for MCP servers.
@@ -37,13 +39,7 @@ export function createSkillService(store: SkillStore) {
       },
     },
     service: async ({ alias: inputAlias }: { alias?: string }) => {
-      const alias = normalizeAlias(inputAlias || "index");
-
-      if (!isValidAlias(alias)) {
-        throw new Error(
-          `Invalid skill alias "${alias}". Use alphanumeric characters, hyphens, and underscores only.`,
-        );
-      }
+      const alias = validateAlias(inputAlias || "index");
 
       if (alias === "index") {
         const allSkills = await store.list();
@@ -59,7 +55,7 @@ export function createSkillService(store: SkillStore) {
       const skill = await store.find(alias);
 
       if (!skill) {
-        throw new Error(
+        throw new NotFoundError(
           `Skill "${alias}" not found. Use skill("index") to list available skills.`,
         );
       }

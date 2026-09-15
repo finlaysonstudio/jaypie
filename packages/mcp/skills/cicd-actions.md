@@ -49,9 +49,8 @@ inputs:
     description: 'Sponsor segment of the generated stack name'
     required: true
   project-nonce:
-    description: 'Unique resource identifier'
-    required: false
-    default: ''
+    description: '8 lowercase hex characters, unique per environment'
+    required: true
   log-level:
     description: 'Log level (trace, debug, info, warn, error)'
     required: false
@@ -92,14 +91,11 @@ runs:
         echo "PROJECT_KEY=${{ inputs.project-key }}" >> $GITHUB_ENV
         echo "PROJECT_SPONSOR=${{ inputs.project-sponsor }}" >> $GITHUB_ENV
 
-        # Resolve PROJECT_NONCE (default: branch name or 'prod')
+        # Resolve PROJECT_NONCE (required, no fallback)
         NONCE="${{ inputs.project-nonce }}"
         if [ -z "$NONCE" ]; then
-          if [ "$PROJECT_ENV" = "production" ]; then
-            NONCE="prod"
-          else
-            NONCE="${GITHUB_REF_NAME//\//-}"
-          fi
+          echo "::error::project-nonce is empty. Set PROJECT_NONCE on the GitHub environment (openssl rand -hex 4)"
+          exit 1
         fi
         echo "project-nonce=${NONCE}" >> $GITHUB_OUTPUT
         echo "PROJECT_NONCE=${NONCE}" >> $GITHUB_ENV
@@ -130,6 +126,8 @@ runs:
 ```
 
 `project-sponsor` is `required: true` on purpose. `PROJECT_SPONSOR` is the first segment of the generated stack name (`cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}`), and an optional input with an empty default deploys `cdk-undefined-...` silently. A stack name is immutable, so correcting it later means a stack replacement. See `skill("cdk")` for stack naming and `skill("variables")` for the full variable reference.
+
+`project-nonce` is `required: true` with no fallback, and the step exits with `::error::` when it is empty because GitHub does not enforce `required` on composite action inputs. `PROJECT_NONCE` is 8 lowercase hex characters, generated once per environment (`openssl rand -hex 4`) and stored as a GitHub environment variable (see `skill("cicd-environments")`). It lands in globally unique names (S3 buckets), SSM parameter paths, and immutable stack names. A branch name or word such as `prod` repeats across projects and accounts, and changing the nonce later means a new install beside the old one.
 
 ## configure-aws/action.yml
 

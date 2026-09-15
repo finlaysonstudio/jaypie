@@ -14,17 +14,17 @@ import { existsSync, readdirSync, type Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gt } from "semver";
+import { gt, rcompare, valid } from "semver";
 
-import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "../../assets.js";
+import {
+  getMcpAssetPaths,
+  getMcpBuildInfo,
+  MCP_ASSET_DIRECTORY,
+} from "../../assets.js";
 import { RELEASE_NOTES_HELP } from "./help.js";
 
 // Build-time constants
-declare const __BUILD_VERSION_STRING__: string;
-const BUILD_VERSION_STRING =
-  typeof __BUILD_VERSION_STRING__ !== "undefined"
-    ? __BUILD_VERSION_STRING__
-    : "@jaypie/mcp@0.0.0";
+const BUILD_VERSION_STRING = getMcpBuildInfo().versionString;
 
 // =============================================================================
 // ASSET PATHS
@@ -178,10 +178,137 @@ const skillStore = createLayeredStore({
 // HELPER FUNCTIONS
 // =============================================================================
 
+const CURSOR_ENCODING = "base64url";
+const INVALID_CURSOR_MESSAGE =
+  'Invalid cursor. Call release_notes("list") to start over.';
+const RELEASE_NOTES_LIST_LIMIT = {
+  DEFAULT: 50,
+  MAXIMUM: 200,
+} as const;
+
 interface ReleaseNoteFrontMatter {
   date?: string;
   summary?: string;
   version?: string;
+}
+
+interface ReleaseNoteListItem {
+  date?: string;
+  filename: string;
+  packageName: string;
+  summary?: string;
+  version?: string;
+}
+
+/** Decoded form of the opaque `list` cursor */
+interface ReleaseNotesListCursor {
+  limit?: number;
+  offset: number;
+  package?: string;
+  since_version?: string;
+}
+
+function compareText({ a, b }: { a: string; b: string }): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+/**
+ * Package ascending, then semver descending. Valid semver sorts before
+ * anything else, and filename breaks every remaining tie so the order is total.
+ */
+function compareReleaseNotes({
+  a,
+  b,
+}: {
+  a: ReleaseNoteListItem;
+  b: ReleaseNoteListItem;
+}): number {
+  const byPackage = compareText({ a: a.packageName, b: b.packageName });
+  if (byPackage !== 0) return byPackage;
+
+  const aVersion = a.version && valid(a.version);
+  const bVersion = b.version && valid(b.version);
+  if (aVersion && bVersion) {
+    const byVersion = rcompare(aVersion, bVersion);
+    if (byVersion !== 0) return byVersion;
+  } else if (aVersion) {
+    return -1;
+  } else if (bVersion) {
+    return 1;
+  }
+
+  return compareText({ a: b.filename, b: a.filename });
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function encodeListCursor(cursor: ReleaseNotesListCursor): string {
+  const ordered: ReleaseNotesListCursor = {
+    limit: cursor.limit,
+    offset: cursor.offset,
+    package: cursor.package,
+    since_version: cursor.since_version,
+  };
+  return Buffer.from(JSON.stringify(ordered)).toString(CURSOR_ENCODING);
+}
+
+function decodeListCursor(cursor: unknown): ReleaseNotesListCursor {
+  if (typeof cursor !== "string" || cursor.length === 0) {
+    throw new BadRequestError(INVALID_CURSOR_MESSAGE);
+  }
+
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(
+      Buffer.from(cursor, CURSOR_ENCODING).toString("utf-8"),
+    );
+  } catch {
+    throw new BadRequestError(INVALID_CURSOR_MESSAGE);
+  }
+
+  if (typeof decoded !== "object" || decoded === null) {
+    throw new BadRequestError(INVALID_CURSOR_MESSAGE);
+  }
+
+  const candidate = decoded as Record<string, unknown>;
+  const isValid =
+    typeof candidate.offset === "number" &&
+    Number.isInteger(candidate.offset) &&
+    candidate.offset >= 0 &&
+    (candidate.limit === undefined ||
+      (isPositiveInteger(candidate.limit) &&
+        candidate.limit <= RELEASE_NOTES_LIST_LIMIT.MAXIMUM)) &&
+    isOptionalString(candidate.package) &&
+    isOptionalString(candidate.since_version);
+
+  if (!isValid) {
+    throw new BadRequestError(INVALID_CURSOR_MESSAGE);
+  }
+
+  return candidate as unknown as ReleaseNotesListCursor;
+}
+
+/**
+ * Accept a number or numeric string, reject anything below one, and clamp to
+ * the maximum
+ */
+function resolveListLimit(value: unknown): number {
+  if (value === undefined || value === null || value === "") {
+    return RELEASE_NOTES_LIST_LIMIT.DEFAULT;
+  }
+  const limit = typeof value === "string" ? Number(value) : value;
+  if (!isPositiveInteger(limit)) {
+    throw new BadRequestError("limit must be a positive integer");
+  }
+  return Math.min(limit, RELEASE_NOTES_LIST_LIMIT.MAXIMUM);
 }
 
 async function parseReleaseNoteFile(filePath: string): Promise<{
@@ -232,56 +359,29 @@ function formatReleaseNoteListItem(note: {
   return parts.join(" ");
 }
 
-async function getPackageReleaseNotes(packageName: string): Promise<
-  Array<{
-    date?: string;
-    filename: string;
-    packageName: string;
-    summary?: string;
-    version?: string;
-  }>
-> {
+async function getPackageReleaseNotes(
+  packageName: string,
+): Promise<ReleaseNoteListItem[]> {
   const packageDir = path.join(RELEASE_NOTES_PATH, packageName);
   try {
     const files = await fs.readdir(packageDir);
-    const mdFiles = files.filter((file) => file.endsWith(".md"));
+    const mdFiles = files.filter((file) => file.endsWith(MARKDOWN_EXTENSION));
 
-    const notes = await Promise.all(
+    return await Promise.all(
       mdFiles.map(async (file) => {
         const parsed = await parseReleaseNoteFile(path.join(packageDir, file));
         return { ...parsed, packageName };
       }),
     );
-
-    return notes.sort((a, b) => {
-      if (!a.version || !b.version) return 0;
-      try {
-        return gt(a.version, b.version) ? -1 : 1;
-      } catch {
-        return b.version.localeCompare(a.version);
-      }
-    });
   } catch {
     return [];
   }
 }
 
 function filterReleaseNotesSince(
-  notes: Array<{
-    date?: string;
-    filename: string;
-    packageName: string;
-    summary?: string;
-    version?: string;
-  }>,
+  notes: ReleaseNoteListItem[],
   sinceVersion: string,
-): Array<{
-  date?: string;
-  filename: string;
-  packageName: string;
-  summary?: string;
-  version?: string;
-}> {
+): ReleaseNoteListItem[] {
   return notes.filter((note) => {
     if (!note.version) return false;
     try {
@@ -314,6 +414,8 @@ export const versionService = fabricService({
 // =============================================================================
 
 interface ReleaseNotesInput {
+  cursor?: string;
+  limit?: number | string;
   package?: string;
   since_version?: string;
   version?: string;
@@ -322,7 +424,7 @@ interface ReleaseNotesInput {
 export const releaseNotesService = fabricService({
   alias: "release_notes",
   description:
-    "Browse Jaypie package release notes. Commands: list, read. Call with no args for help.",
+    "Browse Jaypie package release notes. Commands: list (paginated), read. Call with no args for help.",
   input: {
     command: {
       description: "Command to execute (omit for help)",
@@ -330,7 +432,7 @@ export const releaseNotesService = fabricService({
       type: String,
     },
     input: {
-      description: "Command parameters",
+      description: `Command parameters. list: package, since_version, limit (default ${RELEASE_NOTES_LIST_LIMIT.DEFAULT}, maximum ${RELEASE_NOTES_LIST_LIMIT.MAXIMUM}), cursor (from the "Next page" footer). read: package, version (both required).`,
       required: false,
       type: Object,
     },
@@ -351,18 +453,41 @@ export const releaseNotesService = fabricService({
 
     switch (command) {
       case "list": {
+        const cursor =
+          p.cursor === undefined ? undefined : decodeListCursor(p.cursor);
+        if (cursor) {
+          if (p.package !== undefined && p.package !== cursor.package) {
+            throw new BadRequestError(
+              "package does not match the cursor. Omit package or start over without a cursor.",
+            );
+          }
+          if (
+            p.since_version !== undefined &&
+            p.since_version !== cursor.since_version
+          ) {
+            throw new BadRequestError(
+              "since_version does not match the cursor. Omit since_version or start over without a cursor.",
+            );
+          }
+        }
+
+        const limit = resolveListLimit(p.limit ?? cursor?.limit);
+        const offset = cursor?.offset ?? 0;
+        const packageFilter = cursor ? cursor.package : p.package;
+        const sinceVersion = cursor ? cursor.since_version : p.since_version;
+
         const entries = await fs.readdir(RELEASE_NOTES_PATH, {
           withFileTypes: true,
         });
         const packageDirs = entries
           .filter((entry) => entry.isDirectory())
           .map((entry) => entry.name);
-        const packagesToList = p.package
-          ? packageDirs.filter((pkg) => pkg === p.package)
+        const packagesToList = packageFilter
+          ? packageDirs.filter((pkg) => pkg === packageFilter)
           : packageDirs;
 
-        if (packagesToList.length === 0 && p.package) {
-          return `No release notes found for package "${p.package}".`;
+        if (packagesToList.length === 0 && packageFilter) {
+          return `No release notes found for package "${packageFilter}".`;
         }
 
         const allNotes = await Promise.all(
@@ -370,18 +495,37 @@ export const releaseNotesService = fabricService({
         );
         let flatNotes = allNotes.flat();
 
-        if (p.since_version) {
-          flatNotes = filterReleaseNotesSince(flatNotes, p.since_version);
+        if (sinceVersion) {
+          flatNotes = filterReleaseNotesSince(flatNotes, sinceVersion);
         }
 
         if (flatNotes.length === 0) {
-          const filterDesc = p.since_version
-            ? ` newer than ${p.since_version}`
-            : "";
+          const filterDesc = sinceVersion ? ` newer than ${sinceVersion}` : "";
           return `No release notes found${filterDesc}.`;
         }
 
-        return flatNotes.map(formatReleaseNoteListItem).join("\n");
+        if (offset >= flatNotes.length) {
+          throw new BadRequestError(INVALID_CURSOR_MESSAGE);
+        }
+
+        flatNotes.sort((a, b) => compareReleaseNotes({ a, b }));
+        const nextOffset = offset + limit;
+        const page = flatNotes
+          .slice(offset, nextOffset)
+          .map(formatReleaseNoteListItem)
+          .join("\n");
+
+        if (nextOffset >= flatNotes.length) {
+          return page;
+        }
+
+        const nextCursor = encodeListCursor({
+          limit,
+          offset: nextOffset,
+          package: packageFilter,
+          since_version: sinceVersion,
+        });
+        return `${page}\n\nNext page: release_notes("list", { cursor: "${nextCursor}" })`;
       }
 
       case "read": {

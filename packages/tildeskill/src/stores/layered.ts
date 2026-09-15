@@ -1,6 +1,7 @@
 import { ConfigurationError } from "@jaypie/errors";
 
 import { normalizeAlias } from "../core/normalize";
+import { filterSkills } from "../core/records";
 import type {
   LayeredStoreLayer,
   LayeredStoreOptions,
@@ -25,15 +26,20 @@ interface ResolvedLayer {
  * layer served the record.
  *
  * Lookup order:
- *   - `get` / `find` walk layers top-to-bottom and return the first match.
- *     A namespaced input (e.g., `jaypie:aws`) is routed directly to the
- *     matching layer.
+ *   - `get` walks layers top-to-bottom and returns the first exact match.
+ *   - `find` first walks every layer for an exact match, then walks every
+ *     layer again with plural/singular fallback. An exact alias in a later
+ *     layer wins over a spelling alternative in an earlier layer.
+ *   - A namespaced input (e.g., `jaypie:aws`) routes `get` / `find` directly
+ *     to the matching layer.
  *   - `getByNickname` aggregates across every layer because a nickname may
  *     have several valid owners (e.g., "sparticus" in multiple packs).
  *   - `list` and `search` aggregate from every layer, since namespace
  *     prefixes already make aliases distinct.
- *   - `put` requires a namespace-qualified alias and delegates to the
- *     matching layer; unqualified writes throw `ConfigurationError`.
+ *   - `put` and `delete` require a namespace-qualified alias and delegate to
+ *     the matching layer; unqualified writes throw `ConfigurationError`.
+ *     `delete` never walks layers, so it cannot remove a record from a layer
+ *     the caller did not name.
  */
 export function createLayeredStore({
   layers,
@@ -95,11 +101,26 @@ export function createLayeredStore({
   }
 
   return {
+    async delete(alias: string): Promise<boolean> {
+      const { layer, inner } = splitAlias(alias);
+      if (!layer) {
+        throw new ConfigurationError(
+          "createLayeredStore delete() requires a namespace-qualified alias",
+        );
+      }
+      return layer.store.delete(inner);
+    },
+
     async find(alias: string): Promise<SkillRecord | null> {
       const { layer, inner } = splitAlias(alias);
       if (layer) {
         const hit = await layer.store.find(inner);
         return hit ? qualify(layer.namespace, hit) : null;
+      }
+      // An exact alias in any layer beats a spelling alternative in any layer
+      for (const l of resolved) {
+        const hit = await l.store.get(inner);
+        if (hit) return qualify(l.namespace, hit);
       }
       for (const l of resolved) {
         const hit = await l.store.find(inner);
@@ -137,21 +158,7 @@ export function createLayeredStore({
         all.push(...qualifyAll(l.namespace, records));
       }
 
-      let filtered = all;
-      if (filter?.namespace) {
-        const prefix = filter.namespace.endsWith("*")
-          ? filter.namespace.slice(0, -1)
-          : filter.namespace;
-        filtered = filtered.filter((r) => r.alias.startsWith(prefix));
-      }
-      if (filter?.tag) {
-        const normalizedTag = normalizeAlias(filter.tag);
-        filtered = filtered.filter((r) =>
-          r.tags?.map(normalizeAlias).includes(normalizedTag),
-        );
-      }
-
-      return filtered.sort((a, b) => a.alias.localeCompare(b.alias));
+      return filterSkills({ filter, records: all });
     },
 
     async put(record: SkillRecord): Promise<SkillRecord> {

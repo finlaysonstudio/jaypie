@@ -100,7 +100,10 @@ runs:
         PROJECT_ENV="${PROJECT_ENV:-sandbox}"
 
         PROJECT_NONCE="${{ inputs.project-nonce }}"
-        PROJECT_NONCE="${PROJECT_NONCE:-$(echo $RANDOM | md5sum | head -c 8)}"
+        if [ -z "$PROJECT_NONCE" ]; then
+          echo "::error::project-nonce is empty. Set PROJECT_NONCE on the GitHub environment (openssl rand -hex 4)"
+          exit 1
+        fi
 
         # Derived from package.json
         PROJECT_VERSION=$(node -p "require('./package.json').version")

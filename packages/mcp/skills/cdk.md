@@ -153,6 +153,8 @@ Props extend `StackProps` with one addition:
 
 If you see `undefined` or `unknown` in a generated stack name or tag, an env var is missing — fix the environment rather than overriding `stackName`.
 
+`JaypieStack` warns at synth (`@jaypie/constructs:projectNonceFormat`) when `CDK_DEFAULT_ACCOUNT` is set and `PROJECT_NONCE` is unset or is not lowercase hex of six or more characters. The warning fires before the first deploy makes a word or branch-name nonce permanent.
+
 #### `JaypieAppStack` / `JaypieInfrastructureStack`
 
 Thin convenience subclasses that pre-fill `key`:
@@ -206,11 +208,13 @@ See `skill("variables")` for the role of `PROJECT_ENV` and `PROJECT_NONCE`.
 
 ```bash
 # Deploy to sandbox
-PROJECT_ENV=sandbox PROJECT_NONCE=dev cdk deploy
+PROJECT_ENV=sandbox PROJECT_NONCE=3f9c21ab cdk deploy
 
 # Deploy to production
-PROJECT_ENV=production PROJECT_NONCE=prod cdk deploy
+PROJECT_ENV=production PROJECT_NONCE=ba342b91 cdk deploy
 ```
+
+Deploys run in CI (see `skill("cicd-deploy")`). Each environment carries its own `PROJECT_NONCE`, 8 lowercase hex characters generated once with `openssl rand -hex 4`. See `skill("github")` for provisioning.
 
 ## Lambda with DynamoDB Tables
 

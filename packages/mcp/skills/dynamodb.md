@@ -366,6 +366,10 @@ const nextPage = await queryByScope({
 
 `storeExchange(envelope, { exchange?, scope? })` persists an `@jaypie/llm` exchange envelope (see `skill("llm")`) as an `exchange` entity. It registers the canonical exchange model (`registerExchangeModel()` from `@jaypie/fabric`), maps envelope fields onto reserved attributes (`input`, `content`, `data`, `llm`, `status`, `xid`), and owns 400KB item-limit safety (drops the history delta, then truncates long fields, marking `metadata.truncated`). It warns and returns `null` — never throws — when `initClient()` has not run or the write fails. `@jaypie/llm` calls it automatically when `LLM_EXCHANGE_ENABLED` is set; pass `exchange` (parent id) for turn chains and `scope` to nest under a parent entity.
 
+### Skill Storage
+
+`@jaypie/tildeskill/dynamodb` stores skills as `skill` entities queried through `indexModelCategory` (see `skill("tildeskill")`). Call `registerSkillModel()` from `@jaypie/tildeskill` before `getAllRegisteredIndexes()` so CDK declares the index.
+
 ### TTL (Time to Live)
 
 DynamoDB expires items whose TTL attribute holds a past Unix epoch **in seconds**. Jaypie writes that attribute (`ttl` by default) and the `JaypieDynamoDb` construct enables TTL on it by default.

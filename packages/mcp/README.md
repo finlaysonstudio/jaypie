@@ -44,6 +44,17 @@ cpSync(assets.skills, join("dist", MCP_ASSET_DIRECTORY.SKILLS), { recursive: tru
 
 `MCP_BUILTIN_SKILLS_PATH` and `MCP_RELEASE_NOTES_PATH` point at other locations.
 
+`getMcpBuildInfo` returns the version and commit of the build that packed the markdown:
+
+```typescript
+import { getMcpBuildInfo } from "@jaypie/mcp/assets";
+
+const { commit, version, versionString } = getMcpBuildInfo();
+// { commit: "460f95c3", version: "0.8.159", versionString: "@jaypie/mcp@0.8.159#460f95c3" }
+```
+
+`commit` is empty when `PROJECT_COMMIT` was unset at build time. Unbuilt source returns version `0.0.0`.
+
 ### Filtering Tools
 
 `createMcpServer`, `mcpExpressHandler`, and `mcpHttpHandler` accept `services`, an allowlist of tool names:

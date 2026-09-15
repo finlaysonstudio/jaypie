@@ -1,3 +1,4 @@
+import { BadRequestError, NotFoundError } from "@jaypie/errors";
 import { describe, expect, it } from "vitest";
 
 import { createSkillService } from "../service";
@@ -100,16 +101,20 @@ describe("createSkillService", () => {
       expect(result).toBe("# AWS\n\nAWS documentation content");
     });
 
-    it("throws when skill not found", async () => {
+    it("throws NotFoundError when skill not found", async () => {
       const store = createMemoryStore();
       const service = createSkillService(store);
-      await expect(service({ alias: "missing" })).rejects.toThrow(/not found/);
+      const promise = service({ alias: "missing" });
+      await expect(promise).rejects.toBeInstanceOf(NotFoundError);
+      await expect(promise).rejects.toThrow(/not found/);
     });
 
-    it("throws on invalid alias", async () => {
+    it("throws BadRequestError on invalid alias", async () => {
       const store = createMemoryStore();
       const service = createSkillService(store);
-      await expect(service({ alias: "../../etc" })).rejects.toThrow(/invalid/i);
+      const promise = service({ alias: "../../etc" });
+      await expect(promise).rejects.toBeInstanceOf(BadRequestError);
+      await expect(promise).rejects.toThrow(/invalid/i);
     });
   });
 
@@ -188,6 +193,25 @@ describe("createSkillService", () => {
 
       const result = await service({ alias: "jaypie:aws" });
       expect(result).toBe("# Jaypie AWS");
+    });
+
+    it("prefers an exact alias in a later layer over a fallback in an earlier layer", async () => {
+      const studio = createMemoryStore([
+        { alias: "test", content: "# Studio Test" },
+      ]);
+      const jaypie = createMemoryStore([
+        { alias: "tests", content: "# Jaypie Tests" },
+      ]);
+      const layered = createLayeredStore({
+        layers: [
+          { namespace: "studio", store: studio },
+          { namespace: "jaypie", store: jaypie },
+        ],
+      });
+      const service = createSkillService(layered);
+
+      const result = await service({ alias: "tests" });
+      expect(result).toBe("# Jaypie Tests");
     });
   });
 });

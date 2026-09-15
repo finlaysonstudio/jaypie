@@ -3,7 +3,11 @@ import * as path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getMcpAssetPaths, MCP_ASSET_DIRECTORY } from "../assets.js";
+import {
+  getMcpAssetPaths,
+  getMcpBuildInfo,
+  MCP_ASSET_DIRECTORY,
+} from "../assets.js";
 
 //
 //
@@ -29,5 +33,30 @@ describe("getMcpAssetPaths", () => {
     const assets = getMcpAssetPaths();
     expect(existsSync(path.join(assets.releaseNotes, "mcp"))).toBe(true);
     expect(existsSync(path.join(assets.skills, "mcp.md"))).toBe(true);
+  });
+});
+
+describe("getMcpBuildInfo", () => {
+  it("is a function", () => {
+    expect(typeof getMcpBuildInfo).toBe("function");
+  });
+
+  it("accepts zero params and returns commit, version, and versionString", () => {
+    const buildInfo = getMcpBuildInfo();
+    expect(typeof buildInfo.commit).toBe("string");
+    expect(typeof buildInfo.version).toBe("string");
+    expect(typeof buildInfo.versionString).toBe("string");
+  });
+
+  it("falls back to an unbuilt version without a commit", () => {
+    expect(getMcpBuildInfo()).toEqual({
+      commit: "",
+      version: "0.0.0",
+      versionString: "@jaypie/mcp@0.0.0",
+    });
+  });
+
+  it("returns a new object on each call", () => {
+    expect(getMcpBuildInfo()).not.toBe(getMcpBuildInfo());
   });
 });

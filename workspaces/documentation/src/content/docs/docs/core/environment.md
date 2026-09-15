@@ -27,7 +27,7 @@ Secrets are loaded from AWS Secrets Manager using a resolution pattern that supp
 |----------|--------|-------------|
 | `PROJECT_ENV` | local, sandbox, production | Environment identifier |
 | `PROJECT_KEY` | string | Project identifier for logging |
-| `PROJECT_NONCE` | string | Unique resource identifier |
+| `PROJECT_NONCE` | 8 lowercase hex | Unique resource identifier, one per environment |
 | `NODE_ENV` | development, production, test | Node environment |
 | `LOG_LEVEL` | trace, debug, info, warn, error | Logging threshold |
 

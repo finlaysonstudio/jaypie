@@ -50,7 +50,7 @@
 |----------|-------------|
 | `PROJECT_ENV` | Environment identifier (local, meta, production) |
 | `PROJECT_KEY` | Project identifier for logging |
-| `PROJECT_NONCE` | Unique identifier for resources |
+| `PROJECT_NONCE` | 8 lowercase hex characters, unique per environment |
 | `PROJECT_SPONSOR` | Sponsor segment of the generated stack name |
 | `PROJECT_CHAOS` | Chaos engineering mode (none, partial, full) |
 | `NODE_ENV` | Node environment (development, production) |
