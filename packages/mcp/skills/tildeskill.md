@@ -104,7 +104,9 @@ const skillService = createSkillService(store);
 
 `@jaypie/dynamodb` is an optional peer dependency. Only the
 `@jaypie/tildeskill/dynamodb` subpath imports it, so markdown-only consumers
-never load it. Call `initClient()` before using the store.
+never load it. The store loads it with a dynamic import on first use, so a
+CJS consumer shares the host's initialized client. Call `initClient()` before
+using the store.
 
 - Records are `skill` entities at APEX scope. `category` is the store
   namespace; `alias` is unqualified.
@@ -135,8 +137,10 @@ const result = await syncSkills({
 `syncSkills` makes `to` match `from`. It puts records missing from `to`
 (`added`) or whose `hashSkill` differs (`updated`), skips records whose hash
 matches (`unchanged`), and deletes records missing from `from` (`removed`).
-Each list holds aliases sorted alphabetically. An empty `from` removes every
-record in `to`; a markdown store pointed at a missing directory lists nothing.
+Each list holds aliases sorted alphabetically. An empty `from` with a
+non-empty `to` throws `ConfigurationError` before writing, since a markdown
+store pointed at a missing directory lists nothing. Pass
+`allowEmptySource: true` to empty `to` on purpose.
 
 ## Deleting Records
 

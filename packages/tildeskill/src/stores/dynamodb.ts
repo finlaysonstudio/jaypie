@@ -1,10 +1,4 @@
-import {
-  deleteEntity,
-  getEntity,
-  queryByCategory,
-  type StorableEntity,
-  updateEntity,
-} from "@jaypie/dynamodb";
+import type { StorableEntity } from "@jaypie/dynamodb";
 import { ConfigurationError } from "@jaypie/errors";
 import { APEX } from "@jaypie/fabric";
 
@@ -34,6 +28,14 @@ import type {
 export const SKILL_NAMESPACE = "98937fbc-3f72-4d4d-8b56-44dad0ac7242";
 
 const ID_SEPARATOR = ":";
+
+type DynamoDbModule = typeof import("@jaypie/dynamodb");
+
+// Load @jaypie/dynamodb with a dynamic import so a CJS consumer of this subpath
+// shares the host's initialized client instead of binding a second copy
+function loadDynamoDb(): Promise<DynamoDbModule> {
+  return import("@jaypie/dynamodb");
+}
 
 function optionalList(value: unknown): string[] | undefined {
   return Array.isArray(value) ? (value as string[]) : undefined;
@@ -90,6 +92,7 @@ export function createDynamoDbStore({
   }
 
   async function readActive(alias: string): Promise<StorableEntity | null> {
+    const { getEntity } = await loadDynamoDb();
     const entity = await getEntity({ id: skillId(normalizeAlias(alias)) });
     if (
       !entity ||
@@ -104,6 +107,7 @@ export function createDynamoDbStore({
   }
 
   async function listAll(): Promise<SkillRecord[]> {
+    const { queryByCategory } = await loadDynamoDb();
     const records: SkillRecord[] = [];
     let startKey: Record<string, unknown> | undefined;
     do {
@@ -127,6 +131,7 @@ export function createDynamoDbStore({
     async delete(alias: string): Promise<boolean> {
       const entity = await readActive(alias);
       if (!entity) return false;
+      const { deleteEntity } = await loadDynamoDb();
       return deleteEntity({ id: entity.id });
     },
 
@@ -145,6 +150,7 @@ export function createDynamoDbStore({
     },
 
     async put(record: SkillRecord): Promise<SkillRecord> {
+      const { getEntity, updateEntity } = await loadDynamoDb();
       const alias = normalizeAlias(record.alias);
       const skill = compactSkill({ ...record, alias });
       const id = skillId(alias);
