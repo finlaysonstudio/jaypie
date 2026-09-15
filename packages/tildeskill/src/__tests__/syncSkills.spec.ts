@@ -1,3 +1,4 @@
+import { ConfigurationError } from "@jaypie/errors";
 import { describe, expect, it, vi } from "vitest";
 
 import { hashSkill, syncSkills } from "../index";
@@ -41,6 +42,30 @@ describe("syncSkills", () => {
 
     expect(result.updated).toEqual(["aws"]);
     await expect(to.get("aws")).resolves.toMatchObject({ description: "New" });
+  });
+
+  it("refuses an empty source that would remove every record", async () => {
+    const to = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
+    const remove = vi.spyOn(to, "delete");
+
+    await expect(
+      syncSkills({ from: createMemoryStore(), to }),
+    ).rejects.toBeInstanceOf(ConfigurationError);
+    expect(remove).not.toHaveBeenCalled();
+    await expect(to.get("aws")).resolves.not.toBeNull();
+  });
+
+  it("empties the destination when allowEmptySource is true", async () => {
+    const to = createMemoryStore([{ alias: "aws", content: "# AWS" }]);
+
+    const result = await syncSkills({
+      allowEmptySource: true,
+      from: createMemoryStore(),
+      to,
+    });
+
+    expect(result.removed).toEqual(["aws"]);
+    await expect(to.list()).resolves.toEqual([]);
   });
 
   it("returns empty lists for two empty stores", async () => {

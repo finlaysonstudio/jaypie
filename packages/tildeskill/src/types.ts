@@ -100,6 +100,8 @@ export interface DynamoDbStoreOptions {
  * Options for syncSkills
  */
 export interface SyncSkillsOptions {
+  /** Allow an empty `from` to remove every record in `to` (default false) */
+  allowEmptySource?: boolean;
   /** Source store; its records are the desired state */
   from: SkillStore;
   /** Destination store; receives puts and deletes */

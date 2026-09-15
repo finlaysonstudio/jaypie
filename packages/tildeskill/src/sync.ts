@@ -1,3 +1,5 @@
+import { ConfigurationError } from "@jaypie/errors";
+
 import { hashSkill } from "./core/records";
 import type { SkillRecord, SyncSkillsOptions, SyncSkillsResult } from "./types";
 
@@ -9,14 +11,26 @@ import type { SkillRecord, SyncSkillsOptions, SyncSkillsResult } from "./types";
  * - Records whose `hashSkill` matches are not written (`unchanged`).
  * - Records in `to` that are missing from `from` are deleted (`removed`).
  *
+ * An empty `from` with a non-empty `to` throws `ConfigurationError` before
+ * writing, since a misconfigured source (for example, a markdown store pointed
+ * at a missing directory) would otherwise remove every record. Pass
+ * `allowEmptySource: true` to empty `to` on purpose.
+ *
  * Aliases are compared exactly as each store's `list()` surfaces them. Each
  * result list is sorted by alias.
  */
 export async function syncSkills({
+  allowEmptySource = false,
   from,
   to,
 }: SyncSkillsOptions): Promise<SyncSkillsResult> {
   const [source, target] = await Promise.all([from.list(), to.list()]);
+
+  if (!allowEmptySource && source.length === 0 && target.length > 0) {
+    throw new ConfigurationError(
+      `syncSkills source is empty and would remove all ${target.length} destination records; pass allowEmptySource: true to proceed`,
+    );
+  }
 
   const result: SyncSkillsResult = {
     added: [],
