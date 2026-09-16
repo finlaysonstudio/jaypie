@@ -53,6 +53,47 @@ new JaypieDistribution(this, "Dist", {
 Cost: $5/month per WebACL + $1/month per rule + $0.60 per million requests. That
 cost is why WAF is opt-in; set `waf: true` (or a config object) to opt in.
 
+## Log bucket
+
+The construct-created WAF log bucket blocks all public access, enforces SSL, is
+versioned, uses SSE-S3, retains objects for `logRetention` (365 days by
+default), and carries `RemovalPolicy.RETAIN` with no auto-delete. It survives
+stack deletion; delete it by hand when tearing an environment down.
+
+CloudFormation owns the whole bucket policy, including the two
+`delivery.logs.amazonaws.com` delivery statements. A policy statement added to
+that bucket out of band (console, CLI, another stack) is discarded on the next
+deploy.
+
+A consumer-supplied `logBucket` is used as given: it needs its own hardening and
+its own delivery policy.
+
+## Redact headers from WAF logs
+
+WAF logs record every request header. `redactedHeaders` names the headers to
+strip:
+
+```typescript
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { name: "api", redactedHeaders: ["authorization", "x-session-token"] },
+});
+```
+
+Default: `["authorization", "cookie", "x-amz-content-sha256", "x-api-key"]`.
+
+- A supplied list **replaces** the default; it does not merge. Include the
+  defaults that still apply.
+- `redactedHeaders: []` redacts nothing and omits `RedactedFields` entirely.
+- `x-amz-content-sha256` is in the default because
+  `originAccessControl` requires clients to send a SHA-256 of the request body.
+  For a low-entropy body that hash is a body fingerprint.
+- `redactedFields` passes `wafv2.CfnLoggingConfiguration.FieldToMatchProperty`
+  entries (query string, URI path, JSON body) through and layers on top of
+  `redactedHeaders` rather than replacing it.
+- WAF caps the combined list at 100 entries; exceeding it throws a
+  `ConfigurationError` at synth.
+
 ## Override specific managed rule actions
 
 Flip a named sub-rule from `block` to `count` everywhere (e.g. allow large

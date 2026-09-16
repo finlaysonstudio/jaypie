@@ -42,14 +42,16 @@ new JaypieWebDeploymentBucket(this, "Web", {
 | `defaultBehavior` | `Partial<BehaviorOptions>` | undefined — merged over the construct's default behavior; keys given win |
 | `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
 | `logBucket` | `IBucket \| string \| { exportName } \| true` | undefined — creates a new bucket if `destination !== false` |
+| `logRetention` | `Duration \| number` | `Duration.days(365)` — retention for the log buckets the construct creates |
 | `name` | `string` | `constructEnvName(component)` |
+| `originAccessControl` | `boolean` | `false` — serve the bucket privately through the S3 REST endpoint with CloudFront OAC |
 | `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |
 | `roleTag` | `string` | `CDK.ROLE.HOSTING` |
 | `securityHeaders` | `boolean \| SecurityHeadersOverrides` | `true` |
 | `spa` | `boolean` | `false` — viewer-request rewrite of extension-less URIs to `/index.html` |
 | `waf` | `boolean \| JaypieWebDeploymentBucketWafConfig` | `false` (when enabled, WAF name defaults to construct id) |
 
-Also accepts all `s3.BucketProps` — the bucket defaults to `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` — which renders an SPA deep link but answers 404; see [Single-Page App](#single-page-app).
+Also accepts all `s3.BucketProps`. With `originAccessControl: false` (the default) the bucket is a public S3 website: `autoDeleteObjects: true`, `publicReadAccess: true`, `websiteIndexDocument: "index.html"`, `websiteErrorDocument: "index.html"` — which renders an SPA deep link but answers 404; see [Single-Page App](#single-page-app). With `originAccessControl: true` the bucket is private; see [Origin Access Control](#origin-access-control).
 
 ### Bucket Name
 
@@ -67,6 +69,7 @@ Changing `component` or `name` on a deployed stack renames the bucket, which rep
 - Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`. `CACHING_DISABLED` outside production; `CACHING_OPTIMIZED` in production (`isProductionEnv()`), so hashed assets get edge cache. The response headers policy sets `Cache-Control: no-store` so browsers still revalidate.
 - No `/*` behavior is created. Paths registered afterward with `distribution.addBehavior("/app/*", origin)` are evaluated ahead of the default behavior and match in every environment — a static site and a Lambda surface can share one distribution.
 - Access logs land in a CloudFront log bucket with Datadog forwarding by default. Set `destination: false` to skip notifications, or pass `logBucket: <existing>` to reuse a bucket.
+- The construct-created log buckets block all public access, enforce SSL, are versioned, use SSE-S3, retain objects for `logRetention` (365 days by default), and carry `RemovalPolicy.RETAIN` with no auto-delete. They survive stack deletion; delete them by hand when tearing an environment down.
 
 ```typescript
 const web = new JaypieWebDeploymentBucket(this, "Web", { host, zone });
@@ -106,6 +109,27 @@ new JaypieWebDeploymentBucket(this, "App", {
 - The function is named `constructEnvName("<component>-spa")`, so `component` disambiguates two instances in one account exactly as it does the bucket name.
 - Exposed as `.spaFunction`. Works without `host` and `zone`, so a deep link resolves on the CloudFront default domain before DNS is wired.
 - Combining `spa: true` with a caller-supplied **viewer-request** association throws `ConfigurationError` at synth; CloudFront permits one function per event type. Other event types (for example viewer-response) compose, with the rewrite appended last.
+
+### Origin Access Control
+
+The default bucket is a public S3 website endpoint. CloudFront cannot use origin access control against a website endpoint, so the bucket stays readable around CloudFront and the WAF.
+
+`originAccessControl: true` serves the bucket privately:
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", {
+  host,
+  originAccessControl: true,
+  spa: true,
+  zone,
+});
+```
+
+- The bucket gets `BlockPublicAccess.BLOCK_ALL` and `enforceSSL: true`, with no ACL, no public read, and no website configuration.
+- The default behavior uses `origins.S3BucketOrigin.withOriginAccessControl(bucket)`, and the distribution sets `defaultRootObject: "index.html"`.
+- Combining it with `publicReadAccess: true`, `websiteIndexDocument`, or `websiteErrorDocument` through `bucketProps` throws `ConfigurationError` at synth. Other bucket props still compose.
+- **Pair it with `spa: true`.** The REST endpoint has no error document, and OAC grants only `s3:GetObject`, so a miss returns `403 AccessDenied` rather than the app shell. The SPA function rewrites extension-less deep links before they reach the origin, so they never miss.
+- `isWebsite` is `false` and `bucketWebsiteUrl` no longer addresses a live endpoint.
 
 ### Security Headers
 

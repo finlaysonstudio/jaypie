@@ -72,6 +72,21 @@ const forwarderFunction = resolveDatadogForwarderFunction(this);
 
 This imports the Lambda via `Fn.importValue("account-datadog-forwarder")` and caches per scope (WeakMap), so multiple calls in the same stack return the same reference.
 
+## Invoke Permissions
+
+The forwarder ARN is always an unresolved token: a cross-stack export or a nested-stack output. `lambda.Function.fromFunctionArn` on a token ARN produces an import with an unknown environment, and `addPermission()` on such an import is a silent no-op that only emits an `UnclearLambdaEnvironment` warning. Every trigger wired to the forwarder then deploys with no invoke permission, and S3 rejects the notification configuration because it cannot validate the destination.
+
+Both import sites use `lambda.Function.fromFunctionAttributes(scope, id, { functionArn, sameEnvironment: true })`. The flag is correct here because the forwarder is always in the same account and region as its consumers.
+
+`JaypieDatadogForwarder` acknowledges `@aws-cdk/aws-events:ruleUnresolvedEnvironment` on its own `CloudFormationEventsRule`. Acknowledgements resolve by construct path, so a consumer creating a rule that targets `forwarder.forwarderFunction` sees that warning on their own rule and should acknowledge it with the same justification:
+
+```typescript
+Annotations.of(rule).acknowledgeWarning(
+  "@aws-cdk/aws-events:ruleUnresolvedEnvironment",
+  "The Datadog forwarder is always in the same account and region",
+);
+```
+
 ### For Log Subscription Filters
 
 Use `resolveDatadogLoggingDestination` to get a `LambdaDestination`:
