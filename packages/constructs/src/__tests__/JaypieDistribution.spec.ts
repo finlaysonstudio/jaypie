@@ -839,7 +839,7 @@ describe("JaypieDistribution", () => {
         LifecycleConfiguration: {
           Rules: Match.arrayWith([
             Match.objectLike({
-              ExpirationInDays: 90,
+              ExpirationInDays: 365,
               Status: "Enabled",
             }),
           ]),
