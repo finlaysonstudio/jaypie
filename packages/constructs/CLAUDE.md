@@ -301,9 +301,21 @@ new JaypieDistribution(this, "Dist", {
 });
 ```
 
+#### Log Buckets
+
+The CloudFront access log bucket and WAF log bucket these constructs create block all public access, enforce SSL, are versioned, use SSE-S3, expire objects after `logRetention` (365 days by default), and carry `RemovalPolicy.RETAIN` with no auto-delete. They survive stack deletion. `waf.logRetention` overrides the construct's `logRetention` for the WAF bucket alone. CloudFormation owns the WAF bucket policy, including the `delivery.logs.amazonaws.com` statements, so a statement added out of band is discarded on the next deploy.
+
+#### Origin Access Control
+
+`originAccessControl: true` closes the gap around CloudFront and the WAF on both constructs. It is opt-in; the defaults are unchanged.
+
+On `JaypieDistribution` with an `IFunction` handler, the Function URL becomes `AWS_IAM`, the origin becomes `FunctionUrlOrigin.withOriginAccessControl`, and the construct adds the `lambda:InvokeFunction` permission that `withOriginAccessControl` omits. Clients must then send the body SHA-256 in `x-amz-content-sha256` on POST and PUT; salt a low-entropy body with a nonce so the hash is not reversible. Setting the prop with a handler that supplies its own Function URL or origin warns (`@jaypie/constructs:originAccessControlIgnored`).
+
+On `JaypieWebDeploymentBucket`, the bucket becomes private (`BLOCK_ALL`, `enforceSSL`, no website configuration) and is served through `S3BucketOrigin.withOriginAccessControl` with `defaultRootObject: "index.html"`. Pair it with `spa: true`: the REST endpoint has no error document and OAC grants only `s3:GetObject`, so a miss returns 403 rather than the app shell.
+
 #### WAF (Web Application Firewall)
 
-`JaypieDistribution` attaches a WAFv2 WebACL when `waf` is set. WAF is off by default; `waf: true` enables AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limiting (2000/5min), and WAF logging to S3 with Datadog forwarding. `JaypieWebDeploymentBucket` follows the same default.
+`JaypieDistribution` attaches a WAFv2 WebACL when `waf` is set. WAF logs always redact `authorization`, `cookie`, `x-amz-content-sha256`, and `x-api-key`; `redactedHeaders` merges with that list rather than replacing it, and `redactedFields` passes query string, URI path, and JSON body matchers through. WAF is off by default; `waf: true` enables AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, IP rate limiting (2000/5min), and WAF logging to S3 with Datadog forwarding. `JaypieWebDeploymentBucket` follows the same default.
 
 ```typescript
 // Default: no WAF
@@ -328,6 +340,12 @@ new JaypieDistribution(this, "Dist", {
 new JaypieDistribution(this, "Dist", {
   handler,
   waf: { name: "api", logBucket: false },
+});
+
+// Redact extra headers and keep WAF logs longer than access logs
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { logRetention: 400, name: "api", redactedHeaders: ["x-session-token"] },
 });
 
 // Override specific managed rule actions (e.g., allow large request bodies)
@@ -566,6 +584,8 @@ Note: `JaypieDynamoDb` uses its own `IndexDefinition` type for GSI configuration
 `JaypieLambda` `tables` (and `JaypieMigration`, which wraps it) grants `grantReadWriteData` plus `dynamodb:Query` and `dynamodb:Scan` on `${tableArn}/index/*`. CDK adds index ARNs to grants only for indexes declared in CDK, so the explicit grant covers indexes on imported tables (#546).
 
 CDK owns indexes (#552). `JaypieDynamoDb` sorts `indexes` by resolved name so `indexes: getAllRegisteredIndexes()` synthesizes the same template regardless of registry order, and exposes the sorted list as `indexes`. `JaypieMigration` grants only `DescribeTable`, `DescribeTimeToLive`, and `DescribeContinuousBackups`, and warns at synth (`@jaypie/constructs:migrationTableWithoutIndexes`) when a `JaypieDynamoDb` in `tables` declares no indexes. A GSI created outside the template blocks every later CloudFormation update to the table, so per-build tags from `constructTagger` and `stackSha` apply to tables like any other resource.
+
+`JaypieMigration` forwards `logGroup`, `logRetention`, and `reservedConcurrentExecutions` to the wrapped `JaypieLambda` (#565). Pass `logGroup` when a compliance baseline requires a KMS-encrypted group or 12-month retention; `logRetention` is inert when `logGroup` is supplied (#568). The migration Lambda serves as both `onEventHandler` and `isCompleteHandler`, so `reservedConcurrentExecutions: 0` throws at synth.
 
 TTL is enabled on the `ttl` attribute by default (matching `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`). Pass `timeToLiveAttribute: "<name>"` to use a different attribute, or `timeToLiveAttribute: false` to disable TTL. The construct attribute name and the runtime write attribute must match, or expiry silently never fires.
 
