@@ -1,4 +1,5 @@
 import { CDK } from "./constants";
+import { ConfigurationError } from "@jaypie/errors";
 import * as cdk from "aws-cdk-lib";
 import { CfnStack } from "aws-cdk-lib";
 import { Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
@@ -12,6 +13,10 @@ import { extendDatadogRole } from "./helpers/extendDatadogRole";
 const DATADOG_FORWARDER_TEMPLATE_URL =
   "https://datadog-cloudformation-template.s3.amazonaws.com/aws/forwarder/latest.yaml";
 const DEFAULT_RESERVED_CONCURRENCY = "10";
+const RULE_UNRESOLVED_ENVIRONMENT_WARNING =
+  "@aws-cdk/aws-events:ruleUnresolvedEnvironment";
+const SAME_ENVIRONMENT_JUSTIFICATION =
+  "The Datadog forwarder is a nested stack in this stack, so it is always in the same account and region.";
 
 export interface JaypieDatadogForwarderProps {
   /**
@@ -134,7 +139,7 @@ export class JaypieDatadogForwarder extends Construct {
 
     // Validate required parameters
     if (!datadogApiKey) {
-      throw new Error(
+      throw new ConfigurationError(
         "Datadog API key is required. Provide via datadogApiKey prop or CDK_ENV_DATADOG_API_KEY environment variable.",
       );
     }
@@ -164,10 +169,18 @@ export class JaypieDatadogForwarder extends Construct {
     }
 
     // Extract forwarder function from stack outputs
-    this.forwarderFunction = lambda.Function.fromFunctionArn(
+    // sameEnvironment is required: the ARN is an unresolved nested stack output,
+    // so CDK cannot infer the environment and addPermission() would silently do
+    // nothing, leaving every trigger without invoke permission.
+    this.forwarderFunction = lambda.Function.fromFunctionAttributes(
       this,
       "Function",
-      this.cfnStack.getAtt("Outputs.DatadogForwarderArn").toString(),
+      {
+        functionArn: this.cfnStack
+          .getAtt("Outputs.DatadogForwarderArn")
+          .toString(),
+        sameEnvironment: true,
+      },
     );
 
     // Extend Datadog role with custom permissions if enabled
@@ -187,6 +200,12 @@ export class JaypieDatadogForwarder extends Construct {
           }),
         ],
       });
+
+      // The forwarder ARN is a token, so the rule cannot compare environments
+      cdk.Annotations.of(this.eventsRule).acknowledgeWarning(
+        RULE_UNRESOLVED_ENVIRONMENT_WARNING,
+        SAME_ENVIRONMENT_JUSTIFICATION,
+      );
 
       // Add tags to events rule
       cdk.Tags.of(this.eventsRule).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);

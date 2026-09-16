@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/constructs",
-  "version": "1.2.87",
+  "version": "1.2.88",
   "description": "CDK constructs for Jaypie applications",
   "repository": {
     "type": "git",

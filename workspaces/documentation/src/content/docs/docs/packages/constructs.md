@@ -207,6 +207,27 @@ hostname dark until the next deploy that touches it.
 | `streaming` | `boolean` | Lambda response streaming |
 | `waf` | `boolean` \| `JaypieWafConfig` | WAFv2 WebACL (default disabled) |
 | `securityHeaders` | `boolean` \| overrides | Security response headers (default enabled) |
+| `logRetention` | `Duration` \| `number` | Retention for the log buckets this construct creates (default 365 days) |
+| `originAccessControl` | `boolean` | Make CloudFront the only caller of the Function URL (default disabled) |
+
+### Origin Access Control
+
+With an `IFunction` handler, the Function URL is `AuthType: NONE` by default, so the Lambda is invokable around CloudFront and the WAF. `originAccessControl: true` creates an `AWS_IAM` Function URL, uses `FunctionUrlOrigin.withOriginAccessControl`, and adds the `lambda:InvokeFunction` permission Lambda requires alongside `lambda:InvokeFunctionUrl`:
+
+```typescript
+new JaypieDistribution(this, "Distribution", {
+  handler,
+  originAccessControl: true,
+});
+```
+
+Clients must then send the body SHA-256 in `x-amz-content-sha256` on POST and PUT. For a body carrying low-entropy secrets, salt it with a nonce so the hash is not reversible; that header is redacted from WAF logs by default.
+
+### Log Buckets
+
+The CloudFront access log bucket and WAF log bucket this construct creates block all public access, enforce SSL, are versioned, use SSE-S3, expire objects after `logRetention`, and carry `RemovalPolicy.RETAIN` with no auto-delete. They survive stack deletion. `waf.logRetention` overrides the retention for the WAF bucket alone.
+
+WAF logs always redact `authorization`, `cookie`, `x-amz-content-sha256`, and `x-api-key`. `waf.redactedHeaders` merges with that list rather than replacing it, and `waf.redactedFields` passes query string, URI path, and JSON body matchers through.
 
 ## JaypieWebDeploymentBucket
 
@@ -259,6 +280,21 @@ new JaypieWebDeploymentBucket(this, "Web", {
   },
 });
 ```
+
+### Origin Access Control
+
+The bucket is a public S3 website endpoint by default, which CloudFront cannot front with origin access control. `originAccessControl: true` serves it privately through the S3 REST endpoint instead:
+
+```typescript
+new JaypieWebDeploymentBucket(this, "Web", {
+  host,
+  originAccessControl: true,
+  spa: true,
+  zone,
+});
+```
+
+The bucket gets `BLOCK_ALL` and `enforceSSL` with no ACL, no public read, and no website configuration, and the distribution sets `defaultRootObject: "index.html"`. Pair it with `spa: true`: the REST endpoint has no error document and OAC grants only `s3:GetObject`, so a miss returns 403 rather than the app shell.
 
 ### Single-Page App
 

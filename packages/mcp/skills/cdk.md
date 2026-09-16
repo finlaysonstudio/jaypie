@@ -440,8 +440,50 @@ KnownBadInputsRuleSet, IP rate limiting, and WAF logging to S3 with Datadog
 forwarding.
 
 See **`skill("waf")`** for configuration: `rateLimitPerIp`, `webAclArn`,
-`logBucket`, `managedRuleOverrides`, `managedRuleScopeDowns`, the `allow`
-path-scoped relaxation prop, and the rule-name ↔ label casing trap.
+`logBucket`, `logRetention`, `managedRuleOverrides`, `managedRuleScopeDowns`,
+`redactedFields`, `redactedHeaders`, the `allow` path-scoped relaxation prop,
+and the rule-name ↔ label casing trap.
+
+WAF logs always redact `authorization`, `cookie`, `x-amz-content-sha256`, and
+`x-api-key`. A `redactedHeaders` list merges with that default rather than
+replacing it, so adding a header can only ever redact more.
+
+## Origin Access Control
+
+`JaypieDistribution` with an `IFunction` handler creates a Function URL with
+`authType: NONE`, so the Lambda is invokable around CloudFront and the WAF.
+`originAccessControl: true` makes CloudFront the only caller:
+
+```typescript
+new JaypieDistribution(this, "Dist", {
+  handler,
+  originAccessControl: true,
+});
+```
+
+- The Function URL becomes `AWS_IAM`, the origin becomes
+  `origins.FunctionUrlOrigin.withOriginAccessControl(...)`, and the construct
+  adds the `lambda:InvokeFunction` permission that `withOriginAccessControl`
+  omits (Lambda requires both it and `lambda:InvokeFunctionUrl`).
+- **Client requirement:** with OAC, Lambda rejects a POST or PUT unless the
+  client sends the body SHA-256 in `x-amz-content-sha256`. For a body carrying
+  low-entropy secrets, salt it with a nonce so the hash is not reversible. That
+  header is redacted from WAF logs by default.
+- The prop applies only to the `IFunction` path. A caller-supplied
+  `IFunctionUrl` or `IOrigin` owns its own auth; setting the prop there warns
+  at synth (`@jaypie/constructs:originAccessControlIgnored`).
+- `JaypieWebDeploymentBucket` has its own `originAccessControl` prop for the S3
+  case; see `skill("web")`.
+
+## Importing a Lambda by Token ARN
+
+`lambda.Function.fromFunctionArn` on an ARN that is a token (`Fn.importValue`,
+a nested-stack output) yields an import with an unresolved environment.
+`addPermission()` on it is a silent no-op that only warns
+(`UnclearLambdaEnvironment`), so every trigger deploys without invoke
+permission. Use
+`lambda.Function.fromFunctionAttributes(scope, id, { functionArn, sameEnvironment: true })`
+whenever the function is known to be in the same account and region.
 
 ## Organization Trail Security Baseline
 

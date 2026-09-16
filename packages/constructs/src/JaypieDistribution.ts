@@ -1,4 +1,12 @@
-import { Duration, Fn, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import {
+  Annotations,
+  Duration,
+  Fn,
+  Lazy,
+  RemovalPolicy,
+  Stack,
+  Tags,
+} from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -9,11 +17,13 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
 import * as wafv2 from "aws-cdk-lib/aws-wafv2";
 import { Construct } from "constructs";
+import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 import {
   assertValidWafRuleNames,
   constructEnvName,
+  constructLogBucket,
   constructWafLogBucketName,
   envHostname,
   HostConfig,
@@ -31,6 +41,57 @@ const DEFAULT_MANAGED_RULES = [
   "AWSManagedRulesCommonRuleSet",
   "AWSManagedRulesKnownBadInputsRuleSet",
 ];
+
+/**
+ * Request headers always redacted from WAF logs. A `waf` config's
+ * `redactedHeaders` merges with this list rather than replacing it, so adding
+ * a header can only ever redact more. `x-amz-content-sha256` is included
+ * because origin access control requires clients to send a hash of the request
+ * body; for a low-entropy body an unredacted hash fingerprints the body.
+ */
+export const DEFAULT_WAF_REDACTED_HEADERS = [
+  "authorization",
+  "cookie",
+  "x-amz-content-sha256",
+  "x-api-key",
+];
+
+const WARNING_ORIGIN_ACCESS_CONTROL_IGNORED =
+  "@jaypie/constructs:originAccessControlIgnored";
+
+/** AWS WAF accepts at most 100 redacted fields per logging configuration. */
+const WAF_REDACTED_FIELDS_LIMIT = 100;
+
+/**
+ * Build the `redactedFields` list for a WAF logging configuration. The default
+ * headers come first, then any caller-supplied headers not already covered,
+ * then raw field matchers. Header names are compared case-insensitively, as
+ * WAF matches them.
+ */
+export function resolveWafRedactedFields({
+  redactedFields = [],
+  redactedHeaders = [],
+}: {
+  redactedFields?: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[];
+  redactedHeaders?: string[];
+} = {}): wafv2.CfnLoggingConfiguration.FieldToMatchProperty[] {
+  const names = [...DEFAULT_WAF_REDACTED_HEADERS];
+  for (const name of redactedHeaders) {
+    if (!names.some((known) => known.toLowerCase() === name.toLowerCase())) {
+      names.push(name);
+    }
+  }
+  const fields: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[] = [
+    ...names.map((name) => ({ singleHeader: { Name: name } })),
+    ...redactedFields,
+  ];
+  if (fields.length > WAF_REDACTED_FIELDS_LIMIT) {
+    throw new ConfigurationError(
+      `WAF logging accepts at most ${WAF_REDACTED_FIELDS_LIMIT} redacted fields; received ${fields.length}`,
+    );
+  }
+  return fields;
+}
 
 /**
  * Reduces a hostname to characters legal in a CDK construct ID.
@@ -124,10 +185,35 @@ export interface JaypieWafConfig {
   managedRules?: string[];
 
   /**
+   * Retention for the WAF log bucket this construct creates. Falls back to the
+   * construct's `logRetention` when unset. Has no effect on a caller-supplied
+   * `logBucket`.
+   */
+  logRetention?: Duration | number;
+
+  /**
    * Rate limit per IP per 5-minute window
    * @default 2000
    */
   rateLimitPerIp?: number;
+
+  /**
+   * Additional request fields redacted from WAF logs, passed through to the
+   * logging configuration verbatim. Layers on top of the redacted headers.
+   * AWS WAF accepts at most 100 redacted fields in total.
+   *
+   * @example
+   * redactedFields: [{ queryString: {} }, { uriPath: {} }]
+   */
+  redactedFields?: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[];
+
+  /**
+   * Extra request header names redacted from WAF logs. Merges with
+   * `DEFAULT_WAF_REDACTED_HEADERS` (`authorization`, `cookie`,
+   * `x-amz-content-sha256`, `x-api-key`) rather than replacing it, so the
+   * defaults are always redacted. Matched case-insensitively.
+   */
+  redactedHeaders?: string[];
 
   /**
    * Path-scoped relaxations layered on top of the default managed-rule groups.
@@ -219,8 +305,22 @@ export interface JaypieDistributionProps extends Omit<
    */
   logBucket?: s3.IBucket | string | { exportName: string } | true;
   /**
+   * Retention for log buckets this construct creates: the CloudFront access
+   * log bucket and the WAF log bucket. Accepts a `Duration` or a number of
+   * days. Has no effect on a bucket supplied through `logBucket` or
+   * `waf.logBucket`.
+   *
+   * The default satisfies the 12-month audit log retention in PCI DSS v4.0.1
+   * 10.5.1. Objects transition to infrequent access after 30 days whenever
+   * retention exceeds 30 days.
+   *
+   * @default Duration.days(365)
+   */
+  logRetention?: Duration | number;
+  /**
    * The origin handler - can be an IOrigin, IFunctionUrl, or IFunction
    * If IFunction, a FunctionUrl will be created with auth NONE
+   * (or AWS_IAM when `originAccessControl` is true)
    */
   handler?: cloudfront.IOrigin | lambda.IFunctionUrl | lambda.IFunction;
   /**
@@ -256,6 +356,24 @@ export interface JaypieDistributionProps extends Omit<
    * @default false
    */
   streaming?: boolean;
+  /**
+   * Restrict the created Function URL to CloudFront using origin access
+   * control (OAC). Applies only when `handler` is an `IFunction`, where this
+   * construct owns the Function URL.
+   *
+   * - `true`: create the Function URL with `AWS_IAM` auth, front it with
+   *   `FunctionUrlOrigin.withOriginAccessControl`, and grant CloudFront both
+   *   `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction`
+   * - `false`: create the Function URL with `NONE` auth, leaving it publicly
+   *   invokable around CloudFront and the WAF
+   *
+   * Clients must send the SHA-256 of the request body in `x-amz-content-sha256`
+   * on POST and PUT: Lambda rejects a signed request without it. Salt
+   * low-entropy bodies with a nonce so the hash is not reversible.
+   *
+   * @default false
+   */
+  originAccessControl?: boolean;
   /**
    * Origin read timeout - how long CloudFront waits for a response from the origin.
    * This is the maximum time allowed for the origin to respond.
@@ -340,6 +458,8 @@ export class JaypieDistribution
       handler,
       host: propsHost,
       logBucket: logBucketProp,
+      logRetention,
+      originAccessControl = false,
       originReadTimeout = Duration.seconds(CDK.DURATION.CLOUDFRONT_API),
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag = CDK.ROLE.API,
@@ -444,20 +564,48 @@ export class JaypieDistribution
       if (this.isIFunction(handler)) {
         // Create FunctionUrl for the Lambda function
         const functionUrl = new lambda.FunctionUrl(this, "FunctionUrl", {
+          authType: originAccessControl
+            ? lambda.FunctionUrlAuthType.AWS_IAM
+            : lambda.FunctionUrlAuthType.NONE,
           function: handler,
-          authType: lambda.FunctionUrlAuthType.NONE,
           invokeMode: resolvedInvokeMode,
         });
         this.functionUrl = functionUrl;
-        origin = new origins.FunctionUrlOrigin(functionUrl, {
-          readTimeout: originReadTimeout,
-        });
+        if (originAccessControl) {
+          origin = origins.FunctionUrlOrigin.withOriginAccessControl(
+            functionUrl,
+            { readTimeout: originReadTimeout },
+          );
+          // withOriginAccessControl grants lambda:InvokeFunctionUrl only.
+          // Lambda requires lambda:InvokeFunction as well. The distribution
+          // does not exist yet, so the source ARN resolves at synth time.
+          new lambda.CfnPermission(this, "DistributionInvokeFunction", {
+            action: "lambda:InvokeFunction",
+            functionName: handler.functionArn,
+            invokedViaFunctionUrl: true,
+            principal: "cloudfront.amazonaws.com",
+            sourceArn: Lazy.string({ produce: () => this.distributionArn }),
+          });
+        } else {
+          origin = new origins.FunctionUrlOrigin(functionUrl, {
+            readTimeout: originReadTimeout,
+          });
+        }
       } else if (this.isIFunctionUrl(handler)) {
         origin = new origins.FunctionUrlOrigin(handler, {
           readTimeout: originReadTimeout,
         });
       } else if (this.isIOrigin(handler)) {
         origin = handler;
+      }
+
+      // originAccessControl only shapes the Function URL this construct
+      // creates; a caller-supplied IFunctionUrl or IOrigin owns its own auth
+      if (originAccessControl && !this.isIFunction(handler)) {
+        Annotations.of(this).addWarningV2(
+          WARNING_ORIGIN_ACCESS_CONTROL_IGNORED,
+          "originAccessControl applies only to an IFunction handler. This handler supplies its own Function URL or origin, so the prop has no effect and that origin's auth is unchanged.",
+        );
       }
 
       // Set PROJECT_BASE_URL on the Lambda if host is resolved and handler supports it
@@ -597,28 +745,13 @@ export class JaypieDistribution
       // Use external bucket
       logBucket = this.resolveLogBucket(logBucketProp);
     } else if (destinationProp !== false) {
-      // Create new bucket (original behavior)
-      const createdBucket = new s3.Bucket(this, constructEnvName("LogBucket"), {
-        autoDeleteObjects: true,
-        lifecycleRules: [
-          {
-            expiration: Duration.days(90),
-            transitions: [
-              {
-                storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-                transitionAfter: Duration.days(30),
-              },
-            ],
-          },
-        ],
-        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-        removalPolicy: RemovalPolicy.DESTROY,
+      // Create new bucket
+      logBucket = constructLogBucket(this, {
+        id: constructEnvName("LogBucket"),
+        logRetention,
+        roleTag: CDK.ROLE.STORAGE,
+        serviceTag,
       });
-      Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
-      if (serviceTag) {
-        Tags.of(createdBucket).add(CDK.TAG.SERVICE, serviceTag);
-      }
-      logBucket = createdBucket;
     }
 
     // Add S3 notifications if we have a bucket and destination is not false
@@ -883,26 +1016,14 @@ export class JaypieDistribution
           ? constructEnvName(`${wafConfig.name}-WafLogBucket`)
           : constructEnvName("WafLogBucket");
         const wafLogBucketName = constructWafLogBucketName(wafConfig.name);
-        const createdBucket = new s3.Bucket(this, wafLogBucketId, {
+        const createdBucket = constructLogBucket(this, {
           bucketName: wafLogBucketName,
-          lifecycleRules: [
-            {
-              expiration: Duration.days(90),
-              transitions: [
-                {
-                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-                  transitionAfter: Duration.days(30),
-                },
-              ],
-            },
-          ],
-          objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-          removalPolicy: RemovalPolicy.RETAIN,
+          id: wafLogBucketId,
+          logRetention: wafConfig.logRetention ?? logRetention,
+          roleTag: CDK.ROLE.MONITORING,
+          serviceTag,
+          wafDelivery: true,
         });
-        Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
-        if (serviceTag) {
-          Tags.of(createdBucket).add(CDK.TAG.SERVICE, serviceTag);
-        }
 
         // Add Datadog forwarder notification
         if (destinationProp !== false) {
@@ -925,10 +1046,23 @@ export class JaypieDistribution
 
       if (wafLogBucket) {
         this.wafLogBucket = wafLogBucket;
-        new wafv2.CfnLoggingConfiguration(this, "WafLoggingConfig", {
-          logDestinationConfigs: [wafLogBucket.bucketArn],
-          resourceArn: resolvedWebAclArn,
-        });
+        const wafLoggingConfig = new wafv2.CfnLoggingConfiguration(
+          this,
+          "WafLoggingConfig",
+          {
+            logDestinationConfigs: [wafLogBucket.bucketArn],
+            redactedFields: resolveWafRedactedFields({
+              redactedFields: wafConfig.redactedFields,
+              redactedHeaders: wafConfig.redactedHeaders,
+            }),
+            resourceArn: resolvedWebAclArn,
+          },
+        );
+        // The logging configuration only references the bucket, so nothing
+        // orders it after the bucket policy carrying the log delivery grants
+        if (wafLogBucket instanceof s3.Bucket && wafLogBucket.policy) {
+          wafLoggingConfig.node.addDependency(wafLogBucket.policy);
+        }
       }
     }
 

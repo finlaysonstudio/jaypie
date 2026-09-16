@@ -1,5 +1,9 @@
 export { addDatadogLayers } from "./addDatadogLayers";
 export { constructEnvName } from "./constructEnvName";
+export {
+  constructLogBucket,
+  ConstructLogBucketOptions,
+} from "./constructLogBucket";
 export { constructName } from "./constructName";
 export { constructParameterName } from "./constructParameterName";
 export { constructStackName } from "./constructStackName";

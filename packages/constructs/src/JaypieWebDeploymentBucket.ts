@@ -29,6 +29,7 @@ import { CDK } from "./constants";
 import {
   assertValidWafRuleNames,
   constructEnvName,
+  constructLogBucket,
   constructWafLogBucketName,
   envHostname,
   githubOidcSubjects,
@@ -42,6 +43,7 @@ import {
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
 import {
   JaypieWafConfig,
+  resolveWafRedactedFields,
   SecurityHeadersOverrides,
 } from "./JaypieDistribution";
 import { JaypieHostedZone } from "./JaypieHostedZone";
@@ -163,6 +165,19 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    */
   logBucket?: s3.IBucket | string | { exportName: string } | true;
   /**
+   * Retention for log buckets this construct creates: the CloudFront access
+   * log bucket and the WAF log bucket. Accepts a `Duration` or a number of
+   * days. Has no effect on a bucket supplied through `logBucket` or
+   * `waf.logBucket`.
+   *
+   * The default satisfies the 12-month audit log retention in PCI DSS v4.0.1
+   * 10.5.1. Objects transition to infrequent access after 30 days whenever
+   * retention exceeds 30 days.
+   *
+   * @default Duration.days(365)
+   */
+  logRetention?: Duration | number;
+  /**
    * Optional bucket name
    */
   name?: string;
@@ -174,6 +189,26 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    * @default CDK_ENV_REPO_ORGANIZATION_ID || PROJECT_REPO_ORGANIZATION_ID
    */
   organizationId?: string;
+  /**
+   * Serve the bucket privately through the S3 REST endpoint with CloudFront
+   * origin access control instead of the public S3 website endpoint.
+   *
+   * When true the bucket blocks all public access, enforces SSL, carries no
+   * website configuration and no ACL, and the default behavior origin becomes
+   * `origins.S3BucketOrigin.withOriginAccessControl(bucket)`. CloudFront is
+   * then the only reader, so the WAF cannot be bypassed by addressing the
+   * bucket directly. The distribution gains `defaultRootObject: "index.html"`,
+   * which the website endpoint's index document used to provide.
+   *
+   * The S3 REST endpoint has no error document, so a deep link resolves only
+   * when `spa` (or an equivalent viewer-request rewrite) is enabled.
+   *
+   * Throws when `bucketProps` also asks for `publicReadAccess` or a website
+   * document, which origin access control cannot serve.
+   *
+   * @default false
+   */
+  originAccessControl?: boolean;
   /**
    * Trusted GitHub OIDC `sub` patterns for the deploy role. An array trusts
    * any one of them. Providing this creates the deploy role even when
@@ -269,8 +304,10 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       destination: destinationProp = true,
       host: propsHost,
       logBucket: logBucketProp,
+      logRetention,
       name: nameProp,
       organizationId: organizationIdProp,
+      originAccessControl: originAccessControlProp = false,
       repoRestriction: repoRestrictionProp,
       responseHeadersPolicy: responseHeadersPolicyProp,
       roleTag: roleTagProp,
@@ -346,17 +383,45 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       process.env.CDK_ENV_WEB_HOSTED_ZONE ||
       process.env.CDK_ENV_HOSTED_ZONE;
 
+    // Origin access control serves the bucket through the S3 REST endpoint, so
+    // the website configuration and the public read grant are not merely
+    // unnecessary but contradictory: either one leaves the bucket readable
+    // around CloudFront and the WAF. Fail at synth rather than deploy a bucket
+    // that is private in name only.
+    if (originAccessControlProp) {
+      if (bucketProps.publicReadAccess) {
+        throw new ConfigurationError(
+          "originAccessControl cannot be combined with publicReadAccess",
+        );
+      }
+      if (
+        bucketProps.websiteErrorDocument ||
+        bucketProps.websiteIndexDocument
+      ) {
+        throw new ConfigurationError(
+          "originAccessControl cannot be combined with a website document",
+        );
+      }
+    }
+
     // Create the S3 bucket
     this.bucket = new s3.Bucket(this, "DestinationBucket", {
-      accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       autoDeleteObjects: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
       bucketName: nameProp || constructEnvName(componentProp),
-      publicReadAccess: true,
       removalPolicy: RemovalPolicy.DESTROY,
       versioned: false,
-      websiteErrorDocument: "index.html",
-      websiteIndexDocument: "index.html",
+      ...(originAccessControlProp
+        ? {
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+            enforceSSL: true,
+          }
+        : {
+            accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
+            publicReadAccess: true,
+            websiteErrorDocument: "index.html",
+            websiteIndexDocument: "index.html",
+          }),
       ...bucketProps,
     });
 
@@ -569,24 +634,11 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     if (logBucketProp !== undefined) {
       accessLogBucket = this.resolveLogBucket(logBucketProp);
     } else if (destinationProp !== false) {
-      const createdBucket = new s3.Bucket(this, constructEnvName("LogBucket"), {
-        autoDeleteObjects: true,
-        lifecycleRules: [
-          {
-            expiration: Duration.days(90),
-            transitions: [
-              {
-                storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-                transitionAfter: Duration.days(30),
-              },
-            ],
-          },
-        ],
-        objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-        removalPolicy: RemovalPolicy.DESTROY,
+      accessLogBucket = constructLogBucket(this, {
+        id: constructEnvName("LogBucket"),
+        logRetention,
+        roleTag: CDK.ROLE.STORAGE,
       });
-      Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.STORAGE);
-      accessLogBucket = createdBucket;
     }
 
     if (accessLogBucket && destinationProp !== false && !isExternalLogBucket) {
@@ -649,7 +701,9 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         cachePolicy: isProductionEnv()
           ? cloudfront.CachePolicy.CACHING_OPTIMIZED
           : cloudfront.CachePolicy.CACHING_DISABLED,
-        origin: new origins.S3StaticWebsiteOrigin(this.bucket),
+        origin: originAccessControlProp
+          ? origins.S3BucketOrigin.withOriginAccessControl(this.bucket)
+          : new origins.S3StaticWebsiteOrigin(this.bucket),
         ...(resolvedResponseHeadersPolicy
           ? { responseHeadersPolicy: resolvedResponseHeadersPolicy }
           : {}),
@@ -657,6 +711,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         ...omitUndefined(defaultBehaviorProp),
         ...(functionAssociations.length ? { functionAssociations } : {}),
       },
+      ...(originAccessControlProp ? { defaultRootObject: "index.html" } : {}),
       ...(host && this.certificate
         ? { certificate: this.certificate, domainNames: [host] }
         : {}),
@@ -793,23 +848,13 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           `${wafConfig.name}-WafLogBucket`,
         );
         const wafLogBucketName = constructWafLogBucketName(wafConfig.name);
-        const createdBucket = new s3.Bucket(this, wafLogBucketId, {
+        const createdBucket = constructLogBucket(this, {
           bucketName: wafLogBucketName,
-          lifecycleRules: [
-            {
-              expiration: Duration.days(90),
-              transitions: [
-                {
-                  storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-                  transitionAfter: Duration.days(30),
-                },
-              ],
-            },
-          ],
-          objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-          removalPolicy: RemovalPolicy.RETAIN,
+          id: wafLogBucketId,
+          logRetention: wafConfig.logRetention ?? logRetention,
+          roleTag: CDK.ROLE.MONITORING,
+          wafDelivery: true,
         });
-        Tags.of(createdBucket).add(CDK.TAG.ROLE, CDK.ROLE.MONITORING);
 
         if (destinationProp !== false) {
           const lambdaDestination =
@@ -829,10 +874,23 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
 
       if (wafLogBucket) {
         (this as { wafLogBucket?: s3.IBucket }).wafLogBucket = wafLogBucket;
-        new wafv2.CfnLoggingConfiguration(this, "WafLoggingConfig", {
-          logDestinationConfigs: [wafLogBucket.bucketArn],
-          resourceArn: resolvedWebAclArn,
-        });
+        const wafLoggingConfig = new wafv2.CfnLoggingConfiguration(
+          this,
+          "WafLoggingConfig",
+          {
+            logDestinationConfigs: [wafLogBucket.bucketArn],
+            redactedFields: resolveWafRedactedFields({
+              redactedFields: wafConfig.redactedFields,
+              redactedHeaders: wafConfig.redactedHeaders,
+            }),
+            resourceArn: resolvedWebAclArn,
+          },
+        );
+        // The logging configuration only references the bucket, so nothing
+        // orders it after the bucket policy carrying the log delivery grants
+        if (wafLogBucket instanceof s3.Bucket && wafLogBucket.policy) {
+          wafLoggingConfig.node.addDependency(wafLogBucket.policy);
+        }
       }
     }
   }

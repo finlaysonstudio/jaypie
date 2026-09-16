@@ -22,9 +22,11 @@ export {
 } from "./JaypieDatadogForwarder";
 export { JaypieDatadogSecret } from "./JaypieDatadogSecret";
 export {
+  DEFAULT_WAF_REDACTED_HEADERS,
   JaypieDistribution,
   JaypieDistributionProps,
   JaypieWafConfig,
+  resolveWafRedactedFields,
   SecurityHeadersOverrides,
 } from "./JaypieDistribution";
 export { JaypieDnsRecord, JaypieDnsRecordProps } from "./JaypieDnsRecord";

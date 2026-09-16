@@ -40,11 +40,13 @@ export function resolveDatadogForwarderFunction(
   }
 
   // Create and cache the function
-  const func = lambda.Function.fromFunctionArn(
-    scope,
-    functionName,
-    cdk.Fn.importValue(importKey),
-  );
+  // sameEnvironment is required: the ARN is an unresolved token, so CDK cannot
+  // infer the environment and addPermission() would silently do nothing. The
+  // forwarder is always exported from the same account and region.
+  const func = lambda.Function.fromFunctionAttributes(scope, functionName, {
+    functionArn: cdk.Fn.importValue(importKey),
+    sameEnvironment: true,
+  });
   scopeCache.set(cacheKey, func);
 
   return func;

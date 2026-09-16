@@ -4,7 +4,9 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
 import { CDK } from "./constants";
+import { ConfigurationError } from "@jaypie/errors";
 import { JaypieDynamoDb } from "./JaypieDynamoDb";
 import { JaypieLambda } from "./JaypieLambda";
 import type { EnvironmentInput, SecretsArrayItem } from "./helpers/index.js";
@@ -27,8 +29,21 @@ export interface JaypieMigrationProps {
   environment?: Record<string, string> | (Record<string, string> | string)[];
   /** Lambda handler entry point */
   handler?: string;
+  /** Log group for the migration Lambda. Defaults to a group created by JaypieLambda. */
+  logGroup?: logs.ILogGroup;
+  /** Retention for the JaypieLambda-created log group. Ignored when logGroup is provided. */
+  logRetention?: logs.RetentionDays | number;
   /** Polling interval between isCompleteHandler invocations. Default: 60 seconds. */
   queryInterval?: cdk.Duration;
+  /**
+   * Reserved concurrency for the migration Lambda. Default: unreserved.
+   *
+   * The same Lambda serves as both `onEventHandler` and `isCompleteHandler`,
+   * so a reservation of 0 makes the migration undeployable and throws at
+   * synth. A reservation of 1 leaves no headroom if CloudFormation overlaps
+   * the onEvent invocation with a waiter poll.
+   */
+  reservedConcurrentExecutions?: number;
   /** Secrets to make available to the migration Lambda */
   secrets?: SecretsArrayItem[];
   /** DynamoDB tables to grant read/write access */
@@ -52,7 +67,10 @@ export class JaypieMigration extends Construct {
       dependencies = [],
       environment,
       handler = "index.handler",
+      logGroup,
+      logRetention,
       queryInterval = cdk.Duration.seconds(60),
+      reservedConcurrentExecutions,
       secrets = [],
       tables = [],
       timeout = cdk.Duration.minutes(15),
@@ -60,11 +78,22 @@ export class JaypieMigration extends Construct {
       variables,
     } = props;
 
+    // The migration Lambda is both onEventHandler and isCompleteHandler; a
+    // reservation of 0 blocks every invocation and the migration never runs
+    if (reservedConcurrentExecutions === 0) {
+      throw new ConfigurationError(
+        "JaypieMigration reservedConcurrentExecutions cannot be 0; the migration Lambda would never be invoked",
+      );
+    }
+
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
       code,
       description: "DynamoDB migration custom resource",
       environment,
       handler,
+      logGroup,
+      logRetention,
+      reservedConcurrentExecutions,
       roleTag: CDK.ROLE.PROCESSING,
       secrets,
       tables,

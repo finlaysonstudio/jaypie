@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ConfigurationError } from "@jaypie/errors";
 import { Duration, Stack } from "aws-cdk-lib";
 import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
 
 import { JaypieDynamoDb } from "../JaypieDynamoDb.js";
 import { JaypieMigration } from "../JaypieMigration.js";
@@ -313,6 +315,82 @@ describe("JaypieMigration", () => {
           }
         }
       }
+    });
+  });
+
+  describe("Log Group (issue #565)", () => {
+    it("forwards a provided logGroup to the wrapped Lambda", () => {
+      const stack = new Stack();
+      const logGroup = new logs.LogGroup(stack, "MigrationLogGroup", {
+        retention: logs.RetentionDays.ONE_YEAR,
+      });
+
+      const migration = new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        logGroup,
+      });
+
+      // JaypieLambda only creates its own "LogGroup" child when none is provided
+      expect(migration.lambda.node.tryFindChild("LogGroup")).toBeUndefined();
+
+      const template = Template.fromStack(stack);
+      const logGroupId = stack.resolve(logGroup.logGroupName);
+      const migrationLambda = Object.values(
+        template.findResources("AWS::Lambda::Function"),
+      ).find(
+        (resource: any) => resource.Properties?.Handler === "index.handler",
+      );
+
+      expect(migrationLambda?.Properties?.LoggingConfig?.LogGroup).toEqual(
+        logGroupId,
+      );
+    });
+
+    it("forwards logRetention to the Lambda log group", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        logRetention: logs.RetentionDays.ONE_YEAR,
+      });
+
+      const template = Template.fromStack(stack);
+      const retentions = Object.values(
+        template.findResources("AWS::Logs::LogGroup"),
+      ).map((resource: any) => resource.Properties?.RetentionInDays);
+
+      expect(retentions).toContain(365);
+    });
+
+    it("forwards reservedConcurrentExecutions to the wrapped Lambda", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        reservedConcurrentExecutions: 2,
+      });
+
+      const template = Template.fromStack(stack);
+      const migrationLambda = Object.values(
+        template.findResources("AWS::Lambda::Function"),
+      ).find(
+        (resource: any) => resource.Properties?.Handler === "index.handler",
+      );
+
+      expect(migrationLambda?.Properties?.ReservedConcurrentExecutions).toBe(2);
+    });
+
+    it("rejects reservedConcurrentExecutions of 0", () => {
+      const stack = new Stack();
+      expect(
+        () =>
+          new JaypieMigration(stack, "TestMigration", {
+            code: lambda.Code.fromInline("exports.handler = () => {}"),
+            handler: "index.handler",
+            reservedConcurrentExecutions: 0,
+          }),
+      ).toThrow(ConfigurationError);
     });
   });
 });
