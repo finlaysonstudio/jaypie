@@ -851,7 +851,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         const createdBucket = constructLogBucket(this, {
           bucketName: wafLogBucketName,
           id: wafLogBucketId,
-          logRetention,
+          logRetention: wafConfig.logRetention ?? logRetention,
           roleTag: CDK.ROLE.MONITORING,
           wafDelivery: true,
         });

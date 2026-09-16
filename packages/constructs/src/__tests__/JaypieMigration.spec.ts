@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ConfigurationError } from "@jaypie/errors";
 import { Duration, Stack } from "aws-cdk-lib";
 import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
@@ -378,6 +379,18 @@ describe("JaypieMigration", () => {
       );
 
       expect(migrationLambda?.Properties?.ReservedConcurrentExecutions).toBe(2);
+    });
+
+    it("rejects reservedConcurrentExecutions of 0", () => {
+      const stack = new Stack();
+      expect(
+        () =>
+          new JaypieMigration(stack, "TestMigration", {
+            code: lambda.Code.fromInline("exports.handler = () => {}"),
+            handler: "index.handler",
+            reservedConcurrentExecutions: 0,
+          }),
+      ).toThrow(ConfigurationError);
     });
   });
 });

@@ -444,9 +444,9 @@ See **`skill("waf")`** for configuration: `rateLimitPerIp`, `webAclArn`,
 `redactedFields`, `redactedHeaders`, the `allow` path-scoped relaxation prop,
 and the rule-name ↔ label casing trap.
 
-WAF logs redact `authorization`, `cookie`, `x-amz-content-sha256`, and
-`x-api-key` by default. A `redactedHeaders` list replaces that default rather
-than merging into it.
+WAF logs always redact `authorization`, `cookie`, `x-amz-content-sha256`, and
+`x-api-key`. A `redactedHeaders` list merges with that default rather than
+replacing it, so adding a header can only ever redact more.
 
 ## Origin Access Control
 
@@ -470,7 +470,8 @@ new JaypieDistribution(this, "Dist", {
   low-entropy secrets, salt it with a nonce so the hash is not reversible. That
   header is redacted from WAF logs by default.
 - The prop applies only to the `IFunction` path. A caller-supplied
-  `IFunctionUrl` or `IOrigin` owns its own auth.
+  `IFunctionUrl` or `IOrigin` owns its own auth; setting the prop there warns
+  at synth (`@jaypie/constructs:originAccessControlIgnored`).
 - `JaypieWebDeploymentBucket` has its own `originAccessControl` prop for the S3
   case; see `skill("web")`.
 

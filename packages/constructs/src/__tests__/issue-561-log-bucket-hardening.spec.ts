@@ -355,6 +355,32 @@ describe("Issue #561: default log bucket hardening", () => {
   });
 
   describe("Features", () => {
+    it("lets waf.logRetention override the construct logRetention", () => {
+      const template = synthDistribution({
+        logRetention: 30,
+        waf: { logRetention: 400, name: WAF_NAME },
+      });
+      const [, cloudFrontBucket] = findBucket(template);
+      const [, wafBucket] = findBucket(template, { waf: true });
+      expect(lifecycleRules(cloudFrontBucket)[0]!.ExpirationInDays).toBe(30);
+      expect(lifecycleRules(wafBucket)[0]!.ExpirationInDays).toBe(400);
+    });
+
+    it("lets waf.logRetention override the construct logRetention on the web bucket", () => {
+      const template = synthWeb({
+        logRetention: Duration.days(30),
+        waf: { logRetention: 400, name: WAF_NAME },
+      });
+      const [, wafBucket] = findBucket(template, { waf: true });
+      expect(lifecycleRules(wafBucket)[0]!.ExpirationInDays).toBe(400);
+    });
+
+    it("falls back to the construct logRetention when waf.logRetention is unset", () => {
+      const template = synthDistribution({ logRetention: 30 });
+      const [, wafBucket] = findBucket(template, { waf: true });
+      expect(lifecycleRules(wafBucket)[0]!.ExpirationInDays).toBe(30);
+    });
+
     it("creates no auto-delete custom resource at all for JaypieDistribution", () => {
       const template = synthDistribution();
       expect(

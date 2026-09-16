@@ -70,29 +70,33 @@ its own delivery policy.
 
 ## Redact headers from WAF logs
 
-WAF logs record every request header. `redactedHeaders` names the headers to
-strip:
+WAF logs record every request header. Jaypie always redacts
+`authorization`, `cookie`, `x-amz-content-sha256`, and `x-api-key`
+(`DEFAULT_WAF_REDACTED_HEADERS`). `redactedHeaders` names more:
 
 ```typescript
 new JaypieDistribution(this, "Dist", {
   handler,
-  waf: { name: "api", redactedHeaders: ["authorization", "x-session-token"] },
+  waf: { name: "api", redactedHeaders: ["x-session-token"] },
 });
 ```
 
-Default: `["authorization", "cookie", "x-amz-content-sha256", "x-api-key"]`.
-
-- A supplied list **replaces** the default; it does not merge. Include the
-  defaults that still apply.
-- `redactedHeaders: []` redacts nothing and omits `RedactedFields` entirely.
-- `x-amz-content-sha256` is in the default because
-  `originAccessControl` requires clients to send a SHA-256 of the request body.
-  For a low-entropy body that hash is a body fingerprint.
+- The list **merges** with the defaults rather than replacing them, so adding a
+  header can only ever redact more. There is no way to un-redact a default.
+- Names are compared case-insensitively, as WAF matches them, so naming a
+  default again does not duplicate it.
+- `x-amz-content-sha256` is in the default because `originAccessControl`
+  requires clients to send a SHA-256 of the request body. For a low-entropy body
+  that hash is a body fingerprint.
 - `redactedFields` passes `wafv2.CfnLoggingConfiguration.FieldToMatchProperty`
-  entries (query string, URI path, JSON body) through and layers on top of
-  `redactedHeaders` rather than replacing it.
+  entries (query string, URI path, JSON body) through and layers on top of the
+  redacted headers.
 - WAF caps the combined list at 100 entries; exceeding it throws a
   `ConfigurationError` at synth.
+
+`waf.logRetention` overrides the construct's `logRetention` for the WAF log
+bucket alone, so WAF logs and CloudFront access logs can keep different
+retention.
 
 ## Override specific managed rule actions
 

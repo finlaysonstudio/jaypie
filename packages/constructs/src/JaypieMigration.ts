@@ -6,6 +6,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { CDK } from "./constants";
+import { ConfigurationError } from "@jaypie/errors";
 import { JaypieDynamoDb } from "./JaypieDynamoDb";
 import { JaypieLambda } from "./JaypieLambda";
 import type { EnvironmentInput, SecretsArrayItem } from "./helpers/index.js";
@@ -34,7 +35,14 @@ export interface JaypieMigrationProps {
   logRetention?: logs.RetentionDays | number;
   /** Polling interval between isCompleteHandler invocations. Default: 60 seconds. */
   queryInterval?: cdk.Duration;
-  /** Reserved concurrency for the migration Lambda. Default: unreserved. */
+  /**
+   * Reserved concurrency for the migration Lambda. Default: unreserved.
+   *
+   * The same Lambda serves as both `onEventHandler` and `isCompleteHandler`,
+   * so a reservation of 0 makes the migration undeployable and throws at
+   * synth. A reservation of 1 leaves no headroom if CloudFormation overlaps
+   * the onEvent invocation with a waiter poll.
+   */
   reservedConcurrentExecutions?: number;
   /** Secrets to make available to the migration Lambda */
   secrets?: SecretsArrayItem[];
@@ -69,6 +77,14 @@ export class JaypieMigration extends Construct {
       totalTimeout = cdk.Duration.hours(2),
       variables,
     } = props;
+
+    // The migration Lambda is both onEventHandler and isCompleteHandler; a
+    // reservation of 0 blocks every invocation and the migration never runs
+    if (reservedConcurrentExecutions === 0) {
+      throw new ConfigurationError(
+        "JaypieMigration reservedConcurrentExecutions cannot be 0; the migration Lambda would never be invoked",
+      );
+    }
 
     this.lambda = new JaypieLambda(this, "MigrationLambda", {
       code,

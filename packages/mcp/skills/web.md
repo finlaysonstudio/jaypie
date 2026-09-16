@@ -42,7 +42,7 @@ new JaypieWebDeploymentBucket(this, "Web", {
 | `defaultBehavior` | `Partial<BehaviorOptions>` | undefined — merged over the construct's default behavior; keys given win |
 | `destination` | `LambdaDestination \| boolean` | `true` (Datadog forwarder for access-log bucket notifications) |
 | `logBucket` | `IBucket \| string \| { exportName } \| true` | undefined — creates a new bucket if `destination !== false` |
-| `logRetention` | `Duration \| number` | `Duration.days(365)` — retention for the log buckets the construct creates |
+| `logRetention` | `Duration \| number` | `Duration.days(365)` — retention for the log buckets the construct creates; `waf.logRetention` overrides it for the WAF bucket |
 | `name` | `string` | `constructEnvName(component)` |
 | `originAccessControl` | `boolean` | `false` — serve the bucket privately through the S3 REST endpoint with CloudFront OAC |
 | `responseHeadersPolicy` | `IResponseHeadersPolicy` | undefined — full override; bypasses default security headers |

@@ -134,20 +134,35 @@ describe("Issue #564: WAF logging redacted headers", () => {
         expect(redactedHeaderNames(template)).toContain("x-amz-content-sha256");
       });
 
-      it("replaces the default list with a custom redactedHeaders list", () => {
+      it("merges a custom redactedHeaders list with the defaults", () => {
         const template = synthDistribution({
           name: "custom",
           redactedHeaders: ["x-session-token"],
         });
-        expect(redactedHeaderNames(template)).toEqual(["x-session-token"]);
+        expect(redactedHeaderNames(template)).toEqual([
+          ...DEFAULT_WAF_REDACTED_HEADERS,
+          "x-session-token",
+        ]);
       });
 
-      it("redacts nothing when redactedHeaders is an empty array", () => {
+      it("redacts the defaults when redactedHeaders is an empty array", () => {
         const template = synthDistribution({
           name: "custom",
           redactedHeaders: [],
         });
-        expect(redactedFields(template)).toBeUndefined();
+        expect(redactedHeaderNames(template)).toEqual(
+          DEFAULT_WAF_REDACTED_HEADERS,
+        );
+      });
+
+      it("does not duplicate a default named again, ignoring case", () => {
+        const template = synthDistribution({
+          name: "custom",
+          redactedHeaders: ["Authorization", "x-api-key"],
+        });
+        expect(redactedHeaderNames(template)).toEqual(
+          DEFAULT_WAF_REDACTED_HEADERS,
+        );
       });
 
       it("appends a redactedFields passthrough after the headers", () => {
@@ -157,7 +172,9 @@ describe("Issue #564: WAF logging redacted headers", () => {
           redactedHeaders: ["x-api-key"],
         });
         expect(redactedFields(template)).toEqual([
-          { SingleHeader: { Name: "x-api-key" } },
+          ...DEFAULT_WAF_REDACTED_HEADERS.map((name) => ({
+            SingleHeader: { Name: name },
+          })),
           { QueryString: {} },
           { UriPath: {} },
         ]);
@@ -172,16 +189,21 @@ describe("Issue #564: WAF logging redacted headers", () => {
         );
       });
 
-      it("replaces the default list with a custom redactedHeaders list", () => {
+      it("merges a custom redactedHeaders list with the defaults", () => {
         const template = synthWebDeploymentBucket({
           redactedHeaders: ["x-session-token"],
         });
-        expect(redactedHeaderNames(template)).toEqual(["x-session-token"]);
+        expect(redactedHeaderNames(template)).toEqual([
+          ...DEFAULT_WAF_REDACTED_HEADERS,
+          "x-session-token",
+        ]);
       });
 
-      it("redacts nothing when redactedHeaders is an empty array", () => {
+      it("redacts the defaults when redactedHeaders is an empty array", () => {
         const template = synthWebDeploymentBucket({ redactedHeaders: [] });
-        expect(redactedFields(template)).toBeUndefined();
+        expect(redactedHeaderNames(template)).toEqual(
+          DEFAULT_WAF_REDACTED_HEADERS,
+        );
       });
 
       it("appends a redactedFields passthrough after the headers", () => {
@@ -190,7 +212,9 @@ describe("Issue #564: WAF logging redacted headers", () => {
           redactedHeaders: ["cookie"],
         });
         expect(redactedFields(template)).toEqual([
-          { SingleHeader: { Name: "cookie" } },
+          ...DEFAULT_WAF_REDACTED_HEADERS.map((name) => ({
+            SingleHeader: { Name: name },
+          })),
           { UriPath: {} },
         ]);
       });

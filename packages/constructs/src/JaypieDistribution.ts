@@ -1,4 +1,12 @@
-import { Duration, Fn, Lazy, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import {
+  Annotations,
+  Duration,
+  Fn,
+  Lazy,
+  RemovalPolicy,
+  Stack,
+  Tags,
+} from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -35,10 +43,11 @@ const DEFAULT_MANAGED_RULES = [
 ];
 
 /**
- * Request headers redacted from WAF logs when a `waf` config does not name its
- * own `redactedHeaders` list. `x-amz-content-sha256` is included because
- * origin access control requires clients to send a hash of the request body;
- * for a low-entropy body an unredacted hash fingerprints the body.
+ * Request headers always redacted from WAF logs. A `waf` config's
+ * `redactedHeaders` merges with this list rather than replacing it, so adding
+ * a header can only ever redact more. `x-amz-content-sha256` is included
+ * because origin access control requires clients to send a hash of the request
+ * body; for a low-entropy body an unredacted hash fingerprints the body.
  */
 export const DEFAULT_WAF_REDACTED_HEADERS = [
   "authorization",
@@ -47,23 +56,33 @@ export const DEFAULT_WAF_REDACTED_HEADERS = [
   "x-api-key",
 ];
 
+const WARNING_ORIGIN_ACCESS_CONTROL_IGNORED =
+  "@jaypie/constructs:originAccessControlIgnored";
+
 /** AWS WAF accepts at most 100 redacted fields per logging configuration. */
 const WAF_REDACTED_FIELDS_LIMIT = 100;
 
 /**
- * Build the `redactedFields` list for a WAF logging configuration. Header
- * names come first, in the order given, followed by any raw field matchers.
- * Returns undefined when nothing is redacted so the property is omitted.
+ * Build the `redactedFields` list for a WAF logging configuration. The default
+ * headers come first, then any caller-supplied headers not already covered,
+ * then raw field matchers. Header names are compared case-insensitively, as
+ * WAF matches them.
  */
 export function resolveWafRedactedFields({
   redactedFields = [],
-  redactedHeaders = DEFAULT_WAF_REDACTED_HEADERS,
+  redactedHeaders = [],
 }: {
   redactedFields?: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[];
   redactedHeaders?: string[];
-} = {}): wafv2.CfnLoggingConfiguration.FieldToMatchProperty[] | undefined {
+} = {}): wafv2.CfnLoggingConfiguration.FieldToMatchProperty[] {
+  const names = [...DEFAULT_WAF_REDACTED_HEADERS];
+  for (const name of redactedHeaders) {
+    if (!names.some((known) => known.toLowerCase() === name.toLowerCase())) {
+      names.push(name);
+    }
+  }
   const fields: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[] = [
-    ...redactedHeaders.map((name) => ({ singleHeader: { Name: name } })),
+    ...names.map((name) => ({ singleHeader: { Name: name } })),
     ...redactedFields,
   ];
   if (fields.length > WAF_REDACTED_FIELDS_LIMIT) {
@@ -71,7 +90,7 @@ export function resolveWafRedactedFields({
       `WAF logging accepts at most ${WAF_REDACTED_FIELDS_LIMIT} redacted fields; received ${fields.length}`,
     );
   }
-  return fields.length > 0 ? fields : undefined;
+  return fields;
 }
 
 /**
@@ -166,6 +185,13 @@ export interface JaypieWafConfig {
   managedRules?: string[];
 
   /**
+   * Retention for the WAF log bucket this construct creates. Falls back to the
+   * construct's `logRetention` when unset. Has no effect on a caller-supplied
+   * `logBucket`.
+   */
+  logRetention?: Duration | number;
+
+  /**
    * Rate limit per IP per 5-minute window
    * @default 2000
    */
@@ -173,8 +199,8 @@ export interface JaypieWafConfig {
 
   /**
    * Additional request fields redacted from WAF logs, passed through to the
-   * logging configuration verbatim. Layers on top of `redactedHeaders` rather
-   * than replacing it. AWS WAF accepts at most 100 redacted fields in total.
+   * logging configuration verbatim. Layers on top of the redacted headers.
+   * AWS WAF accepts at most 100 redacted fields in total.
    *
    * @example
    * redactedFields: [{ queryString: {} }, { uriPath: {} }]
@@ -182,10 +208,10 @@ export interface JaypieWafConfig {
   redactedFields?: wafv2.CfnLoggingConfiguration.FieldToMatchProperty[];
 
   /**
-   * Request header names redacted from WAF logs. Replaces the default list
-   * rather than extending it; pass an empty array to redact no headers.
-   *
-   * @default ["authorization", "cookie", "x-amz-content-sha256", "x-api-key"]
+   * Extra request header names redacted from WAF logs. Merges with
+   * `DEFAULT_WAF_REDACTED_HEADERS` (`authorization`, `cookie`,
+   * `x-amz-content-sha256`, `x-api-key`) rather than replacing it, so the
+   * defaults are always redacted. Matched case-insensitively.
    */
   redactedHeaders?: string[];
 
@@ -571,6 +597,15 @@ export class JaypieDistribution
         });
       } else if (this.isIOrigin(handler)) {
         origin = handler;
+      }
+
+      // originAccessControl only shapes the Function URL this construct
+      // creates; a caller-supplied IFunctionUrl or IOrigin owns its own auth
+      if (originAccessControl && !this.isIFunction(handler)) {
+        Annotations.of(this).addWarningV2(
+          WARNING_ORIGIN_ACCESS_CONTROL_IGNORED,
+          "originAccessControl applies only to an IFunction handler. This handler supplies its own Function URL or origin, so the prop has no effect and that origin's auth is unchanged.",
+        );
       }
 
       // Set PROJECT_BASE_URL on the Lambda if host is resolved and handler supports it
@@ -984,7 +1019,7 @@ export class JaypieDistribution
         const createdBucket = constructLogBucket(this, {
           bucketName: wafLogBucketName,
           id: wafLogBucketId,
-          logRetention,
+          logRetention: wafConfig.logRetention ?? logRetention,
           roleTag: CDK.ROLE.MONITORING,
           serviceTag,
           wafDelivery: true,

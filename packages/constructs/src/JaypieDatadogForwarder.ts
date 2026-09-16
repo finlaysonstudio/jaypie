@@ -1,4 +1,5 @@
 import { CDK } from "./constants";
+import { ConfigurationError } from "@jaypie/errors";
 import * as cdk from "aws-cdk-lib";
 import { CfnStack } from "aws-cdk-lib";
 import { Rule, RuleTargetInput } from "aws-cdk-lib/aws-events";
@@ -138,7 +139,7 @@ export class JaypieDatadogForwarder extends Construct {
 
     // Validate required parameters
     if (!datadogApiKey) {
-      throw new Error(
+      throw new ConfigurationError(
         "Datadog API key is required. Provide via datadogApiKey prop or CDK_ENV_DATADOG_API_KEY environment variable.",
       );
     }

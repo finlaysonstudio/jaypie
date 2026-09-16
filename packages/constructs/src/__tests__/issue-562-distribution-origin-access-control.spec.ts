@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Stack } from "aws-cdk-lib";
-import { Template } from "aws-cdk-lib/assertions";
+import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 
 import { JaypieDistribution } from "../JaypieDistribution";
 
@@ -121,6 +122,42 @@ describe("Issue #562: JaypieDistribution origin access control", () => {
     it("grants no wildcard principal any invoke permission", () => {
       const template = synthDistribution({ originAccessControl: true });
       expect(permissions(template, { principal: "*" })).toHaveLength(0);
+    });
+  });
+
+  describe("Observability", () => {
+    it("warns when originAccessControl is set with a non-IFunction handler", () => {
+      const stack = new Stack();
+      const origin = new origins.HttpOrigin("example.com");
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        originAccessControl: true,
+      });
+      expect(
+        Annotations.fromStack(stack).findWarning(
+          "*",
+          Match.stringLikeRegexp("originAccessControl applies only"),
+        ),
+      ).toHaveLength(1);
+    });
+
+    it("emits no warning when originAccessControl is set with an IFunction handler", () => {
+      const stack = new Stack();
+      const handler = new lambda.Function(stack, "TestFunction", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        runtime: lambda.Runtime.NODEJS_22_X,
+      });
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler,
+        originAccessControl: true,
+      });
+      expect(
+        Annotations.fromStack(stack).findWarning(
+          "*",
+          Match.stringLikeRegexp("originAccessControl applies only"),
+        ),
+      ).toHaveLength(0);
     });
   });
 });

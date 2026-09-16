@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ConfigurationError } from "@jaypie/errors";
 import { App, Stack } from "aws-cdk-lib";
 import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import { Bucket, EventType } from "aws-cdk-lib/aws-s3";
@@ -101,6 +102,16 @@ describe("Issue #560: Datadog forwarder imports create invoke permissions", () =
       expect(
         findWarnings(stackWithNotifiedBucket(), LAMBDA_WARNING_ID),
       ).toHaveLength(0);
+    });
+  });
+
+  describe("Error Conditions", () => {
+    it("throws a ConfigurationError when the Datadog API key is missing", () => {
+      const stack = newStack();
+      delete process.env.CDK_ENV_DATADOG_API_KEY;
+      expect(() => new JaypieDatadogForwarder(stack)).toThrow(
+        ConfigurationError,
+      );
     });
   });
 });
