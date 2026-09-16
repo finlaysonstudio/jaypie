@@ -66,7 +66,10 @@ Add release notes when:
 
 ## Writing Guidelines
 
-1. **Summary** - One line, present tense, describes the release
+1. **Summary** - One line, present tense, describes the release. Wrap the
+   value in double quotes whenever it contains `:`, `#`, `{`, `[`, or a
+   leading `*`, `&`, or `!`; an unquoted `: ` makes YAML read the rest as a
+   nested mapping and the frontmatter fails to parse
 2. **Changes** - Group by type: New Features, Bug Fixes, Breaking Changes
 3. **Bullets** - Start with verb (Add, Fix, Update, Remove)
 4. **Links** - Reference issues/PRs when relevant

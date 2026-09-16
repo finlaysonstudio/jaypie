@@ -204,7 +204,8 @@ summary: Consolidate 26 tools into 6 unified router-style tools
 
 When adding release notes:
 1. Create `release-notes/<package>/<version>.md` for each version bump
-2. Add frontmatter with `version`, `date`, and `summary`
+2. Add frontmatter with `version`, `date`, and `summary`; double-quote a
+   `summary` containing `:`, `#`, `{`, or `[` so the YAML parses
 3. Notes are immediately available via `release_notes("list")` and `release_notes("read", ...)` — no rebuild needed
 
 ## Environment Variables
