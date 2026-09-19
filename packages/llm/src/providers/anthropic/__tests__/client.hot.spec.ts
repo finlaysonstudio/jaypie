@@ -17,6 +17,12 @@ import { AnthropicProvider } from "../AnthropicProvider.class.js";
 
 const apiKey = process.env.ANTHROPIC_API_KEY;
 const TIMEOUT = 60_000;
+// The 5-family models open a response with a thinking block, so a small
+// budget is spent entirely on reasoning and the request stops at max_tokens
+// before a single text delta arrives. Budget for the thinking block; the
+// streaming case stops reading as soon as text appears, so the generated
+// tokens stay near the length of the answer either way.
+const MAX_TOKENS = 4096;
 
 describe.skipIf(!apiKey)("AnthropicClient (hot)", () => {
   describe.each(HOT_MODELS.anthropic)("%s", (MODEL) => {
@@ -27,7 +33,7 @@ describe.skipIf(!apiKey)("AnthropicClient (hot)", () => {
           const client = new AnthropicClient({ apiKey: apiKey! });
           const response = await client.messages.create({
             model: MODEL,
-            max_tokens: 64,
+            max_tokens: MAX_TOKENS,
             messages: [
               { role: "user", content: "Reply with the single word: pong" },
             ],
@@ -45,7 +51,7 @@ describe.skipIf(!apiKey)("AnthropicClient (hot)", () => {
           const client = new AnthropicClient({ apiKey: apiKey! });
           const stream = await client.messages.create({
             model: MODEL,
-            max_tokens: 64,
+            max_tokens: MAX_TOKENS,
             messages: [{ role: "user", content: "Count: one two three" }],
             stream: true,
           });
@@ -57,6 +63,7 @@ describe.skipIf(!apiKey)("AnthropicClient (hot)", () => {
               event.delta.type === "text_delta"
             ) {
               text += event.delta.text;
+              break;
             }
           }
           expect(text.length).toBeGreaterThan(0);
