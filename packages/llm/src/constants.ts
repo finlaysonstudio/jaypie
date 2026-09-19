@@ -60,7 +60,7 @@ export const MODEL = {
   MUSE_SPARK_CONTRIBUTOR: "muse-spark-1.3-contributor",
   // Mistral
   MISTRAL: {
-    LARGE: "mistral-large-latest", // mistral-large-2512
+    LARGE: "mistral-large-2512", // mistral-large-latest
     // Medium is deliberately absent. mistral-medium-3-5 will not converge when
     // tools and response_format are combined — it re-calls the tool instead of
     // answering from the result, and has been observed emitting concatenated
@@ -69,8 +69,8 @@ export const MODEL = {
     // the model is not cataloged. Its COST entry is retained per policy.
     // Document extraction over POST /v1/ocr, not chat completions. Priced per
     // page, so it carries no COST entry and is excluded from the chat matrix.
-    OCR: "mistral-ocr-4-0",
-    SMALL: "mistral-small-latest", // mistral-small-2603
+    OCR: "mistral-ocr-4-1",
+    SMALL: "mistral-small-2603", // mistral-small-latest
   },
   // OpenAI
   ASTRA: "gpt-6-astra",
@@ -83,6 +83,12 @@ export const MODEL = {
   GPT_MINI: "gpt-5.4-mini",
   /** @deprecated use MODEL.LUNA (gpt-5.6-luna) */
   GPT_NANO: "gpt-5.4-nano",
+  // TypeSafe (System One; answers typed questions, generates no text)
+  // Pinned to the versioned id the API echoes on every response. `jev-latest`
+  // and `jev-preview` are aliases TypeSafe repoints; COST is keyed by literal
+  // id, so the catalog names the version it prices. Both aliases still route
+  // to the provider through MODEL_MATCH_WORDS.
+  JEV: "jev-1.13.0",
   // xAI
   // Pinned to a literal version rather than the `grok-latest` alias. COST is
   // keyed by literal id, so an alias xAI repoints would leave the catalog
@@ -459,13 +465,15 @@ export const COST: Record<string, LlmModelCost> = {
   // Cached prompt tokens bill at 10% of the standard input rate. Note the
   // marketing FAQ at mistral.ai/pricing still quotes $2/$6 for "Mistral
   // Large" — that is stale copy describing Large 2; the model cards govern.
-  // mistral-ocr-4-0 is deliberately unpriced: it bills per page ($4/1000,
-  // $5/1000 annotated), which LlmModelCost cannot express.
-  // Keys are dated ids only. `MODEL.MISTRAL.*` names `-latest` aliases, so a
-  // lookup on `COST[MODEL.MISTRAL.LARGE]` misses by design: an alias has no
-  // stable price, and an entry under one would quietly go stale the moment
-  // Mistral repointed it. Resolve the alias to the id the API echoes on the
-  // response and price that. Callers must handle a miss regardless.
+  // mistral-ocr-4-1 is deliberately unpriced: it bills per page ($4/1000
+  // pages, $0.4/1000 cached; verified 2026-09-19), which LlmModelCost cannot
+  // express.
+  // Keys are dated ids only. `MODEL.MISTRAL.*` names dated ids as of
+  // 2026-09-19, so those lookups now hit. A `-latest` alias still misses by
+  // design: an alias has no stable price, and an entry under one would
+  // quietly go stale the moment Mistral repointed it. Resolve an alias to the
+  // id the API echoes on the response and price that. Callers must handle a
+  // miss regardless.
   //
   // Medium is **priced but not exported**. It is absent from MODEL.MISTRAL
   // because it cannot combine tools with structured output reliably, but a
@@ -475,6 +483,10 @@ export const COST: Record<string, LlmModelCost> = {
   "mistral-large-2512": { cachedInputRead: 0.05, input: 0.5, output: 1.5 },
   "mistral-medium-3-5": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
   "mistral-small-2603": { cachedInputRead: 0.015, input: 0.15, output: 0.6 },
+  // TypeSafe — https://docs.typesafe.ai (verified 2026-09-18). Output tokens
+  // are free: a System One answer is a handful of numbers, and TypeSafe does
+  // not bill them.
+  "jev-1.13.0": { input: 0.042, output: 0 },
 };
 
 const GOOGLE_PROVIDER = {
@@ -646,6 +658,16 @@ export const PROVIDER = {
       USER: "user" as const,
     },
   },
+  TYPESAFE: {
+    // https://docs.typesafe.ai
+    API_KEY: "TYPESAFE_API_KEY" as const,
+    BASE_URL: "https://api.typesafe.ai/v1" as const,
+    DEFAULT: MODEL.JEV,
+    // No deprecated size-tier MODEL block: tiers are frozen and new providers
+    // do not add one.
+    MODEL_MATCH_WORDS: ["jev", "typesafe"] as const,
+    NAME: "typesafe" as const,
+  },
   XAI: {
     // https://docs.x.ai/docs/models
     API_KEY: "XAI_API_KEY" as const,
@@ -672,6 +694,7 @@ export type LlmProviderName =
   | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME
+  | typeof PROVIDER.TYPESAFE.NAME
   | typeof PROVIDER.XAI.NAME;
 
 // Last: Defaults

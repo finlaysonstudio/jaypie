@@ -4,6 +4,8 @@ import log from "@jaypie/logger";
 import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
+import { runWithFallback } from "./util/runWithFallback.js";
+import { emulateQuestion, validateQuestions } from "./question/index.js";
 import { emitExchange } from "./operate/exchange/index.js";
 import {
   ExchangeStore,
@@ -24,6 +26,11 @@ import {
   LlmOptions,
   LlmProvider,
 } from "./types/LlmProvider.interface.js";
+import {
+  LlmQuestionOptions,
+  LlmQuestionResponse,
+  LlmQuestionState,
+} from "./types/LlmQuestion.interface.js";
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { BedrockProvider } from "./providers/bedrock/index.js";
@@ -33,6 +40,7 @@ import { MetaProvider } from "./providers/meta/index.js";
 import { MistralProvider } from "./providers/mistral/index.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
+import { TypeSafeProvider } from "./providers/typesafe/index.js";
 import { XaiProvider } from "./providers/xai/index.js";
 
 class Llm implements LlmProvider {
@@ -147,6 +155,10 @@ class Llm implements LlmProvider {
         return new OpenRouterProvider(model || PROVIDER.OPENROUTER.DEFAULT, {
           apiKey,
         });
+      case PROVIDER.TYPESAFE.NAME:
+        return new TypeSafeProvider(model || PROVIDER.TYPESAFE.DEFAULT, {
+          apiKey,
+        });
       case PROVIDER.XAI.NAME:
         return new XaiProvider(model || PROVIDER.XAI.DEFAULT, {
           apiKey,
@@ -173,9 +185,9 @@ class Llm implements LlmProvider {
    * Per-call options take precedence over instance config.
    * Returns empty array if fallback is disabled.
    */
-  private resolveFallbackChain(
-    options: LlmOperateOptions,
-  ): LlmFallbackConfig[] {
+  private resolveFallbackChain(options: {
+    fallback?: LlmFallbackConfig[] | false;
+  }): LlmFallbackConfig[] {
     // Per-call `fallback: false` disables fallback entirely
     if (options.fallback === false) {
       return [];
@@ -242,86 +254,122 @@ class Llm implements LlmProvider {
         ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
         : optionsWithoutFallback;
 
-    let lastError: Error | undefined;
-    let attempts = 0;
-
-    // Try primary provider first
-    attempts++;
-    try {
-      const response = await this._llm.operate(input, eagerOptions);
-      const settled = {
-        ...response,
-        fallbackAttempts: attempts,
-        fallbackUsed: false,
-        provider: response.provider || this._provider,
-      };
-      await this.settleExchange({
-        onExchange: resolvedOptions.onExchange,
-        response: settled,
-      });
-      return settled;
-    } catch (error) {
-      lastError = error as Error;
-      log.warn(`Provider ${this._provider} failed`, {
-        error: lastError.message,
-        fallbacksRemaining: fallbackChain.length,
-      });
-    }
-
-    // Try fallback providers. The fallback instance's underlying provider is
-    // called directly so the nested facade does not settle the exchange —
-    // exactly one settlement per operate() happens here.
-    for (const [index, fallbackConfig] of fallbackChain.entries()) {
-      attempts++;
-      try {
-        const fallbackInstance = this.createFallbackInstance(fallbackConfig);
-        if (!fallbackInstance._llm.operate) {
+    return runWithFallback<Llm, LlmOperateResponse>({
+      attempt: async ({ attempts, instance, isLast, provider }) => {
+        if (!instance._llm.operate) {
           throw new NotImplementedError(
-            `Provider ${fallbackConfig.provider} does not support operate method`,
+            `Provider ${provider} does not support operate method`,
           );
         }
-        const isLastAttempt = index === fallbackChain.length - 1;
-        const response = await fallbackInstance._llm.operate(
+        // A fallback runs its own model: the per-call model named the
+        // primary, and forwarding it would ask the next provider for a
+        // model it does not serve.
+        const attemptOptions = isLast ? optionsWithoutFallback : eagerOptions;
+        const response = await instance._llm.operate(
           input,
-          isLastAttempt ? optionsWithoutFallback : eagerOptions,
+          instance === this
+            ? attemptOptions
+            : { ...attemptOptions, model: undefined },
         );
         const settled = {
           ...response,
           fallbackAttempts: attempts,
-          fallbackUsed: true,
-          provider: response.provider || fallbackConfig.provider,
+          fallbackUsed: attempts > 1,
+          provider: response.provider || provider,
         };
         await this.settleExchange({
           onExchange: resolvedOptions.onExchange,
           response: settled,
         });
         return settled;
-      } catch (error) {
-        lastError = error as Error;
-        log.warn(`Fallback provider ${fallbackConfig.provider} failed`, {
-          error: lastError.message,
-          fallbacksRemaining: fallbackChain.length - attempts + 1,
+      },
+      chain: fallbackChain,
+      createInstance: (config) => this.createFallbackInstance(config),
+      onExhausted: async ({ attempts, error }) => {
+        // All providers failed: settle the exchange from the envelope the
+        // loop attached to the last error before it is rethrown
+        const failureEnvelope = (error as { exchange?: LlmExchangeEnvelope })
+          ?.exchange;
+        if (!failureEnvelope) {
+          return;
+        }
+        failureEnvelope.resolution = {
+          ...failureEnvelope.resolution,
+          fallbackAttempts: attempts,
+          fallbackUsed: attempts > 1,
+        };
+        await emitExchange({
+          envelope: failureEnvelope,
+          onExchange: resolvedOptions.onExchange,
         });
-      }
-    }
+        await persistExchange(failureEnvelope);
+      },
+      primary: this,
+      primaryProvider: this._provider,
+    });
+  }
 
-    // All providers failed: settle the exchange from the envelope the loop
-    // attached to the last error, then throw
-    const failureEnvelope = (lastError as { exchange?: LlmExchangeEnvelope })
-      ?.exchange;
-    if (failureEnvelope) {
-      failureEnvelope.resolution = {
-        ...failureEnvelope.resolution,
-        fallbackAttempts: attempts,
-        fallbackUsed: attempts > 1,
-      };
-      await emitExchange({
-        envelope: failureEnvelope,
-        onExchange: resolvedOptions.onExchange,
-      });
-      await persistExchange(failureEnvelope);
-    }
-    throw lastError;
+  /**
+   * Answer typed questions about a state, in TypeSafe's (Jev's) shape. A
+   * provider with native `question` support answers directly; every other
+   * provider answers through the emulator, which rigs up one structured
+   * `operate()` call and derives the answers from the reported
+   * distributions. A chain can therefore mix the two: the shape of the
+   * request and the response does not change with who served it.
+   */
+  async question(
+    state: LlmQuestionState,
+    options: LlmQuestionOptions,
+  ): Promise<LlmQuestionResponse> {
+    validateQuestions(options.questions);
+
+    const { fallback: modelFallback, model: perCallModel } = resolveModelChain(
+      options.model,
+    );
+    const resolvedOptions: LlmQuestionOptions = {
+      ...options,
+      model: perCallModel,
+    };
+    const fallbackChain = [
+      ...modelFallback,
+      ...this.resolveFallbackChain(resolvedOptions),
+    ];
+    const optionsWithoutFallback = {
+      ...resolvedOptions,
+      fallback: false as const,
+    };
+    // Same bargain as operate: an attempt with somewhere left to go fails
+    // fast instead of waiting out a rate limit.
+    const eagerOptions =
+      fallbackChain.length > 0 && resolvedOptions.retry === undefined
+        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
+        : optionsWithoutFallback;
+
+    return runWithFallback<Llm, LlmQuestionResponse>({
+      attempt: async ({ attempts, instance, isLast, provider }) => {
+        const base = isLast ? optionsWithoutFallback : eagerOptions;
+        const attemptOptions =
+          instance === this ? base : { ...base, model: undefined };
+        const response = instance._llm.question
+          ? await instance._llm.question(state, attemptOptions)
+          : await emulateQuestion({
+              options: attemptOptions,
+              provider: instance._llm,
+              providerName: provider,
+              state,
+            });
+        return {
+          ...response,
+          fallbackAttempts: attempts,
+          fallbackUsed: attempts > 1,
+          provider: response.provider || provider,
+        };
+      },
+      chain: fallbackChain,
+      createInstance: (config) => this.createFallbackInstance(config),
+      primary: this,
+      primaryProvider: this._provider,
+    });
   }
 
   /**
@@ -452,6 +500,48 @@ class Llm implements LlmProvider {
     return instance.operate(input, {
       ...operateOptions,
       ...(operateFallback !== undefined && { fallback: operateFallback }),
+    });
+  }
+
+  static async question(
+    state: LlmQuestionState,
+    options: LlmQuestionOptions,
+  ): Promise<LlmQuestionResponse> {
+    const { apiKey, fallback, llm, model, ...questionOptions } = options;
+
+    // A `model` array becomes primary + derived fallback chain
+    const { fallback: modelFallback, model: primaryModel } =
+      resolveModelChain(model);
+
+    let finalLlm = llm as LlmProviderName | undefined;
+    let finalModel = primaryModel;
+
+    if (!llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
+      if (determined.provider) {
+        finalLlm = determined.provider as LlmProviderName;
+      }
+    } else if (llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
+      if (determined.provider && determined.provider !== llm) {
+        finalModel = undefined;
+      }
+    }
+
+    const explicitFallback = Array.isArray(fallback) ? fallback : [];
+    const instanceFallback =
+      modelFallback.length || explicitFallback.length
+        ? [...modelFallback, ...explicitFallback]
+        : undefined;
+
+    const instance = new Llm(finalLlm, {
+      apiKey,
+      fallback: instanceFallback,
+      model: finalModel,
+    });
+    return instance.question(state, {
+      ...questionOptions,
+      ...(fallback === false && { fallback: false }),
     });
   }
 

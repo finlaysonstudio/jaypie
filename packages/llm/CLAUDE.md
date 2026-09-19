@@ -6,6 +6,10 @@ LLM provider abstraction for multi-provider support with unified API.
 
 `@jaypie/llm` provides a unified interface for interacting with multiple LLM providers (OpenAI, Anthropic, Google, Meta, OpenRouter, xAI). It supports multi-turn conversations, tool calling, structured output, streaming, and retry logic.
 
+It also provides `Llm.question`, a fourth entry point in TypeSafe's (Jev's)
+shape: typed questions about a state, answered natively by a System One model
+or by any other provider through the emulator. See "Questions" below.
+
 ## Directory Structure
 
 ```
@@ -55,9 +59,17 @@ src/
 │   ├── meta/
 │   │   ├── MetaProvider.class.ts
 │   │   └── utils.ts
+│   ├── typesafe/
+│   │   ├── client.ts
+│   │   ├── TypeSafeProvider.class.ts
+│   │   └── utils.ts
 │   └── xai/
 │       ├── XaiProvider.class.ts
 │       └── utils.ts
+├── question/                 # Llm.question support
+│   ├── confidence.ts         # normalizeDistribution, peakConfidence
+│   ├── QuestionEmulator.ts   # prompt, format, parse, emulate
+│   └── validateQuestions.ts  # TypeSafe limits, enforced everywhere
 ├── tools/                    # Tool system
 │   ├── Toolkit.class.ts      # Tool container with logging
 │   ├── index.ts              # JaypieToolkit with built-in tools
@@ -67,6 +79,7 @@ src/
 │   └── weather.ts            # Built-in: weather lookup
 ├── types/                    # Type definitions
 │   ├── LlmProvider.interface.ts
+│   ├── LlmQuestion.interface.ts
 │   ├── LlmStreamChunk.interface.ts
 │   └── LlmTool.interface.ts
 └── util/                     # Utilities
@@ -385,7 +398,7 @@ a caller `signal` that aborts mid-wait ends the call immediately rather than
 holding the request for the remaining minute.
 
 ```typescript
-await Llm.operate(input, { model: "mistral-large-latest" }); // waits and retries
+await Llm.operate(input, { model: "mistral-large-2512" }); // waits and retries
 
 await Llm.operate(input, { retry: { rateLimit: false } }); // throws at once
 await Llm.operate(input, {
@@ -427,6 +440,54 @@ await Llm.operate(input, {
 
 The verbose `fallback` form remains for advanced needs (per-entry `apiKey`, or an
 explicit provider override that disagrees with the model name).
+
+### Questions
+
+`Llm.question(state, { questions })` asks `noul`, `choice`, and `score`
+questions about a body of text and returns one typed answer each, with
+probabilities. TypeSafe's System One models answer natively
+(`TypeSafeProvider.question`); every other provider answers through
+`src/question/QuestionEmulator.ts`, which builds a prompt and a JSON Schema
+from the questions, makes one `operate()` call at `temperature: 0` and
+`turns: 1`, and derives choice (argmax), score (probability-weighted level
+index), and confidence from the reported distribution.
+
+```typescript
+const { answers, emulated } = await Llm.question(ticket, {
+  model: [LLM.MODEL.JEV, LLM.MODEL.HAIKU],
+  questions: {
+    department: {
+      type: "choice",
+      instructions: "Which team handles this?",
+      criteria: { billing: "Charges, invoices", technical: "Bugs", sales: null },
+    },
+    is_urgent: { type: "noul", instructions: "Does this convey urgency?" },
+    frustration: {
+      type: "score",
+      instructions: "How frustrated is the customer?",
+      criteria: ["Calm", "Frustrated", "Very angry"],
+    },
+  },
+});
+```
+
+Everything the emulator adds is marked: `emulated: true` says the
+probabilities are model-reported and `confidence` is Jaypie's normalized peak
+probability (`peakConfidence`, `src/question/confidence.ts`) rather than a
+calibrated System One statistic — TypeSafe has not published its formula, and
+normalized peak reproduces its documented examples and a live Jev call within
+rounding.
+
+TypeSafe's limits (1 to 255 choice options, 2 to 10 score levels, non-empty
+instructions) are enforced on **every** provider by
+`src/question/validateQuestions.ts` before any call goes out. That is what
+makes a mixed chain safe: a question that validates is answerable by whoever
+picks it up.
+
+`MODEL.JEV` is excluded from the live capability matrix — a System One model
+implements neither `operate()` nor `send()`, so every cell would fail by
+construction. It is covered by `tsx test/question.ts` (`npm run
+test:llm:question`) and the TypeSafe hot spec.
 
 ### Structured Outputs
 
@@ -899,6 +960,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `OPENROUTER_API_KEY` - OpenRouter API key
 - `XAI_API_KEY` - xAI (Grok) API key
 - `META_API_KEY` - Meta Model API key (`MODEL_API_KEY`, the name Meta's own docs use, is read as a fallback)
+- `TYPESAFE_API_KEY` - TypeSafe API key for System One models (Jev); only `Llm.question` uses it
 - `LLM_EXCHANGE_ENABLED` - Persist each `operate()` and `stream()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
@@ -991,6 +1053,7 @@ export {
   MetaProvider,
   MistralProvider,
   OpenRouterProvider,
+  TypeSafeProvider,
   XaiProvider,
 };
 // GeminiProvider remains as a deprecated alias of GoogleProvider
@@ -1076,7 +1139,9 @@ than relying on recovery. Pacing is applied per **model request** via the
 issuing many requests. Limiters are keyed by model and outlive the cell;
 scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
-Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
+Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s. The rates
+predate the 2026-09-19 tier upgrade and are deliberately conservative; `APP_RPS`
+overrides them for a run.
 
 **Fireworks withdraws serverless models without notice.** `minimax-m2p7`
 began answering "Model not found, inaccessible, and/or not deployed" on every
@@ -1098,16 +1163,17 @@ rename: the operator confirmed the id as
 `MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the matrix again. The
 retired id keeps its `COST` entry per policy.
 
-**`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
-the CI Mistral key answers every capability with "This model is not available
-in your subscription tier", so all seven cells fail on an entitlement rather
-than on the model, while `mistral-small-latest` passes all seven on the same
-key. It stays cataloged in `constants.ts` and priced in `COST`. Restoring the
-tier, or retiring the id, means removing its `MATRIX_EXCLUDE` line in
-`test/models.ts`.
+**Mistral Large was excluded from the live matrix** from 2026-08-30 to
+2026-09-19: the Mistral key answered every capability with "This model is not
+available in your subscription tier", so all seven cells failed on an
+entitlement rather than on the model, while Mistral Small passed all seven on
+the same key. The account was upgraded on 2026-09-19 and both models pass all
+seven cells, so the `MATRIX_EXCLUDE` line is gone and CI shards `mistral`
+again. An entitlement failure reads as a model failure in the matrix; check
+the error text before concluding a model is broken.
 
 Pacing is not sufficient on its own: a paced run still lost a
-`mistral-large-latest / pdf` cell to `Rate limit exceeded` while spacing
+Mistral Large `pdf` cell to `Rate limit exceeded` while spacing
 correctly at 14.3s, which points at a token-per-minute ceiling that
 request-count pacing cannot see. The matrix now also inherits the library's
 rate-limit backoff, so a 429 that slips past pacing waits and retries instead

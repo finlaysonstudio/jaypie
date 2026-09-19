@@ -65,13 +65,11 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
-  // Temporary. As of 2026-08-30 the Mistral key answers every capability with
-  // "This model is not available in your subscription tier", so all seven cells
-  // fail on an entitlement, not on the model. mistral-small-latest reaches the
-  // API on the same key. Restore the tier or drop the id from the catalog and
-  // remove this line; it stays cataloged and priced meanwhile. This only
-  // affects on-demand runs now — CI no longer shards Mistral.
-  MODEL.MISTRAL.LARGE,
+  // A System One model answers typed questions and generates no text, so it
+  // implements neither operate() nor send() and every capability cell would
+  // fail by construction. It is exercised by `tsx test/question.ts` and by
+  // the TypeSafe hot spec instead.
+  MODEL.JEV,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.

@@ -41,12 +41,15 @@ the alias rather than the id it currently resolves to. Read the id off
 | xAI | "xai", "grok" | `MODEL.GROK` |
 | Meta | "muse" (plus the exact name `meta` and a `meta:` prefix) | `MODEL.MUSE_SPARK` |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO` |
+| TypeSafe | "jev", "typesafe" | `MODEL.JEV` |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
 Mistral's family names mostly do not contain the substring "mistral" (`ministral` is m-i-n-i-s-t-r-a-l; `codestral`/`devstral`/`pixtral`/`voxtral` share only the `-tral` suffix), so each family carries its own match word. Bedrock-hosted `mistral.mistral-*` ids still resolve to `bedrock`, and `mistralai/*` routes still resolve to `openrouter`; use the `mistral:` prefix to force the direct API.
 
 "meta" is deliberately not a Meta match word: `meta.llama-*` is a Bedrock id and `meta-llama/*` an OpenRouter route. Muse Spark ids resolve on "muse"; use the `meta:` prefix to force the Meta Model API for any other id.
+
+TypeSafe serves System One models (Jev), which answer typed questions and generate no text. The provider implements `question()` only: `operate()`, `send()`, and `stream()` throw. See [Questions](#questions-jev-shape).
 
 ### Model Constants
 
@@ -401,6 +404,87 @@ jsonSchemaToNaturalSchema({
 
 `naturalSchemaToJsonSchema` is lossless — Natural Schema is a strict subset of JSON Schema. `jsonSchemaToNaturalSchema` is lossy: JSON Schema constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent and are dropped. It never throws; every dropped keyword is logged at `log.debug` with the keyword name and JSON path.
 
+## Questions (Jev Shape)
+
+`Llm.question(state, { questions })` asks typed questions about a body of
+text and returns one typed answer each, with probabilities. The request and
+response shapes are TypeSafe's, so a question written once is answered the
+same way by every provider: TypeSafe's System One models (Jev) answer
+natively, and every other provider answers through an emulator that rigs up
+one structured `operate()` call. Traditional models fit the question shape;
+the question shape does not bend to fit them.
+
+```typescript
+import { Llm, LLM } from "@jaypie/llm";
+
+const { answers, emulated } = await Llm.question(ticket, {
+  model: [LLM.MODEL.JEV, LLM.MODEL.HAIKU], // native first, emulated if Jev is down
+  questions: {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: {
+        billing: "Charges, invoices, refunds",
+        sales: null, // the option name speaks for itself
+        technical: "Bugs, outages",
+      },
+    },
+    is_urgent: { type: "noul", instructions: "Does this convey urgency?" },
+    frustration: {
+      type: "score",
+      instructions: "How frustrated is the customer?",
+      criteria: ["Calm", "Frustrated", "Very angry"], // 2 to 10, lowest first
+    },
+  },
+});
+
+answers.department; // { type: "choice", choice: "billing", confidence: 0.98, probabilities: {...} }
+answers.is_urgent;  // { type: "noul", noul: 0.94 }
+answers.frustration; // { type: "score", score: 1.7, confidence: 0.56, legend: {...}, probabilities: {...} }
+```
+
+### Question Types
+
+| Type | Criteria | Answer |
+|------|----------|--------|
+| `noul` | optional `{ true, false }` descriptions | `{ type, noul }` — probability 0 to 1, no confidence: the number is the degree of belief |
+| `choice` | `Record<option, description \| null>`, 1 to 255 options | `{ type, choice, confidence, probabilities }` — `choice` is the argmax, `probabilities` keyed by option name |
+| `score` | ordered `string[]`, 2 to 10 levels lowest first | `{ type, score, confidence, legend, probabilities }` — `score` is the probability-weighted level index, `legend` and `probabilities` keyed by level index as a string |
+
+`instructions` and every criteria value accept a string, an object, or an
+array. `state` accepts the same three and is text only: no files, no images,
+no conversation. Question ids are the caller's and never reach the model.
+TypeSafe's limits are enforced on every provider at the entry point, so a
+question that validates works anywhere in a chain; a violation throws
+`BadRequestError` naming the question id.
+
+### Response
+
+```typescript
+{
+  answers,          // Record<question id, answer>
+  emulated,         // false when a System One model answered natively
+  fallbackAttempts, // providers tried (1 = primary only)
+  fallbackUsed,
+  model,            // the versioned id that served the request
+  provider,
+  responses,        // raw provider payloads
+  usage,            // LlmUsage, same shape operate() reports
+}
+```
+
+`emulated: true` marks an answer a traditional model produced. Its
+`probabilities` are model-reported (normalized in code) and its `confidence`
+is a Jaypie statistic over them — normalized peak probability,
+`(max(p) - 1/n) / (1 - 1/n)`, exported as `peakConfidence` — not a calibrated
+System One output. Threshold on it knowing that.
+
+Chains work exactly as they do for `operate()`: `model` accepts a
+preference-ordered array, `fallback` accepts explicit entries or `false`, and
+an attempt with somewhere left to go skips the rate-limit wait. A provider
+that can neither `question` nor `operate` counts as a failed attempt and the
+chain moves on.
+
 ## Conversation History
 
 Continue conversations across calls:
@@ -649,6 +733,7 @@ OPENAI_API_KEY      # Required for OpenAI
 OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)
 META_API_KEY        # Required for Meta (Muse Spark); MODEL_API_KEY is read as a fallback
+TYPESAFE_API_KEY    # Required for TypeSafe (Jev); emulated questions use the answering provider's key
 ```
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.

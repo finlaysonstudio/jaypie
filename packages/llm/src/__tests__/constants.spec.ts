@@ -66,9 +66,9 @@ describe("Constants", () => {
   describe("MODEL Constants", () => {
     it("Exposes a Mistral subtree", () => {
       expect(MODEL.MISTRAL).toBeObject();
-      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-latest");
-      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-0");
-      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-latest");
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-2512");
+      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-1");
+      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-2603");
     });
 
     it("Does not catalog mistral-medium", () => {
@@ -229,12 +229,14 @@ describe("Constants", () => {
       }
     });
 
-    it("Quotes positive dollars per million with output above input", () => {
+    it("Quotes positive dollars per million with output at or above input, or free", () => {
       // Collect by model id so a failure names the entry rather than a number
       const violations: string[] = [];
       for (const [model, cost] of Object.entries(COST)) {
         if (!(cost.input > 0)) violations.push(`${model}: input not positive`);
-        if (!(cost.output >= cost.input)) {
+        // Output is never cheaper than input, with one exception: a System
+        // One model generates no text and TypeSafe bills its answers at $0.
+        if (!(cost.output >= cost.input || cost.output === 0)) {
           violations.push(`${model}: output below input`);
         }
         if (cost.cachedInputRead !== undefined) {

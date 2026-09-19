@@ -108,6 +108,12 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.OPENROUTER.NAME,
     };
   }
+  if (input === PROVIDER.TYPESAFE.NAME) {
+    return {
+      model: PROVIDER.TYPESAFE.DEFAULT,
+      provider: PROVIDER.TYPESAFE.NAME,
+    };
+  }
   if (input === PROVIDER.XAI.NAME) {
     return {
       model: PROVIDER.XAI.DEFAULT,
@@ -211,6 +217,17 @@ export function determineModelProvider(input?: string): {
           provider: PROVIDER.OPENAI.NAME,
         };
       }
+    }
+  }
+
+  // Check TypeSafe match words (before OpenRouter — "jev-latest" and
+  // "jev-preview" are aliases the System One API resolves to a versioned id)
+  for (const matchWord of PROVIDER.TYPESAFE.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.TYPESAFE.NAME,
+      };
     }
   }
 

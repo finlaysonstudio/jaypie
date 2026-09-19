@@ -321,7 +321,7 @@ describe("MistralClient", () => {
     it("POSTs the document to the OCR endpoint with the default model", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         jsonResponse({
-          model: "mistral-ocr-4-0",
+          model: "mistral-ocr-4-1",
           pages: [{ index: 0, markdown: "# Mock Page" }],
         }),
       );
@@ -338,7 +338,7 @@ describe("MistralClient", () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe("https://api.mistral.ai/v1/ocr");
       const body = JSON.parse(init.body);
-      expect(body.model).toBe("mistral-ocr-4-0");
+      expect(body.model).toBe("mistral-ocr-4-1");
       expect(body.document.type).toBe("document_url");
       expect(body.pages).toBeUndefined();
       expect(result.pages).toBeDefined();
