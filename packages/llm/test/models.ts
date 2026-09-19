@@ -70,13 +70,6 @@ const MATRIX_EXCLUDE = new Set<string>([
   // fail by construction. It is exercised by `tsx test/question.ts` and by
   // the TypeSafe hot spec instead.
   MODEL.JEV,
-  // Temporary. As of 2026-08-30 the Mistral key answers every capability with
-  // "This model is not available in your subscription tier", so all seven cells
-  // fail on an entitlement, not on the model. mistral-small-latest reaches the
-  // API on the same key. Restore the tier or drop the id from the catalog and
-  // remove this line; it stays cataloged and priced meanwhile. This only
-  // affects on-demand runs now — CI no longer shards Mistral.
-  MODEL.MISTRAL.LARGE,
 ]);
 
 // Flatten MODEL.* (including the BEDROCK and OPENROUTER subtrees) into ids.

@@ -102,9 +102,8 @@ constants only; nothing else carries a model id:
   uncatalogued: pass the literal id and `determineModelProvider` resolves it.
 - `.github/workflows/npm-check.yml` / `npm-deploy.yml` shard the matrix by
   provider group via `APP_GROUP` — no model id lists to keep in sync. Mistral
-  carries no shard: the provider's availability does not survive a per-push run,
-  so its models stay cataloged and priced but run only on demand
-  (`APP_GROUP=mistral`).
+  carries a shard again as of 2026-09-19, restored once the account's tier
+  could answer the matrix.
 - A new id must resolve through `determineModelProvider` (add a
   `MODEL_MATCH_WORDS` entry when it does not) or the matrix cannot shard it; a
   constants test fails on any catalog id with no provider.

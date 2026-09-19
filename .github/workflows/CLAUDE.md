@@ -81,16 +81,18 @@ No docs deployment step (unlike `deploy-env-*.yml`).
 | `typecheck` | `continue-on-error: true` |
 | `test` | Node 24 (stable) + 25 (experimental, `continue-on-error: true`) |
 | `build-llm` | Detects changes to `packages/llm/**` via `dorny/paths-filter`; builds and uploads artifact |
-| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `meta`, `fireworks`, `openrouter`, `bedrock`. Mistral is deliberately absent — see below |
+| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `meta`, `fireworks`, `mistral`, `openrouter`, `bedrock` |
 | `test-llm-matrix-complete` | Aggregator job — fails if any matrix group failed |
 
-**Mistral is not exercised in CI.** The provider's availability does not hold
-up to a per-push run: the shard has failed on a `Rate limit exceeded` 429
-across all seven cells, and before that on `This model is not available in your
-subscription tier`, neither of which says anything about the code under test.
-The group is removed from both workflows and `MISTRAL_API_KEY` is no longer
-passed. Mistral models stay cataloged, priced, and adapter-tested; reach the
-live cells on demand with `APP_GROUP=mistral npm run test:llm:matrix`.
+**Mistral returned to CI on 2026-09-19.** The shard was dropped on 2026-09-04
+after failing on a `Rate limit exceeded` 429 across all seven cells, and on
+`This model is not available in your subscription tier` before that, neither of
+which says anything about the code under test. The account was upgraded on
+2026-09-19 and both cataloged models pass all seven cells, so `mistral` is a
+group again in both workflows and `MISTRAL_API_KEY` is passed. Pacing comes
+from `test/rateLimit.ts` and the library's rate-limit backoff; if the shard
+starts failing on 429s again rather than on the code, drop the group before
+chasing the matrix.
 
 **Bedrock two-step role assumption** (matrix group `bedrock`):
 1. `configure-aws` with `vars.AWS_ROLE_ARN` (sandbox environment)

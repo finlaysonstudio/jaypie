@@ -75,6 +75,7 @@ const MODEL_REQUESTS_PER_SECOND: Record<string, number> = {
   "mistral-medium-3-5": 0.83,
   "mistral-medium-latest": 0.83,
   "mistral-ocr-4-0": 0.83,
+  "mistral-ocr-4-1": 0.83,
   "mistral-small-2603": 0.83,
   "mistral-small-latest": 0.83,
   "muse-spark-1.3-contributor": 1.5,

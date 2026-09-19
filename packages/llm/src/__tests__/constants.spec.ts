@@ -66,9 +66,9 @@ describe("Constants", () => {
   describe("MODEL Constants", () => {
     it("Exposes a Mistral subtree", () => {
       expect(MODEL.MISTRAL).toBeObject();
-      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-latest");
-      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-0");
-      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-latest");
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-2512");
+      expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-1");
+      expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-2603");
     });
 
     it("Does not catalog mistral-medium", () => {

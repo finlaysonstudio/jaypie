@@ -398,7 +398,7 @@ a caller `signal` that aborts mid-wait ends the call immediately rather than
 holding the request for the remaining minute.
 
 ```typescript
-await Llm.operate(input, { model: "mistral-large-latest" }); // waits and retries
+await Llm.operate(input, { model: "mistral-large-2512" }); // waits and retries
 
 await Llm.operate(input, { retry: { rateLimit: false } }); // throws at once
 await Llm.operate(input, {
@@ -1139,7 +1139,9 @@ than relying on recovery. Pacing is applied per **model request** via the
 issuing many requests. Limiters are keyed by model and outlive the cell;
 scoping one to a cell lets each cell's first request fire unspaced, which is
 its own source of spurious `Rate limit exceeded` cells. Current rates: Mistral
-Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s.
+Large 0.07 req/s, the rest of the Mistral catalog 0.83 req/s. The rates
+predate the 2026-09-19 tier upgrade and are deliberately conservative; `APP_RPS`
+overrides them for a run.
 
 **Fireworks withdraws serverless models without notice.** `minimax-m2p7`
 began answering "Model not found, inaccessible, and/or not deployed" on every
@@ -1161,16 +1163,17 @@ rename: the operator confirmed the id as
 `MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the matrix again. The
 retired id keeps its `COST` entry per policy.
 
-**`mistral-large-latest` is excluded from the live matrix** as of 2026-08-30:
-the CI Mistral key answers every capability with "This model is not available
-in your subscription tier", so all seven cells fail on an entitlement rather
-than on the model, while `mistral-small-latest` passes all seven on the same
-key. It stays cataloged in `constants.ts` and priced in `COST`. Restoring the
-tier, or retiring the id, means removing its `MATRIX_EXCLUDE` line in
-`test/models.ts`.
+**Mistral Large was excluded from the live matrix** from 2026-08-30 to
+2026-09-19: the Mistral key answered every capability with "This model is not
+available in your subscription tier", so all seven cells failed on an
+entitlement rather than on the model, while Mistral Small passed all seven on
+the same key. The account was upgraded on 2026-09-19 and both models pass all
+seven cells, so the `MATRIX_EXCLUDE` line is gone and CI shards `mistral`
+again. An entitlement failure reads as a model failure in the matrix; check
+the error text before concluding a model is broken.
 
 Pacing is not sufficient on its own: a paced run still lost a
-`mistral-large-latest / pdf` cell to `Rate limit exceeded` while spacing
+Mistral Large `pdf` cell to `Rate limit exceeded` while spacing
 correctly at 14.3s, which points at a token-per-minute ceiling that
 request-count pacing cannot see. The matrix now also inherits the library's
 rate-limit backoff, so a 429 that slips past pacing waits and retries instead

@@ -128,6 +128,8 @@ jobs:
             providers: "meta"
           - group: fireworks
             providers: "fireworks"
+          - group: mistral
+            providers: "mistral"
           - group: openrouter
             providers: "openrouter"
           - group: bedrock
@@ -181,6 +183,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.CICD_GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
           FIREWORKS_API_KEY: ${{ secrets.CICD_FIREWORKS_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.CICD_MISTRAL_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
           META_API_KEY: ${{ secrets.CICD_META_API_KEY }}
