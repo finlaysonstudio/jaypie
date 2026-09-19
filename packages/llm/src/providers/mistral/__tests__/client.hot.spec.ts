@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { HOT_MODELS } from "../../../__tests__/hotModels.js";
+import { MODEL as CATALOG } from "../../../constants.js";
+import Llm from "../../../Llm.js";
 import { MistralClient } from "../client.js";
 import { MistralProvider } from "../MistralProvider.class.js";
 
@@ -10,7 +12,8 @@ import { MistralProvider } from "../MistralProvider.class.js";
 //
 // Live tests against the real Mistral API. Skipped unless MISTRAL_API_KEY is
 // set, so CI stays green and `npm test` runs them automatically on machines
-// that have a key.
+// that have a key. The Unit Test job in both workflows passes
+// CICD_MISTRAL_API_KEY, so these run on every push.
 //
 //   MISTRAL_API_KEY=... npm run test -w packages/llm
 //
@@ -20,6 +23,9 @@ import { MistralProvider } from "../MistralProvider.class.js";
 
 const apiKey = process.env.MISTRAL_API_KEY;
 const TIMEOUT = 120_000;
+
+/** Resolves to the mistral provider by match word, then fails at the API */
+const MISSING_ENGINE = "mistral-ocr-does-not-exist";
 
 describe.skipIf(!apiKey)("MistralClient (hot)", () => {
   describe.each(HOT_MODELS.mistral)("%s", (MODEL) => {
@@ -147,5 +153,38 @@ describe.skipIf(!apiKey)("MistralClient (hot)", () => {
       },
       TIMEOUT,
     );
+
+    describe("Fallback", () => {
+      it(
+        "falls from an engine the API rejects to Mistral OCR",
+        async () => {
+          // Simulates a failing primary engine: the id resolves to this
+          // provider but the API has no such model, so the chain moves on to
+          // the real engine on the same key and the transcription stays
+          // native.
+          const { readFileSync } = await import("node:fs");
+          const { fileURLToPath } = await import("node:url");
+          const pdfPath = fileURLToPath(
+            new URL("../../../../test/fixtures/page.pdf", import.meta.url),
+          );
+          const base64 = readFileSync(pdfPath).toString("base64");
+
+          const response = await Llm.ocr(
+            `data:application/pdf;base64,${base64}`,
+            {
+              apiKey: apiKey!,
+              model: [MISSING_ENGINE, CATALOG.MISTRAL.OCR],
+            },
+          );
+
+          expect(response.fallbackUsed).toBe(true);
+          expect(response.fallbackAttempts).toBe(2);
+          expect(response.emulated).toBe(false);
+          expect(response.model).toBe(CATALOG.MISTRAL.OCR);
+          expect(response.markdown.toLowerCase()).toContain("mock page");
+        },
+        TIMEOUT,
+      );
+    });
   });
 });

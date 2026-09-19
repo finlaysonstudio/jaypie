@@ -478,7 +478,11 @@ const { answers, emulated } = await Llm.question(ticket, {
     department: {
       type: "choice",
       instructions: "Which team handles this?",
-      criteria: { billing: "Charges, invoices", technical: "Bugs", sales: null },
+      criteria: {
+        billing: "Charges, invoices",
+        technical: "Bugs",
+        sales: null,
+      },
     },
     is_urgent: { type: "noul", instructions: "Does this convey urgency?" },
     frustration: {
@@ -520,13 +524,17 @@ any model that accepts files:
 - **LlamaParse** over the LlamaCloud Parse API v2 (provider `llamacloud`,
   `LLAMA_CLOUD_API_KEY`): a job that is submitted, polled, and fetched. The
   parse **tier is the model id** — `MODEL.LLAMAPARSE.{FAST, COST_EFFECTIVE,
-  AGENTIC, AGENTIC_PLUS}` — so a fallback chain is a plain model list and
+AGENTIC, AGENTIC_PLUS}` — so a fallback chain is a plain model list and
   `determineModelProvider` routes it (match words `llamacloud`, `llamaindex`,
   `llamaparse`). `PROVIDER.LLAMACLOUD.DEFAULT` is the agentic tier.
 
 ```typescript
 const { markdown, pages, usage } = await Llm.ocr("./scans/invoice.pdf", {
-  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE, LLM.MODEL.HAIKU],
+  model: [
+    LLM.MODEL.MISTRAL.OCR,
+    LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE,
+    LLM.MODEL.HAIKU,
+  ],
   pages: "1,3-5",
 });
 ```
@@ -569,7 +577,7 @@ call sites that OCR through chat models:
   image or other file is one page. A URL is fetched first, since chat
   providers take bytes.
 - **Fixed schema, verbatim rules.** The format is `{ confidence, markdown,
-  notes }` with no extra keys. The system prompt asks for verbatim
+notes }` with no extra keys. The system prompt asks for verbatim
   transcription in reading order, `[UNCLEAR: best guess]` for illegible
   text, `[ELEMENT: description]` for non-text visuals (logos with readable
   text are transcribed), and the table rule `tables` selects.
@@ -622,7 +630,16 @@ unrecoverable) and both providers share `src/ocr/runOcrAttempts.ts`, so
 capability matrix. They are covered by `tsx test/ocr.ts` (`npm run
 test:llm:ocr`; `APP_MODELS` filters engines, `APP_DOCUMENTS` names files or
 URLs to run instead of the fixtures, `APP_IMAGES=true` downloads images) and
-by the Mistral and LlamaCloud hot specs.
+by the Mistral and LlamaCloud hot specs. Each hot spec also simulates a
+failing primary engine: an id that resolves to the provider by match word
+but names no real model, chained ahead of a real engine on the same key,
+asserting two attempts and a native (not emulated) transcription. The
+Mistral API rejects `mistral-ocr-does-not-exist` with "Invalid model"; the
+LlamaCloud provider rejects `llamaparse-does-not-exist` in tier validation
+before any request. In CI the
+mistral matrix shard runs `test:llm:ocr` after the matrix, and the Unit Test
+job carries the Mistral and LlamaCloud keys so the hot specs run on every
+push.
 
 ### Structured Outputs
 
@@ -1089,7 +1106,10 @@ rolled client impractical). Non-Bedrock consumers never need it installed.
 
 Each provider has env-gated live "hot" tests at
 `src/providers/<provider>/__tests__/client.hot.spec.ts` — they run automatically
-when the matching `*_API_KEY` is set and skip otherwise.
+when the matching `*_API_KEY` is set and skip otherwise. The CI Unit Test job
+sets only `MISTRAL_API_KEY` and `LLAMA_CLOUD_API_KEY` (the OCR engines the
+matrix cannot cover), so every other hot spec skips in CI and its provider is
+verified by the capability matrix instead.
 
 ## Environment Variables
 
