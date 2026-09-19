@@ -72,6 +72,10 @@ jobs:
         run: npm rebuild
       - run: npm run build
       - run: npm test
+        env:
+          # Hot specs skip without a key; these run the OCR engines live
+          LLAMA_CLOUD_API_KEY: ${{ secrets.CICD_LLAMA_CLOUD_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.CICD_MISTRAL_API_KEY }}
   build-llm:
     name: Build (LLM matrix)
     runs-on: ubuntu-latest
@@ -188,6 +192,16 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.CICD_OPENROUTER_API_KEY }}
           XAI_API_KEY: ${{ secrets.CICD_XAI_API_KEY }}
           META_API_KEY: ${{ secrets.CICD_META_API_KEY }}
+      - name: Run OCR engines and fallback chain
+        # OCR engines are excluded from the matrix; this runs them all plus
+        # one emulated engine per chat provider and a fallback chain
+        if: matrix.group == 'mistral' && needs.build-llm.outputs.llm_changed == 'true'
+        run: LOG_LEVEL=warn npm run test:llm:ocr
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.CICD_ANTHROPIC_API_KEY }}
+          LLAMA_CLOUD_API_KEY: ${{ secrets.CICD_LLAMA_CLOUD_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.CICD_MISTRAL_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.CICD_OPENAI_API_KEY }}
 
   test-llm-matrix-complete:
     name: LLM Capability Matrix (conditional)

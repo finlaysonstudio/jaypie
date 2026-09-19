@@ -104,7 +104,10 @@ constants only; nothing else carries a model id:
 - `.github/workflows/npm-check.yml` / `npm-deploy.yml` shard the matrix by
   provider group via `APP_GROUP` — no model id lists to keep in sync. Mistral
   carries a shard again as of 2026-09-19, restored once the account's tier
-  could answer the matrix.
+  could answer the matrix. OCR engines (`MODEL.MISTRAL.OCR`,
+  `MODEL.LLAMAPARSE.*`) are outside the matrix: the mistral shard runs
+  `test:llm:ocr` after it, and the Unit Test job carries the Mistral and
+  LlamaCloud keys so their hot specs (including a fallback simulation) run.
 - A new id must resolve through `determineModelProvider` (add a
   `MODEL_MATCH_WORDS` entry when it does not) or the matrix cannot shard it; a
   constants test fails on any catalog id with no provider.
