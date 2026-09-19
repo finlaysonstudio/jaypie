@@ -632,9 +632,11 @@ test:llm:ocr`; `APP_MODELS` filters engines, `APP_DOCUMENTS` names files or
 URLs to run instead of the fixtures, `APP_IMAGES=true` downloads images) and
 by the Mistral and LlamaCloud hot specs. Each hot spec also simulates a
 failing primary engine: an id that resolves to the provider by match word
-but names no real model (`mistral-ocr-does-not-exist`,
-`llamaparse-does-not-exist`) chained ahead of a real engine on the same key,
-asserting two attempts and a native (not emulated) transcription. In CI the
+but names no real model, chained ahead of a real engine on the same key,
+asserting two attempts and a native (not emulated) transcription. The
+Mistral API rejects `mistral-ocr-does-not-exist` with "Invalid model"; the
+LlamaCloud provider rejects `llamaparse-does-not-exist` in tier validation
+before any request. In CI the
 mistral matrix shard runs `test:llm:ocr` after the matrix, and the Unit Test
 job carries the Mistral and LlamaCloud keys so the hot specs run on every
 push.

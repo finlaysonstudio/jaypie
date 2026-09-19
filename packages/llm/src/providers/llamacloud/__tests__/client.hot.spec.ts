@@ -24,7 +24,7 @@ import { LlamaCloudProvider } from "../LlamaCloudProvider.class.js";
 const apiKey = process.env.LLAMA_CLOUD_API_KEY;
 const TIMEOUT = 300_000;
 
-/** Resolves to the llamacloud provider by match word, then fails at the API */
+/** Resolves to the llamacloud provider by match word, then fails tier validation */
 const MISSING_TIER = "llamaparse-does-not-exist";
 
 const pdfPath = fileURLToPath(
@@ -54,11 +54,12 @@ describe.skipIf(!apiKey)("LlamaCloudProvider (hot)", () => {
 
   describe("Fallback", () => {
     it(
-      "falls from a tier the API rejects to the cost-effective tier",
+      "falls from a tier the provider rejects to the cost-effective tier",
       async () => {
         // Simulates a failing primary engine: the id resolves to this
-        // provider but the API has no such tier, so the chain moves on to a
-        // real tier on the same key and the transcription stays native.
+        // provider but names no tier, so the provider throws before any
+        // request and the chain moves on to a real tier on the same key. The
+        // transcription stays native.
         const response = await Llm.ocr(
           {
             data: readFileSync(pdfPath).toString("base64"),
