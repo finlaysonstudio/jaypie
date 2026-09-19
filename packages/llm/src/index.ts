@@ -40,6 +40,22 @@ export {
   LlmProgressEventType,
   LlmResponseErrorReason,
 } from "./types/LlmProvider.interface.js";
+export type {
+  LlmAnswer,
+  LlmChoiceAnswer,
+  LlmChoiceQuestion,
+  LlmNoulAnswer,
+  LlmNoulQuestion,
+  LlmQuestion,
+  LlmQuestionOptions,
+  LlmQuestionResponse,
+  LlmQuestions,
+  LlmQuestionState,
+  LlmQuestionText,
+  LlmScoreAnswer,
+  LlmScoreQuestion,
+} from "./types/LlmQuestion.interface.js";
+export { LlmQuestionType } from "./types/LlmQuestion.interface.js";
 export {
   isLlmOperateInput,
   isLlmOperateInputContent,
@@ -101,6 +117,7 @@ export {
   jsonSchemaToNaturalSchema,
   naturalSchemaToJsonSchema,
 } from "./util/jsonSchema.js";
+export { normalizeDistribution, peakConfidence } from "./question/index.js";
 
 // Providers
 export { BedrockProvider } from "./providers/bedrock/index.js";
@@ -116,4 +133,14 @@ export type {
   OcrRequest,
 } from "./providers/mistral/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
+export {
+  TypeSafeClient,
+  TypeSafeProvider,
+} from "./providers/typesafe/index.js";
+export type {
+  TypeSafeModel,
+  TypeSafeModelsResponse,
+  TypeSafeSystemOneRequest,
+  TypeSafeSystemOneResponse,
+} from "./providers/typesafe/index.js";
 export { XaiProvider } from "./providers/xai/index.js";

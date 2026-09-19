@@ -83,6 +83,12 @@ export const MODEL = {
   GPT_MINI: "gpt-5.4-mini",
   /** @deprecated use MODEL.LUNA (gpt-5.6-luna) */
   GPT_NANO: "gpt-5.4-nano",
+  // TypeSafe (System One; answers typed questions, generates no text)
+  // Pinned to the versioned id the API echoes on every response. `jev-latest`
+  // and `jev-preview` are aliases TypeSafe repoints; COST is keyed by literal
+  // id, so the catalog names the version it prices. Both aliases still route
+  // to the provider through MODEL_MATCH_WORDS.
+  JEV: "jev-1.13.0",
   // xAI
   // Pinned to a literal version rather than the `grok-latest` alias. COST is
   // keyed by literal id, so an alias xAI repoints would leave the catalog
@@ -475,6 +481,10 @@ export const COST: Record<string, LlmModelCost> = {
   "mistral-large-2512": { cachedInputRead: 0.05, input: 0.5, output: 1.5 },
   "mistral-medium-3-5": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
   "mistral-small-2603": { cachedInputRead: 0.015, input: 0.15, output: 0.6 },
+  // TypeSafe — https://docs.typesafe.ai (verified 2026-09-18). Output tokens
+  // are free: a System One answer is a handful of numbers, and TypeSafe does
+  // not bill them.
+  "jev-1.13.0": { input: 0.042, output: 0 },
 };
 
 const GOOGLE_PROVIDER = {
@@ -646,6 +656,16 @@ export const PROVIDER = {
       USER: "user" as const,
     },
   },
+  TYPESAFE: {
+    // https://docs.typesafe.ai
+    API_KEY: "TYPESAFE_API_KEY" as const,
+    BASE_URL: "https://api.typesafe.ai/v1" as const,
+    DEFAULT: MODEL.JEV,
+    // No deprecated size-tier MODEL block: tiers are frozen and new providers
+    // do not add one.
+    MODEL_MATCH_WORDS: ["jev", "typesafe"] as const,
+    NAME: "typesafe" as const,
+  },
   XAI: {
     // https://docs.x.ai/docs/models
     API_KEY: "XAI_API_KEY" as const,
@@ -672,6 +692,7 @@ export type LlmProviderName =
   | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
   | typeof PROVIDER.OPENROUTER.NAME
+  | typeof PROVIDER.TYPESAFE.NAME
   | typeof PROVIDER.XAI.NAME;
 
 // Last: Defaults

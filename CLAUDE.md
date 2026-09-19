@@ -72,6 +72,7 @@
 | `ANTHROPIC_API_KEY` | Anthropic API key for LLM |
 | `OPENAI_API_KEY` | OpenAI API key for LLM |
 | `META_API_KEY` | Meta Model API key for LLM (`MODEL_API_KEY`, Meta's documented name, is a fallback) |
+| `TYPESAFE_API_KEY` | TypeSafe API key for LLM System One models (Jev) |
 | `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |
 ## Commands and Skills
 - [VERSIONING.md](VERSIONING.md) for versioning and npm publishing

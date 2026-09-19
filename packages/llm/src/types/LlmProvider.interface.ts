@@ -9,6 +9,11 @@ import { z } from "zod/v4";
 import { type LlmEffort } from "../constants.js";
 import { type LlmRetryOptions } from "../operate/retry/RetryPolicy.js";
 import { LlmTool } from "./LlmTool.interface.js";
+import type {
+  LlmQuestionOptions,
+  LlmQuestionResponse,
+  LlmQuestionState,
+} from "./LlmQuestion.interface.js";
 import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 
@@ -662,6 +667,14 @@ export interface LlmProvider {
     input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,
   ): Promise<LlmOperateResponse>;
+  /**
+   * Answer typed questions about a state. Implemented natively by System One
+   * providers; every other provider is served by the shared emulator.
+   */
+  question?(
+    state: LlmQuestionState,
+    options: LlmQuestionOptions,
+  ): Promise<LlmQuestionResponse>;
   send(
     message: string,
     options?: LlmMessageOptions,

@@ -62,6 +62,32 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
 });
+const mockQuestion = createMockResolvedFunction({
+  answers: {
+    _MOCK_QUESTION: {
+      choice: "_MOCK_CHOICE",
+      confidence: 1,
+      probabilities: { _MOCK_CHOICE: 1 },
+      type: "choice",
+    },
+  },
+  emulated: false,
+  fallbackAttempts: 1,
+  fallbackUsed: false,
+  model: "_MOCK_MODEL",
+  provider: "_MOCK_PROVIDER",
+  responses: [],
+  usage: [
+    {
+      input: 100,
+      model: "_MOCK_MODEL",
+      output: 20,
+      provider: "_MOCK_PROVIDER",
+      reasoning: 0,
+      total: 120,
+    },
+  ],
+});
 const mockSend = createMockResolvedFunction("_MOCK_LLM_RESPONSE");
 // Host bootstrap registers the exchange store beside initClient(); mocked so
 // that call is inert and assertable rather than reaching the real module state
@@ -75,14 +101,17 @@ export const Llm = Object.assign(
       _provider: providerName,
       _llm: {
         operate: mockOperate,
+        question: mockQuestion,
         send: mockSend,
       },
       operate: mockOperate,
+      question: mockQuestion,
       send: mockSend,
     };
   }),
   {
     operate: mockOperate,
+    question: mockQuestion,
     send: mockSend,
     useExchangeStore,
   },
@@ -169,6 +198,12 @@ export const OpenRouterProvider = createMockWrappedObject(
     isClass: true,
   },
 );
+export const TypeSafeProvider = createMockWrappedObject(
+  original.TypeSafeProvider,
+  {
+    isClass: true,
+  },
+);
 export const XaiProvider = createMockWrappedObject(original.XaiProvider, {
   isClass: true,
 });
@@ -188,7 +223,11 @@ export const isLlmOperateInputFile = original.isLlmOperateInputFile;
 export const isLlmOperateInputImage = original.isLlmOperateInputImage;
 export const jsonSchemaToNaturalSchema = original.jsonSchemaToNaturalSchema;
 export const naturalSchemaToJsonSchema = original.naturalSchemaToJsonSchema;
+export const LlmQuestionType = original.LlmQuestionType;
+export const normalizeDistribution = original.normalizeDistribution;
+export const peakConfidence = original.peakConfidence;
 export const RetryPolicy = original.RetryPolicy;
+export const TypeSafeClient = original.TypeSafeClient;
 
 // Tool collections (undefined when @jaypie/llm is not installed)
 export const toolkit = (

@@ -713,4 +713,36 @@ describe("determineModelProvider", () => {
       });
     });
   });
+
+  describe("TypeSafe", () => {
+    it("Resolves the provider name to the default model", () => {
+      expect(determineModelProvider(PROVIDER.TYPESAFE.NAME)).toEqual({
+        model: PROVIDER.TYPESAFE.DEFAULT,
+        provider: PROVIDER.TYPESAFE.NAME,
+      });
+    });
+
+    it("Resolves the versioned catalog id", () => {
+      expect(determineModelProvider(MODEL.JEV)).toEqual({
+        model: MODEL.JEV,
+        provider: PROVIDER.TYPESAFE.NAME,
+      });
+    });
+
+    it("Resolves the aliases TypeSafe repoints", () => {
+      for (const alias of ["jev-latest", "jev-preview"]) {
+        expect(determineModelProvider(alias)).toEqual({
+          model: alias,
+          provider: PROVIDER.TYPESAFE.NAME,
+        });
+      }
+    });
+
+    it("Resolves an id named for the vendor", () => {
+      expect(determineModelProvider("typesafe-system-one")).toEqual({
+        model: "typesafe-system-one",
+        provider: PROVIDER.TYPESAFE.NAME,
+      });
+    });
+  });
 });
