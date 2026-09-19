@@ -79,9 +79,9 @@ No docs deployment step (unlike `deploy-env-*.yml`).
 |-----|-------|
 | `lint` | Node 24 |
 | `typecheck` | `continue-on-error: true` |
-| `test` | Node 24 (stable) + 25 (experimental, `continue-on-error: true`) |
+| `test` | Node 24 (stable) + 25 (experimental, `continue-on-error: true`); passes `MISTRAL_API_KEY` and `LLAMA_CLOUD_API_KEY` so the two OCR hot specs run |
 | `build-llm` | Detects changes to `packages/llm/**` via `dorny/paths-filter`; builds and uploads artifact |
-| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `meta`, `fireworks`, `mistral`, `openrouter`, `bedrock` |
+| `test-llm-matrix` | Only runs when `packages/llm/**` changed; matrix: `anthropic`, `openai`, `gemini-xai`, `meta`, `fireworks`, `mistral`, `openrouter`, `bedrock`; the `mistral` shard then runs the OCR step |
 | `test-llm-matrix-complete` | Aggregator job — fails if any matrix group failed |
 
 **Mistral returned to CI on 2026-09-19.** The shard was dropped on 2026-09-04
@@ -93,6 +93,16 @@ group again in both workflows and `MISTRAL_API_KEY` is passed. Pacing comes
 from `test/rateLimit.ts` and the library's rate-limit backoff; if the shard
 starts failing on 429s again rather than on the code, drop the group before
 chasing the matrix.
+
+**OCR coverage (added 2026-09-19).** `MODEL.MISTRAL.OCR` and
+`MODEL.LLAMAPARSE.*` are excluded from the matrix, so two things cover them.
+The `test` job passes `CICD_MISTRAL_API_KEY` and `CICD_LLAMA_CLOUD_API_KEY`
+(the only provider keys it carries) so the Mistral and LlamaCloud hot specs
+run instead of skipping; each includes a fallback simulation from a rejected
+id to the real engine. The `mistral` shard runs `npm run test:llm:ocr` after
+the matrix (`Run OCR engines and fallback chain`): every native engine, one
+emulated engine per chat provider (Anthropic and OpenAI keys), and a
+LlamaParse-to-Haiku fallback chain. Same in `npm-deploy.yml`.
 
 **Bedrock two-step role assumption** (matrix group `bedrock`):
 1. `configure-aws` with `vars.AWS_ROLE_ARN` (sandbox environment)
@@ -116,9 +126,9 @@ Requires `JaypieCicd` stack deployed.
 - `rc-*` tag + version contains `-rc.` → `--tag rc`
 - otherwise → latest (no tag flag)
 
-**test job:** optionally wraps `npm test` with Datadog tracing when `DATADOG_CICD_API_KEY` is set.
+**test job:** optionally wraps `npm test` with Datadog tracing when `DATADOG_CICD_API_KEY` is set. Passes `MISTRAL_API_KEY` and `LLAMA_CLOUD_API_KEY` so the OCR hot specs run (see npm-check).
 
-**test-llm-matrix:** always runs (no path filter), same matrix groups as npm-check, Bedrock two-step role assumption for `bedrock` group. Owns live-model coverage (the former `test-llm-client` job was retired — its tools+structured "both" scenario is a subset of the matrix's `both` capability, and the matrix now includes each provider's default model).
+**test-llm-matrix:** always runs (no path filter), same matrix groups as npm-check, same OCR step on the `mistral` shard, Bedrock two-step role assumption for `bedrock` group. Owns live-model coverage (the former `test-llm-client` job was retired — its tools+structured "both" scenario is a subset of the matrix's `both` capability, and the matrix now includes each provider's default model).
 
 **Bedrock two-step role assumption** (same pattern as npm-check):
 1. `configure-aws` with `vars.AWS_ROLE_ARN` (sandbox environment)
