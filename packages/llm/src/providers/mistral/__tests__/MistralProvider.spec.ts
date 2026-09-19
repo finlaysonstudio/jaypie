@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MistralProvider } from "../MistralProvider.class";
 import { MistralClient } from "../client.js";
 import { MODEL, PROVIDER } from "../../../constants.js";
+import { LlmUnrecoverableError } from "../../../errors/LlmError.js";
 
 // Mock the Mistral client
 vi.mock("../client.js");
@@ -220,49 +221,158 @@ describe("MistralProvider", () => {
 
   describe("Features", () => {
     describe("OCR", () => {
-      it("joins page markdown and preserves the raw response", async () => {
-        const raw = {
-          model: MODEL.MISTRAL.OCR,
-          pages: [
-            { index: 0, markdown: "# Page One", blocks: [{ type: "title" }] },
-            { index: 1, markdown: "Page two body" },
-          ],
-        };
+      const DOCUMENT_URL = "https://x.test/scan.pdf";
+
+      function mockOcrClient(raw: unknown) {
         const mockOcr = vi.fn().mockResolvedValue(raw);
         vi.mocked(MistralClient).mockImplementation(
           class {
             ocr = mockOcr;
           } as any,
         );
+        return mockOcr;
+      }
+
+      it("Returns the common OCR shape with 1-indexed pages", async () => {
+        const raw = {
+          model: MODEL.MISTRAL.OCR,
+          pages: [
+            {
+              images: [{ id: "img-0.jpeg", image_base64: "AAAA" }],
+              index: 0,
+              markdown: "# Page One",
+              header: "Header",
+            },
+            { index: 1, markdown: "Page two body", footer: "Footer" },
+          ],
+          usage_info: { pages_processed: 2 },
+        };
+        mockOcrClient(raw);
 
         const provider = new MistralProvider();
-        const result = await provider.ocr({
-          document: {
-            type: "document_url",
-            document_url: "data:application/pdf;base64,AAAA",
-          },
-        });
+        const result = await provider.ocr(DOCUMENT_URL);
 
         expect(result.markdown).toBe("# Page One\n\nPage two body");
         expect(result.pages).toHaveLength(2);
+        expect(result.pages[0].page).toBe(1);
+        expect(result.pages[0].header).toBe("Header");
+        expect(result.pages[0].raw).toBe(raw.pages[0]);
+        expect(result.pages[0].success).toBe(true);
+        expect(result.pages[1].page).toBe(2);
+        expect(result.pages[1].footer).toBe("Footer");
+        expect(result.images).toEqual([
+          {
+            data: "data:image/jpeg;base64,AAAA",
+            id: "img-0.jpeg",
+            mimeType: "image/jpeg",
+            page: 1,
+          },
+        ]);
         expect(result.model).toBe(MODEL.MISTRAL.OCR);
-        expect(result.raw).toBe(raw);
+        expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
+        expect(result.responses).toEqual([raw]);
+        expect(result.fallbackAttempts).toBe(1);
+        expect(result.fallbackUsed).toBe(false);
+        expect(result.usage).toEqual({
+          cost: 0.008,
+          model: MODEL.MISTRAL.OCR,
+          pages: 2,
+          provider: PROVIDER.MISTRAL.NAME,
+        });
       });
 
-      it("returns empty markdown when no pages come back", async () => {
-        vi.mocked(MistralClient).mockImplementation(
-          class {
-            ocr = vi.fn().mockResolvedValue({});
-          } as any,
-        );
-
+      it("Sends a URL as document_url and defaults to the OCR model", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
         const provider = new MistralProvider();
-        const result = await provider.ocr({
-          document: { type: "document_url", document_url: "https://x.test/a" },
+        await provider.ocr(DOCUMENT_URL);
+        const [request] = mockOcr.mock.calls[0];
+        expect(request.document).toEqual({
+          document_name: "scan.pdf",
+          document_url: DOCUMENT_URL,
+          type: "document_url",
         });
+        expect(request.model).toBe(MODEL.MISTRAL.OCR);
+      });
 
+      it("Sends image bytes as image_url", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr({
+          data: Buffer.from("png").toString("base64"),
+          image: "photo.png",
+        });
+        const [request] = mockOcr.mock.calls[0];
+        expect(request.document.type).toBe("image_url");
+        expect(request.document.image_url).toMatch(/^data:image\/png;base64,/);
+      });
+
+      it("Converts 1-indexed pages to the 0-indexed wire form", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr(DOCUMENT_URL, { pages: "1,3-4" });
+        expect(mockOcr.mock.calls[0][0].pages).toEqual([0, 2, 3]);
+      });
+
+      it("Maps tables, images, and providerOptions onto the request", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr(DOCUMENT_URL, {
+          images: true,
+          providerOptions: { include_blocks: true },
+          tables: "html",
+        });
+        const [request] = mockOcr.mock.calls[0];
+        expect(request.table_format).toBe("html");
+        expect(request.include_image_base64).toBe(true);
+        expect(request.include_blocks).toBe(true);
+      });
+
+      it("Uses the instance model when it is an OCR model", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider("mistral-ocr-latest");
+        await provider.ocr(DOCUMENT_URL);
+        expect(mockOcr.mock.calls[0][0].model).toBe("mistral-ocr-latest");
+      });
+
+      it("Prefers an explicit per-call model", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr(DOCUMENT_URL, { model: "mistral-ocr-2512" });
+        expect(mockOcr.mock.calls[0][0].model).toBe("mistral-ocr-2512");
+      });
+
+      it("Surfaces document annotations", async () => {
+        mockOcrClient({ document_annotation: { title: "T" }, pages: [] });
+        const provider = new MistralProvider();
+        const result = await provider.ocr(DOCUMENT_URL);
+        expect(result.annotations).toEqual({ title: "T" });
+      });
+
+      it("Returns empty markdown when no pages come back", async () => {
+        mockOcrClient({});
+        const provider = new MistralProvider();
+        const result = await provider.ocr(DOCUMENT_URL);
         expect(result.markdown).toBe("");
         expect(result.pages).toEqual([]);
+        expect(result.usage.pages).toBe(0);
+      });
+
+      it("Classifies a client failure as a typed LlmError", async () => {
+        const { MistralHttpError } =
+          await vi.importActual<typeof import("../client.js")>("../client.js");
+        vi.mocked(MistralClient).mockImplementation(
+          class {
+            ocr = vi
+              .fn()
+              .mockRejectedValue(
+                new MistralHttpError(422, "body.pages: extra_forbidden"),
+              );
+          } as any,
+        );
+        const provider = new MistralProvider();
+        await expect(provider.ocr(DOCUMENT_URL)).rejects.toBeInstanceOf(
+          LlmUnrecoverableError,
+        );
       });
     });
   });

@@ -10,6 +10,10 @@ It also provides `Llm.question`, a fourth entry point in TypeSafe's (Jev's)
 shape: typed questions about a state, answered natively by a System One model
 or by any other provider through the emulator. See "Questions" below.
 
+`Llm.ocr` is a fifth entry point: a document in, per-page markdown out, served
+by Mistral OCR or LlamaParse (LlamaCloud) behind one request and response
+shape. See "OCR" below.
+
 ## Directory Structure
 
 ```
@@ -17,6 +21,11 @@ src/
 ├── Llm.ts                    # Main facade class
 ├── constants.ts              # Provider/model constants
 ├── index.ts                  # Package exports
+├── ocr/                      # Llm.ocr support
+│   ├── expandPageSelection.ts # "1,3-5" or [1, 3] → sorted 1-indexed pages
+│   ├── pageCost.ts           # USD from PAGE_COST
+│   ├── resolveOcrDocument.ts # URL, data: URI, S3, or disk → url | buffer
+│   └── runOcrAttempts.ts     # Shared rate-limit / transient retry loop
 ├── operate/                  # Core operation loop
 │   ├── OperateLoop.ts        # Multi-turn conversation orchestrator
 │   ├── StreamLoop.ts         # Streaming variant
@@ -59,6 +68,14 @@ src/
 │   ├── meta/
 │   │   ├── MetaProvider.class.ts
 │   │   └── utils.ts
+│   ├── llamacloud/
+│   │   ├── client.ts         # Parse API v2: create, upload, poll, image
+│   │   ├── LlamaCloudProvider.class.ts
+│   │   └── utils.ts          # resolveTier
+│   ├── mistral/
+│   │   ├── client.ts         # Chat Completions plus POST /v1/ocr
+│   │   ├── MistralProvider.class.ts
+│   │   └── utils.ts
 │   ├── typesafe/
 │   │   ├── client.ts
 │   │   ├── TypeSafeProvider.class.ts
@@ -78,6 +95,7 @@ src/
 │   ├── time.ts               # Built-in: current time
 │   └── weather.ts            # Built-in: weather lookup
 ├── types/                    # Type definitions
+│   ├── LlmOcr.interface.ts
 │   ├── LlmProvider.interface.ts
 │   ├── LlmQuestion.interface.ts
 │   ├── LlmStreamChunk.interface.ts
@@ -488,6 +506,81 @@ picks it up.
 implements neither `operate()` nor `send()`, so every cell would fail by
 construction. It is covered by `tsx test/question.ts` (`npm run
 test:llm:question`) and the TypeSafe hot spec.
+
+### OCR
+
+`Llm.ocr(document, options?)` turns a document into per-page markdown. Two
+engines answer natively behind one shape:
+
+- **Mistral OCR** (`MODEL.MISTRAL.OCR`, `POST /v1/ocr`): one synchronous
+  call. The default when neither `llm` nor `model` is given (`DEFAULT.OCR`).
+- **LlamaParse** over the LlamaCloud Parse API v2 (provider `llamacloud`,
+  `LLAMA_CLOUD_API_KEY`): a job that is submitted, polled, and fetched. The
+  parse **tier is the model id** — `MODEL.LLAMAPARSE.{FAST, COST_EFFECTIVE,
+  AGENTIC, AGENTIC_PLUS}` — so a fallback chain is a plain model list and
+  `determineModelProvider` routes it (match words `llamacloud`, `llamaindex`,
+  `llamaparse`). `PROVIDER.LLAMACLOUD.DEFAULT` is the agentic tier.
+
+```typescript
+const { markdown, pages, usage } = await Llm.ocr("./scans/invoice.pdf", {
+  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE],
+  pages: "1,3-5",
+});
+```
+
+`document` is a string (`https://` URL passed to the vendor, `data:` URI,
+S3 key when `CDK_ENV_BUCKET` is set, or local path) or the `{ file, bucket?,
+data?, pages? }` / `{ image, ... }` objects `operate()` accepts. It is
+resolved once (`src/ocr/resolveOcrDocument.ts`) before the fallback chain runs,
+so S3 and disk are read a single time per call.
+
+Options: `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
+(`"markdown"` default or `"html"`), `images` (fetch extracted images as
+`data:` URIs; off by default), `timeout` (asynchronous job ceiling, default
+ten minutes), `retry`, `signal`, and `providerOptions` — vendor fields spread
+last onto the request (Mistral `OCRRequest` fields such as
+`document_annotation_format`; LlamaParse `ParseRequestConfiguration` fields
+such as `version`, `agentic_options`, `processing_options`, `output_options`).
+
+Response: `markdown` (pages joined with a blank line), `pages[]` (`page`
+1-indexed, `markdown`, `header`/`footer`, `images`, `success`/`error`, and
+the vendor page untouched at `raw`), `images[]`, `usage` (`pages`,
+LlamaParse `credits`, and `cost` in USD from `PAGE_COST`), `responses[]` (the
+raw vendor payload), and the `provider`/`model`/`fallbackAttempts`/
+`fallbackUsed` fields `operate` carries. Mistral pages are 0-indexed on the
+wire and converted on both sides; Mistral `document_annotation` surfaces as
+`annotations`.
+
+**Pricing.** OCR bills per page, which `LlmModelCost` cannot express, so the
+engines are absent from `COST` and priced in `PAGE_COST` (USD per 1,000
+pages, keyed by literal id). LlamaParse bills credits at
+`PROVIDER.LLAMACLOUD.CREDIT_COST` per 1,000; a job's recorded `credits` win
+over the per-page estimate when the API has them.
+
+**LlamaParse versions are per tier.** `PROVIDER.LLAMACLOUD.VERSION` maps each
+API tier to the dated version sent with it. The API rejects a version the
+tier does not serve (verified live 2026-09-19: the agentic tier's newest date
+is invalid on the other three), so one pin cannot cover all four. Override
+per call with `providerOptions.version` (`"latest"` is accepted). The
+response `model` is `<tier id>@<version>` so usage records name the
+configuration that ran. The fast tier returns text only; the provider
+requests `text` and copies it into `markdown`, logged at debug.
+
+**Errors and fallback.** A job that reports `FAILED` throws
+`LlmUnrecoverableError` with the API's `error_message`; `CANCELLED` throws
+`LlmAbortError`; a job that outlives `timeout` throws `LlmTransientError` so
+a chain can try the next engine. HTTP failures classify like the other
+`fetch` clients (429 rate limit with `retry-after`, 5xx transient, else
+unrecoverable) and both providers share `src/ocr/runOcrAttempts.ts`, so
+`retry` and `signal` mean the same thing on each. A provider without `ocr`
+(every chat provider) fails the attempt with `NotImplementedError` and the
+chain moves on; there is no emulation on chat models.
+
+`MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are excluded from the live
+capability matrix. They are covered by `tsx test/ocr.ts` (`npm run
+test:llm:ocr`; `APP_MODELS` filters engines, `APP_DOCUMENTS` names files or
+URLs to run instead of the fixtures, `APP_IMAGES=true` downloads images) and
+by the Mistral and LlamaCloud hot specs.
 
 ### Structured Outputs
 
@@ -940,6 +1033,12 @@ HTTP errors shaped to drive `classifyError`):
     renders the object form as `body.field: message` rather than
     `[object Object]`.
 - OpenRouter — `OpenRouterClient` (OpenAI-compatible Chat Completions)
+- LlamaCloud — `LlamaCloudClient` (Parse API v2: `POST /parse` by
+  `source_url`, `POST /parse/upload` as multipart `file` plus a
+  `configuration` JSON string, `GET /parse/{job_id}?expand=…`, and presigned
+  image download). `ocr` is the provider's whole surface; `send` throws
+  `NotImplementedError`. FastAPI validation details are rendered
+  `body.field: message`.
 
 Bedrock is the one provider that keeps an SDK: `@aws-sdk/client-bedrock-runtime`
 is an **optional peer dependency**, loaded lazily via dynamic `import()` only
@@ -961,6 +1060,7 @@ when the matching `*_API_KEY` is set and skip otherwise.
 - `XAI_API_KEY` - xAI (Grok) API key
 - `META_API_KEY` - Meta Model API key (`MODEL_API_KEY`, the name Meta's own docs use, is read as a fallback)
 - `TYPESAFE_API_KEY` - TypeSafe API key for System One models (Jev); only `Llm.question` uses it
+- `LLAMA_CLOUD_API_KEY` - LlamaCloud API key for LlamaParse; only `Llm.ocr` uses it
 - `LLM_EXCHANGE_ENABLED` - Persist each `operate()` and `stream()` call as an `exchange` entity via `@jaypie/dynamodb` `storeExchange` (optional peer, lazily resolved; silent no-op when absent)
 
 Keys are resolved via `getEnvSecret` from `@jaypie/aws` (supports AWS Secrets Manager).
@@ -1017,6 +1117,9 @@ export * as LLM from "./constants.js";
 export type {
   LlmHistory,
   LlmInputMessage,
+  LlmOcrDocument,
+  LlmOcrOptions,
+  LlmOcrResponse,
   LlmOperateOptions,
   LlmOperateResponse,
   LlmProvider,
@@ -1050,6 +1153,8 @@ export {
 export {
   FireworksProvider,
   GoogleProvider,
+  LlamaCloudClient,
+  LlamaCloudProvider,
   MetaProvider,
   MistralProvider,
   OpenRouterProvider,
@@ -1075,6 +1180,7 @@ Integration tests in `test/` directory require API keys:
 - `test/client.ts` - Real API calls
 - `test/joke.ts` - Streaming test
 - `test/format.ts` - Multi-word `format` key fidelity (issue #393); run `tsx test/format.ts`, override providers with `APP_PROVIDER=openai,anthropic,...`
+- `test/ocr.ts` - `Llm.ocr` across Mistral OCR and every LlamaParse tier plus a fallback chain; run `npm run test:ocr`, filter with `APP_MODELS`, supply documents with `APP_DOCUMENTS`
 
 ### Live Capability Matrix
 

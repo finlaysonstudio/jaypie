@@ -52,6 +52,19 @@ export const MODEL = {
   GEMINI_FLASH: "gemini-3.8-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
+  // LlamaCloud (LlamaParse; https://developers.llamaindex.ai/python/cloud/llamaparse)
+  // Document extraction over the Parse API v2, not chat completions. The
+  // parse tier is the model id: `determineModelProvider` routes each id to
+  // the llamacloud provider, which maps the suffix to the API's `tier`, so a
+  // fallback chain reads as a plain model list. Priced per page in PAGE_COST,
+  // never in COST; excluded from the chat matrix. The API version is pinned
+  // at PROVIDER.LLAMACLOUD.VERSION.
+  LLAMAPARSE: {
+    AGENTIC: "llamaparse-agentic",
+    AGENTIC_PLUS: "llamaparse-agentic-plus",
+    COST_EFFECTIVE: "llamaparse-cost-effective",
+    FAST: "llamaparse-fast",
+  },
   // Meta (Model API; https://dev.meta.ai/docs/models)
   MUSE_SPARK: "muse-spark-1.3",
   // Contributor tier: prompts and completions may train Meta models, so this
@@ -489,6 +502,23 @@ export const COST: Record<string, LlmModelCost> = {
   "jev-1.13.0": { input: 0.042, output: 0 },
 };
 
+/**
+ * Price of one thousand pages, in US dollars, for document-extraction models
+ * (`Llm.ocr`). Keyed by literal id like COST, so a retired id keeps its price.
+ * LlamaParse bills in credits ($1.25 per 1,000) at a per-page rate that
+ * depends on the tier: fast 1, cost_effective 3, agentic 10, agentic_plus 45.
+ * Mistral OCR bills $4 per 1,000 pages ($0.40 cached; verified 2026-09-19).
+ * `usage.cost` on an OCR response is computed from this table and is absent
+ * for an id it does not price.
+ */
+export const PAGE_COST: Record<string, number> = {
+  "llamaparse-agentic": 12.5,
+  "llamaparse-agentic-plus": 56.25,
+  "llamaparse-cost-effective": 3.75,
+  "llamaparse-fast": 1.25,
+  "mistral-ocr-4-1": 4,
+};
+
 const GOOGLE_PROVIDER = {
   // https://ai.google.dev/gemini-api/docs/models
   DEFAULT: MODEL.GEMINI_FLASH,
@@ -586,6 +616,31 @@ export const PROVIDER = {
   /** @deprecated Use PROVIDER.GOOGLE — "Google" is the provider; Gemini is the model family */
   GEMINI: GOOGLE_PROVIDER,
   GOOGLE: GOOGLE_PROVIDER,
+  LLAMACLOUD: {
+    // https://developers.llamaindex.ai/python/cloud/llamaparse
+    // LlamaParse is the product; LlamaCloud is the account, key, and host.
+    API_KEY: "LLAMA_CLOUD_API_KEY" as const,
+    BASE_URL: "https://api.cloud.llamaindex.ai/api/v2" as const,
+    /** USD per 1,000 credits; a job's `usage.credits` times this is its cost */
+    CREDIT_COST: 1.25 as const,
+    DEFAULT: MODEL.LLAMAPARSE.AGENTIC,
+    // No deprecated size-tier MODEL block: tiers are frozen and new providers
+    // do not add one.
+    MODEL_MATCH_WORDS: ["llamacloud", "llamaindex", "llamaparse"] as const,
+    NAME: "llamacloud" as const,
+    // Parse API version sent on every request, keyed by API tier. Each tier
+    // accepts its own set of dated versions (verified live 2026-09-19: the
+    // API rejects `agentic`'s newest date on every other tier), so a single
+    // pin cannot serve all four. Pinned so a result does not change shape
+    // under a caller when LlamaIndex moves `latest`; override per call
+    // through `providerOptions.version`.
+    VERSION: {
+      agentic: "2026-09-13",
+      agentic_plus: "2026-09-11",
+      cost_effective: "2026-08-19",
+      fast: "2026-06-15",
+    } as const,
+  },
   META: {
     // https://dev.meta.ai/docs/models
     API_KEY: "META_API_KEY" as const,
@@ -690,6 +745,7 @@ export type LlmProviderName =
   | typeof PROVIDER.BEDROCK.NAME
   | typeof PROVIDER.FIREWORKS.NAME
   | typeof PROVIDER.GOOGLE.NAME
+  | typeof PROVIDER.LLAMACLOUD.NAME
   | typeof PROVIDER.META.NAME
   | typeof PROVIDER.MISTRAL.NAME
   | typeof PROVIDER.OPENAI.NAME
@@ -705,6 +761,13 @@ export const DEFAULT = {
     LARGE: PROVIDER.OPENAI.MODEL.LARGE,
     SMALL: PROVIDER.OPENAI.MODEL.SMALL,
     TINY: PROVIDER.OPENAI.MODEL.TINY,
+  },
+  /** Engine `Llm.ocr` uses when neither a provider nor a model is named:
+   * one synchronous call, already integrated, and the cheapest markdown
+   * tier on offer. */
+  OCR: {
+    MODEL: MODEL.MISTRAL.OCR,
+    PROVIDER: PROVIDER.MISTRAL,
   },
   PROVIDER: PROVIDER.OPENAI,
 } as const;

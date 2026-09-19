@@ -6,6 +6,7 @@ import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
 import { runWithFallback } from "./util/runWithFallback.js";
 import { emulateQuestion, validateQuestions } from "./question/index.js";
+import { resolveOcrDocument } from "./ocr/index.js";
 import { emitExchange } from "./operate/exchange/index.js";
 import {
   ExchangeStore,
@@ -31,11 +32,17 @@ import {
   LlmQuestionResponse,
   LlmQuestionState,
 } from "./types/LlmQuestion.interface.js";
+import {
+  LlmOcrDocument,
+  LlmOcrOptions,
+  LlmOcrResponse,
+} from "./types/LlmOcr.interface.js";
 import { LlmStreamChunk } from "./types/LlmStreamChunk.interface.js";
 import { AnthropicProvider } from "./providers/anthropic/AnthropicProvider.class.js";
 import { BedrockProvider } from "./providers/bedrock/index.js";
 import { FireworksProvider } from "./providers/fireworks/index.js";
 import { GoogleProvider } from "./providers/google/GoogleProvider.class.js";
+import { LlamaCloudProvider } from "./providers/llamacloud/index.js";
 import { MetaProvider } from "./providers/meta/index.js";
 import { MistralProvider } from "./providers/mistral/index.js";
 import { OpenAiProvider } from "./providers/openai/index.js";
@@ -137,6 +144,10 @@ class Llm implements LlmProvider {
         });
       case PROVIDER.GOOGLE.NAME:
         return new GoogleProvider(model || PROVIDER.GOOGLE.DEFAULT, {
+          apiKey,
+        });
+      case PROVIDER.LLAMACLOUD.NAME:
+        return new LlamaCloudProvider(model || PROVIDER.LLAMACLOUD.DEFAULT, {
           apiKey,
         });
       case PROVIDER.META.NAME:
@@ -304,6 +315,71 @@ class Llm implements LlmProvider {
         });
         await persistExchange(failureEnvelope);
       },
+      primary: this,
+      primaryProvider: this._provider,
+    });
+  }
+
+  /**
+   * Turn a document into per-page markdown. Mistral OCR and LlamaParse
+   * answer natively behind one request and response shape; a provider
+   * without `ocr` fails the attempt and a fallback chain moves on. The
+   * document is resolved once (S3, disk, or data URI) before the chain runs,
+   * so a fallback never re-reads it.
+   */
+  async ocr(
+    document: LlmOcrDocument,
+    options: LlmOcrOptions = {},
+  ): Promise<LlmOcrResponse> {
+    const { fallback: modelFallback, model: perCallModel } = resolveModelChain(
+      options.model,
+    );
+    const resolvedOptions: LlmOcrOptions = {
+      ...options,
+      model: perCallModel,
+    };
+    const fallbackChain = [
+      ...modelFallback,
+      ...this.resolveFallbackChain(resolvedOptions),
+    ];
+    const optionsWithoutFallback = {
+      ...resolvedOptions,
+      fallback: false as const,
+    };
+    // Same bargain as operate: an attempt with somewhere left to go fails
+    // fast instead of waiting out a rate limit.
+    const eagerOptions =
+      fallbackChain.length > 0 && resolvedOptions.retry === undefined
+        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
+        : optionsWithoutFallback;
+    const resolvedDocument = await resolveOcrDocument(document);
+
+    return runWithFallback<Llm, LlmOcrResponse>({
+      attempt: async ({ attempts, instance, isLast, provider }) => {
+        if (!instance._llm.ocr) {
+          throw new NotImplementedError(
+            `Provider ${provider} does not support ocr method`,
+          );
+        }
+        const base = isLast ? optionsWithoutFallback : eagerOptions;
+        // A fallback runs its own model: the per-call model named the
+        // primary, and forwarding it would ask the next provider for a
+        // tier it does not serve.
+        const attemptOptions =
+          instance === this ? base : { ...base, model: undefined };
+        const response = await instance._llm.ocr(
+          resolvedDocument,
+          attemptOptions,
+        );
+        return {
+          ...response,
+          fallbackAttempts: attempts,
+          fallbackUsed: attempts > 1,
+          provider: response.provider || provider,
+        };
+      },
+      chain: fallbackChain,
+      createInstance: (config) => this.createFallbackInstance(config),
       primary: this,
       primaryProvider: this._provider,
     });
@@ -500,6 +576,56 @@ class Llm implements LlmProvider {
     return instance.operate(input, {
       ...operateOptions,
       ...(operateFallback !== undefined && { fallback: operateFallback }),
+    });
+  }
+
+  /**
+   * With neither `llm` nor `model`, the default engine is Mistral OCR
+   * (`DEFAULT.OCR`): one synchronous call and the cheapest markdown tier.
+   */
+  static async ocr(
+    document: LlmOcrDocument,
+    options: LlmOcrOptions = {},
+  ): Promise<LlmOcrResponse> {
+    const { apiKey, fallback, llm, model, ...ocrOptions } = options;
+
+    // A `model` array becomes primary + derived fallback chain
+    const { fallback: modelFallback, model: primaryModel } =
+      resolveModelChain(model);
+
+    let finalLlm = llm as LlmProviderName | undefined;
+    let finalModel = primaryModel;
+
+    if (!llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
+      if (determined.provider) {
+        finalLlm = determined.provider as LlmProviderName;
+      }
+    } else if (llm && primaryModel) {
+      const determined = determineModelProvider(primaryModel);
+      if (determined.provider && determined.provider !== llm) {
+        finalModel = undefined;
+      }
+    }
+    if (!finalLlm && !finalModel) {
+      finalLlm = DEFAULT.OCR.PROVIDER.NAME;
+      finalModel = DEFAULT.OCR.MODEL;
+    }
+
+    const explicitFallback = Array.isArray(fallback) ? fallback : [];
+    const instanceFallback =
+      modelFallback.length || explicitFallback.length
+        ? [...modelFallback, ...explicitFallback]
+        : undefined;
+
+    const instance = new Llm(finalLlm, {
+      apiKey,
+      fallback: instanceFallback,
+      model: finalModel,
+    });
+    return instance.ocr(document, {
+      ...ocrOptions,
+      ...(fallback === false && { fallback: false }),
     });
   }
 

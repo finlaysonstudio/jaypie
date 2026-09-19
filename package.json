@@ -60,6 +60,7 @@
     "test:llm:joke": "tsx packages/llm/test/joke.ts",
     "test:llm:matrix": "tsx packages/llm/test/matrix.ts",
     "test:llm:matrix:bedrock": "npm run test:matrix:bedrock -w packages/llm",
+    "test:llm:ocr": "tsx packages/llm/test/ocr.ts",
     "test:llm:question": "tsx packages/llm/test/question.ts",
     "test:llm:reasoning": "tsx packages/llm/test/reasoning.ts",
     "test:llm:structured": "tsx packages/llm/test/structured.ts",

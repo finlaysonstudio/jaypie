@@ -62,6 +62,30 @@ const mockOperate = createMockResolvedFunction({
     },
   ],
 });
+const mockOcr = createMockResolvedFunction({
+  fallbackAttempts: 1,
+  fallbackUsed: false,
+  images: [],
+  markdown: "_MOCK_OCR_MARKDOWN",
+  model: "_MOCK_MODEL",
+  pages: [
+    {
+      images: [],
+      markdown: "_MOCK_OCR_MARKDOWN",
+      page: 1,
+      raw: {},
+      success: true,
+    },
+  ],
+  provider: "_MOCK_PROVIDER",
+  responses: [],
+  usage: {
+    cost: 0,
+    model: "_MOCK_MODEL",
+    pages: 1,
+    provider: "_MOCK_PROVIDER",
+  },
+});
 const mockQuestion = createMockResolvedFunction({
   answers: {
     _MOCK_QUESTION: {
@@ -100,16 +124,19 @@ export const Llm = Object.assign(
     return {
       _provider: providerName,
       _llm: {
+        ocr: mockOcr,
         operate: mockOperate,
         question: mockQuestion,
         send: mockSend,
       },
+      ocr: mockOcr,
       operate: mockOperate,
       question: mockQuestion,
       send: mockSend,
     };
   }),
   {
+    ocr: mockOcr,
     operate: mockOperate,
     question: mockQuestion,
     send: mockSend,
@@ -181,6 +208,12 @@ export const FireworksProvider = createMockWrappedObject(
 export const GoogleProvider = createMockWrappedObject(original.GoogleProvider, {
   isClass: true,
 });
+export const LlamaCloudProvider = createMockWrappedObject(
+  original.LlamaCloudProvider,
+  {
+    isClass: true,
+  },
+);
 export const MetaProvider = createMockWrappedObject(original.MetaProvider, {
   isClass: true,
 });
@@ -222,6 +255,7 @@ export const isLlmOperateInputContent = original.isLlmOperateInputContent;
 export const isLlmOperateInputFile = original.isLlmOperateInputFile;
 export const isLlmOperateInputImage = original.isLlmOperateInputImage;
 export const jsonSchemaToNaturalSchema = original.jsonSchemaToNaturalSchema;
+export const LlamaCloudClient = original.LlamaCloudClient;
 export const naturalSchemaToJsonSchema = original.naturalSchemaToJsonSchema;
 export const LlmQuestionType = original.LlmQuestionType;
 export const normalizeDistribution = original.normalizeDistribution;

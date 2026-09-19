@@ -39,6 +39,20 @@ const EXTENSION_TO_MIME: Record<string, string> = {
 };
 
 /**
+ * Pick the catalog extension for a MIME type, for naming a document that
+ * arrived as a `data:` URI. Undefined for a type the catalog does not carry.
+ */
+export function getExtensionForMimeType(mimeType: string): string | undefined {
+  const normalized = mimeType.toLowerCase().split(";")[0].trim();
+  for (const [extension, candidate] of Object.entries(EXTENSION_TO_MIME)) {
+    if (candidate === normalized) {
+      return extension;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Extract file extension from a path or filename
  */
 export function getFileExtension(filePath: string): string | undefined {

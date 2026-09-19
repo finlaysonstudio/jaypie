@@ -714,6 +714,42 @@ describe("determineModelProvider", () => {
     });
   });
 
+  describe("LlamaCloud", () => {
+    it("Resolves the provider name to the default tier", () => {
+      expect(determineModelProvider(PROVIDER.LLAMACLOUD.NAME)).toEqual({
+        model: PROVIDER.LLAMACLOUD.DEFAULT,
+        provider: PROVIDER.LLAMACLOUD.NAME,
+      });
+    });
+
+    it("Resolves every LlamaParse tier id", () => {
+      for (const tier of Object.values(MODEL.LLAMAPARSE)) {
+        expect(determineModelProvider(tier)).toEqual({
+          model: tier,
+          provider: PROVIDER.LLAMACLOUD.NAME,
+        });
+      }
+    });
+
+    it("Resolves ids named for the vendor", () => {
+      for (const id of ["llamacloud-parse", "llamaindex-parse"]) {
+        expect(determineModelProvider(id)).toEqual({
+          model: id,
+          provider: PROVIDER.LLAMACLOUD.NAME,
+        });
+      }
+    });
+
+    it("Leaves Bedrock and OpenRouter llama ids alone", () => {
+      expect(
+        determineModelProvider("meta.llama3-70b-instruct-v1:0").provider,
+      ).toBe(PROVIDER.BEDROCK.NAME);
+      expect(
+        determineModelProvider("meta-llama/llama-4-maverick").provider,
+      ).toBe(PROVIDER.OPENROUTER.NAME);
+    });
+  });
+
   describe("TypeSafe", () => {
     it("Resolves the provider name to the default model", () => {
       expect(determineModelProvider(PROVIDER.TYPESAFE.NAME)).toEqual({
