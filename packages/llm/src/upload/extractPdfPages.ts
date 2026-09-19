@@ -1,3 +1,4 @@
+import { BadRequestError } from "@jaypie/errors";
 import { PDFDocument } from "pdf-lib";
 
 /**
@@ -16,7 +17,7 @@ export async function extractPdfPages(
   // Validate page numbers
   for (const pageNum of pages) {
     if (pageNum < 1 || pageNum > totalPages) {
-      throw new Error(
+      throw new BadRequestError(
         `Page number ${pageNum} is out of range. Document has ${totalPages} pages.`,
       );
     }

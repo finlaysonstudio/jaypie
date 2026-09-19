@@ -323,6 +323,7 @@ export class MistralProvider implements LlmProvider {
       ...(raw.document_annotation
         ? { annotations: raw.document_annotation as JsonObject }
         : {}),
+      emulated: false,
       fallbackAttempts: 1,
       fallbackUsed: false,
       images: ocrPages.flatMap((page) => page.images),

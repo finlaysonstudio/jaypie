@@ -6,7 +6,7 @@ import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
 import { runWithFallback } from "./util/runWithFallback.js";
 import { emulateQuestion, validateQuestions } from "./question/index.js";
-import { resolveOcrDocument } from "./ocr/index.js";
+import { emulateOcr, resolveOcrDocument } from "./ocr/index.js";
 import { emitExchange } from "./operate/exchange/index.js";
 import {
   ExchangeStore,
@@ -322,10 +322,12 @@ class Llm implements LlmProvider {
 
   /**
    * Turn a document into per-page markdown. Mistral OCR and LlamaParse
-   * answer natively behind one request and response shape; a provider
-   * without `ocr` fails the attempt and a fallback chain moves on. The
-   * document is resolved once (S3, disk, or data URI) before the chain runs,
-   * so a fallback never re-reads it.
+   * answer natively behind one request and response shape; every other
+   * provider answers through the emulator, which sends each page through
+   * one structured `operate()` call. A chain can therefore fall from a
+   * native engine to any chat model. The document is resolved once (S3,
+   * disk, or data URI) before the chain runs, so a fallback never re-reads
+   * it.
    */
   async ocr(
     document: LlmOcrDocument,
@@ -356,21 +358,20 @@ class Llm implements LlmProvider {
 
     return runWithFallback<Llm, LlmOcrResponse>({
       attempt: async ({ attempts, instance, isLast, provider }) => {
-        if (!instance._llm.ocr) {
-          throw new NotImplementedError(
-            `Provider ${provider} does not support ocr method`,
-          );
-        }
         const base = isLast ? optionsWithoutFallback : eagerOptions;
         // A fallback runs its own model: the per-call model named the
         // primary, and forwarding it would ask the next provider for a
         // tier it does not serve.
         const attemptOptions =
           instance === this ? base : { ...base, model: undefined };
-        const response = await instance._llm.ocr(
-          resolvedDocument,
-          attemptOptions,
-        );
+        const response = instance._llm.ocr
+          ? await instance._llm.ocr(resolvedDocument, attemptOptions)
+          : await emulateOcr({
+              document: resolvedDocument,
+              options: attemptOptions,
+              provider: instance._llm,
+              providerName: provider,
+            });
         return {
           ...response,
           fallbackAttempts: attempts,

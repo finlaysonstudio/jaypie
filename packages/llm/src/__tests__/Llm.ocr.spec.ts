@@ -1,3 +1,6 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Llm from "../Llm.js";
@@ -5,7 +8,11 @@ import { MODEL, PROVIDER } from "../constants.js";
 import { LlmUnrecoverableError } from "../errors/LlmError.js";
 import { LlamaCloudProvider } from "../providers/llamacloud/index.js";
 import { LlmOcrResponse } from "../types/LlmOcr.interface.js";
+import { LlmOperateResponse } from "../types/LlmProvider.interface.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const anthropicOperateMock = vi.fn();
 const llamaCloudOcrMock = vi.fn();
 const mistralOcrMock = vi.fn();
 
@@ -31,7 +38,16 @@ vi.mock("../providers/mistral/index.js", () => ({
 vi.mock("../providers/anthropic/AnthropicProvider.class.js", () => ({
   AnthropicProvider: vi.fn().mockImplementation(
     class {
-      operate = vi.fn();
+      operate = anthropicOperateMock;
+      send = vi.fn();
+    } as any,
+  ),
+}));
+
+vi.mock("../providers/typesafe/index.js", () => ({
+  TypeSafeProvider: vi.fn().mockImplementation(
+    class {
+      question = vi.fn();
       send = vi.fn();
     } as any,
   ),
@@ -52,12 +68,14 @@ vi.mock("@jaypie/logger", async (importOriginal) => {
 });
 
 const DOCUMENT_URL = "https://x.test/scan.pdf";
+const FIXTURE_PDF = join(__dirname, "../../test/fixtures/page.pdf");
 
 function response(
   provider: string,
   model: string,
 ): Omit<LlmOcrResponse, "fallbackAttempts" | "fallbackUsed"> {
   return {
+    emulated: false,
     images: [],
     markdown: "# Page",
     model,
@@ -70,6 +88,31 @@ function response(
   };
 }
 
+function operateResponse(
+  content: LlmOperateResponse["content"],
+): LlmOperateResponse {
+  return {
+    content,
+    history: [],
+    model: MODEL.HAIKU,
+    output: [],
+    provider: PROVIDER.ANTHROPIC.NAME,
+    reasoning: [],
+    responses: [{ id: "r" }],
+    status: "completed" as LlmOperateResponse["status"],
+    usage: [
+      {
+        input: 10,
+        model: MODEL.HAIKU,
+        output: 5,
+        provider: PROVIDER.ANTHROPIC.NAME,
+        reasoning: 0,
+        total: 15,
+      },
+    ],
+  };
+}
+
 describe("Llm.ocr", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,6 +121,9 @@ describe("Llm.ocr", () => {
     );
     llamaCloudOcrMock.mockResolvedValue(
       response(PROVIDER.LLAMACLOUD.NAME, MODEL.LLAMAPARSE.AGENTIC),
+    );
+    anthropicOperateMock.mockResolvedValue(
+      operateResponse({ confidence: 0.9, markdown: "# Emulated", notes: "" }),
     );
   });
 
@@ -96,6 +142,7 @@ describe("Llm.ocr", () => {
       expect(mistralOcrMock).toHaveBeenCalledTimes(1);
       expect(llamaCloudOcrMock).not.toHaveBeenCalled();
       expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
+      expect(result.emulated).toBe(false);
       expect(result.fallbackAttempts).toBe(1);
       expect(result.fallbackUsed).toBe(false);
     });
@@ -190,19 +237,93 @@ describe("Llm.ocr", () => {
     });
   });
 
+  describe("Emulation", () => {
+    it("Emulates through operate on a chat model", async () => {
+      const result = await Llm.ocr(FIXTURE_PDF, { model: MODEL.HAIKU });
+      expect(mistralOcrMock).not.toHaveBeenCalled();
+      expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+      const [input, options] = anthropicOperateMock.mock.calls[0];
+      expect(input[0]).toBe("Transcribe page 1 of 1.");
+      expect(input[1].file).toBe("page.pdf");
+      expect(input[1].data).toBeString();
+      expect(options.format).toMatchObject({ type: "object" });
+      expect(options.fallback).toBe(false);
+      expect(options.turns).toBe(1);
+      expect(result.emulated).toBe(true);
+      expect(result.provider).toBe(PROVIDER.ANTHROPIC.NAME);
+      expect(result.model).toBe(MODEL.HAIKU);
+      expect(result.markdown).toBe("# Emulated");
+      expect(result.pages[0]).toMatchObject({
+        confidence: 0.9,
+        page: 1,
+        success: true,
+      });
+      expect(result.usage.pages).toBe(1);
+      expect(result.usage.tokens).toHaveLength(1);
+      expect(result.usage.cost).toBeGreaterThan(0);
+    });
+
+    it("Falls from a native engine to an emulated one", async () => {
+      mistralOcrMock.mockRejectedValueOnce(
+        new LlmUnrecoverableError("mistral down"),
+      );
+      const result = await Llm.ocr(FIXTURE_PDF, {
+        model: [MODEL.MISTRAL.OCR, MODEL.HAIKU],
+      });
+      expect(mistralOcrMock).toHaveBeenCalledTimes(1);
+      expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+      // The fallback runs its own model, never the primary's
+      expect(anthropicOperateMock.mock.calls[0][1].model).toBeUndefined();
+      expect(result.emulated).toBe(true);
+      expect(result.fallbackAttempts).toBe(2);
+      expect(result.fallbackUsed).toBe(true);
+    });
+
+    it("Falls from an emulated engine to a native one on unreadable content", async () => {
+      anthropicOperateMock.mockResolvedValueOnce(operateResponse("not json"));
+      const result = await Llm.ocr(FIXTURE_PDF, {
+        model: [MODEL.HAIKU, MODEL.MISTRAL.OCR],
+      });
+      expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+      expect(mistralOcrMock).toHaveBeenCalledTimes(1);
+      expect(result.emulated).toBe(false);
+      expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
+      expect(result.fallbackUsed).toBe(true);
+    });
+
+    it("Fetches a URL for an emulated engine", async () => {
+      const buffer = Buffer.from("png");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          arrayBuffer: async () => buffer,
+          ok: true,
+          status: 200,
+        }),
+      );
+      await Llm.ocr("https://x.test/scan.png", { model: MODEL.HAIKU });
+      expect(fetch).toHaveBeenCalledWith("https://x.test/scan.png");
+      const [input] = anthropicOperateMock.mock.calls[0];
+      expect(input[1]).toEqual({
+        data: buffer.toString("base64"),
+        image: "scan.png",
+      });
+    });
+  });
+
   describe("Error Conditions", () => {
-    it("Moves on when a chat provider cannot ocr", async () => {
+    it("Moves on when a provider has neither ocr nor operate", async () => {
       const result = await Llm.ocr(DOCUMENT_URL, {
-        model: [MODEL.SONNET, MODEL.MISTRAL.OCR],
+        model: [MODEL.JEV, MODEL.MISTRAL.OCR],
       });
       expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
       expect(result.fallbackUsed).toBe(true);
     });
 
-    it("Throws NotImplementedError on a chat-only instance", async () => {
+    it("Throws NotImplementedError on an instance with neither", async () => {
       await expect(
-        new Llm(PROVIDER.ANTHROPIC.NAME).ocr(DOCUMENT_URL),
-      ).rejects.toThrow(/does not support ocr/);
+        new Llm(PROVIDER.TYPESAFE.NAME).ocr(DOCUMENT_URL),
+      ).rejects.toThrow(/neither ocr nor operate/);
     });
 
     it("Rethrows the last error when every engine fails", async () => {

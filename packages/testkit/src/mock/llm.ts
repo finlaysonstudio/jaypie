@@ -63,6 +63,7 @@ const mockOperate = createMockResolvedFunction({
   ],
 });
 const mockOcr = createMockResolvedFunction({
+  emulated: false,
   fallbackAttempts: 1,
   fallbackUsed: false,
   images: [],

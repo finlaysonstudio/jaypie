@@ -68,6 +68,7 @@ describe("LLM Mocks", () => {
     it("ocr returns a mock result object", async () => {
       const result = await llm.ocr("scan.pdf");
       expect(result).toEqual({
+        emulated: false,
         fallbackAttempts: 1,
         fallbackUsed: false,
         images: [],

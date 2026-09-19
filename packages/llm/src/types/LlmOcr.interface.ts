@@ -7,6 +7,7 @@ import type {
   LlmModelOption,
   LlmOperateInputFile,
   LlmOperateInputImage,
+  LlmUsage,
 } from "./LlmProvider.interface.js";
 
 /**
@@ -35,6 +36,11 @@ export type LlmOcrTableFormat = "html" | "markdown";
 export interface LlmOcrOptions {
   /** Static form only: API key for the primary provider */
   apiKey?: string;
+  /**
+   * Emulated engines only: pages in flight at once, each its own
+   * `operate()` call. Default 5.
+   */
+  concurrency?: number;
   /** Chain of fallback providers; `false` disables instance-level fallback */
   fallback?: LlmFallbackConfig[] | false;
   /** Fetch extracted images as base64 data URIs. Default false. */
@@ -57,6 +63,8 @@ export interface LlmOcrOptions {
   tables?: LlmOcrTableFormat;
   /** Upper bound on an asynchronous job, in milliseconds. Default 10 minutes. */
   timeout?: number;
+  /** End-user identifier forwarded to emulated engines, as on `operate()` */
+  user?: string;
 }
 
 export interface LlmOcrImage {
@@ -70,6 +78,11 @@ export interface LlmOcrImage {
 }
 
 export interface LlmOcrPage {
+  /**
+   * Emulated engines only: the model's self-reported confidence in the
+   * transcription, 0 to 1. Native OCR engines report none.
+   */
+  confidence?: number;
   /** Vendor error text when the page failed */
   error?: string;
   footer?: string;
@@ -84,18 +97,25 @@ export interface LlmOcrPage {
 }
 
 export interface LlmOcrUsage {
-  /** USD, when PAGE_COST prices the model */
+  /** USD: from PAGE_COST for a native engine, from COST tokens when emulated */
   cost?: number;
   /** LlamaParse credits billed, when the job has recorded them */
   credits?: number;
   model: string;
   pages: number;
   provider: string;
+  /** Emulated engines only: token usage of every `operate()` call made */
+  tokens?: LlmUsage;
 }
 
 export interface LlmOcrResponse {
   /** Mistral `document_annotation`, when requested through providerOptions */
   annotations?: JsonObject;
+  /**
+   * True when a chat model transcribed the pages through `operate()`
+   * rather than a native OCR engine answering.
+   */
+  emulated: boolean;
   /** Number of providers attempted (1 = primary only, >1 = fallback(s) used) */
   fallbackAttempts: number;
   fallbackUsed: boolean;

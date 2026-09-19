@@ -23,6 +23,7 @@ src/
 ├── index.ts                  # Package exports
 ├── ocr/                      # Llm.ocr support
 │   ├── expandPageSelection.ts # "1,3-5" or [1, 3] → sorted 1-indexed pages
+│   ├── OcrEmulator.ts        # Per-page operate() transcription for chat models
 │   ├── pageCost.ts           # USD from PAGE_COST
 │   ├── resolveOcrDocument.ts # URL, data: URI, S3, or disk → url | buffer
 │   └── runOcrAttempts.ts     # Shared rate-limit / transient retry loop
@@ -510,7 +511,9 @@ test:llm:question`) and the TypeSafe hot spec.
 ### OCR
 
 `Llm.ocr(document, options?)` turns a document into per-page markdown. Two
-engines answer natively behind one shape:
+engines answer natively behind one shape, and every chat provider answers
+through the emulator (below), so a chain can fall from a native engine to
+any model that accepts files:
 
 - **Mistral OCR** (`MODEL.MISTRAL.OCR`, `POST /v1/ocr`): one synchronous
   call. The default when neither `llm` nor `model` is given (`DEFAULT.OCR`).
@@ -523,7 +526,7 @@ engines answer natively behind one shape:
 
 ```typescript
 const { markdown, pages, usage } = await Llm.ocr("./scans/invoice.pdf", {
-  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE],
+  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE, LLM.MODEL.HAIKU],
   pages: "1,3-5",
 });
 ```
@@ -537,19 +540,59 @@ so S3 and disk are read a single time per call.
 Options: `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
 (`"markdown"` default or `"html"`), `images` (fetch extracted images as
 `data:` URIs; off by default), `timeout` (asynchronous job ceiling, default
-ten minutes), `retry`, `signal`, and `providerOptions` — vendor fields spread
+ten minutes), `retry`, `signal`, `providerOptions` — vendor fields spread
 last onto the request (Mistral `OCRRequest` fields such as
 `document_annotation_format`; LlamaParse `ParseRequestConfiguration` fields
-such as `version`, `agentic_options`, `processing_options`, `output_options`).
+such as `version`, `agentic_options`, `processing_options`, `output_options`)
+— and, for emulated engines only, `concurrency` (pages in flight, default 5)
+and `user`.
 
 Response: `markdown` (pages joined with a blank line), `pages[]` (`page`
-1-indexed, `markdown`, `header`/`footer`, `images`, `success`/`error`, and
-the vendor page untouched at `raw`), `images[]`, `usage` (`pages`,
-LlamaParse `credits`, and `cost` in USD from `PAGE_COST`), `responses[]` (the
-raw vendor payload), and the `provider`/`model`/`fallbackAttempts`/
-`fallbackUsed` fields `operate` carries. Mistral pages are 0-indexed on the
-wire and converted on both sides; Mistral `document_annotation` surfaces as
-`annotations`.
+1-indexed, `markdown`, `header`/`footer`, `images`, `success`/`error`, the
+vendor page untouched at `raw`, and `confidence` when emulated), `images[]`,
+`usage` (`pages`, LlamaParse `credits`, `cost` in USD from `PAGE_COST` or
+from `COST` tokens when emulated, and `tokens` when emulated), `responses[]`
+(the raw vendor payloads), `emulated`, and the `provider`/`model`/
+`fallbackAttempts`/`fallbackUsed` fields `operate` carries. Mistral pages are
+0-indexed on the wire and converted on both sides; Mistral
+`document_annotation` surfaces as `annotations`.
+
+**Emulation.** A provider with `operate` but no `ocr` transcribes through
+`src/ocr/OcrEmulator.ts`, which mirrors `question`'s emulator: one
+structured `operate()` call per page, `temperature: 0`, `turns: 1`,
+placeholders off, `fallback: false`. The practices come from two production
+call sites that OCR through chat models:
+
+- **One page per call.** A PDF is counted with pdf-lib and trimmed to a
+  single page per request (`extractPdfPages`), so the model never counts or
+  numbers pages and the page-count-mismatch failure mode does not exist. An
+  image or other file is one page. A URL is fetched first, since chat
+  providers take bytes.
+- **Fixed schema, verbatim rules.** The format is `{ confidence, markdown,
+  notes }` with no extra keys. The system prompt asks for verbatim
+  transcription in reading order, `[UNCLEAR: best guess]` for illegible
+  text, `[ELEMENT: description]` for non-text visuals (logos with readable
+  text are transcribed), and the table rule `tables` selects.
+- **Low-confidence re-transcription.** A page the model scores under 0.4 is
+  sent once more and the higher score wins (`pages[].raw.transcriptions`
+  records how many ran). Native engines report no confidence.
+- **Bounded concurrency, quiet failure.** `concurrency` pages run at once
+  (default 5). The first failure aborts the rest through an internal
+  `AbortSignal` wrapped around the caller's, then rethrows, so the next
+  engine in a chain starts from a quiet line. Unreadable content throws
+  `InternalError`, which also moves the chain on, in place of the
+  hand-rolled "parse failed, try the other model" second instance the
+  production sites carry.
+- **Cost from tokens.** `usage.tokens` is every call's usage and
+  `usage.cost` prices it through `COST` (`src/util/tokenCost.ts`). An item
+  whose vendor-echoed id is unpriced (Anthropic reports the dated
+  `claude-haiku-4-5-20251001` for `claude-haiku-4-5`) prices at the model
+  that served the call; a model neither prices leaves `cost` undefined.
+
+A provider with a native `ocr` always answers natively: on the Mistral
+provider that is Mistral OCR even when the instance model is a chat model.
+A provider with neither (`typesafe`) fails the attempt with
+`NotImplementedError` and the chain moves on.
 
 **Pricing.** OCR bills per page, which `LlmModelCost` cannot express, so the
 engines are absent from `COST` and priced in `PAGE_COST` (USD per 1,000
@@ -572,9 +615,8 @@ requests `text` and copies it into `markdown`, logged at debug.
 a chain can try the next engine. HTTP failures classify like the other
 `fetch` clients (429 rate limit with `retry-after`, 5xx transient, else
 unrecoverable) and both providers share `src/ocr/runOcrAttempts.ts`, so
-`retry` and `signal` mean the same thing on each. A provider without `ocr`
-(every chat provider) fails the attempt with `NotImplementedError` and the
-chain moves on; there is no emulation on chat models.
+`retry` and `signal` mean the same thing on each. The emulator forwards
+`retry` and `signal` to every `operate()` call it makes.
 
 `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are excluded from the live
 capability matrix. They are covered by `tsx test/ocr.ts` (`npm run

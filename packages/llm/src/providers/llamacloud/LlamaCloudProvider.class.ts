@@ -398,6 +398,7 @@ export class LlamaCloudProvider implements LlmProvider {
     this.log.trace(`LlamaParse extracted ${pages.length} page(s)`);
 
     return {
+      emulated: false,
       fallbackAttempts: 1,
       fallbackUsed: false,
       images,

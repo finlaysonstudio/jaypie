@@ -491,27 +491,48 @@ chain moves on.
 ## OCR
 
 `Llm.ocr(document, options?)` turns a document into per-page markdown. Two
-engines answer behind one request and response shape: Mistral OCR
+engines answer natively behind one request and response shape: Mistral OCR
 (`MODEL.MISTRAL.OCR`, one synchronous call, the default when no provider or
 model is named) and LlamaParse over LlamaCloud (`MODEL.LLAMAPARSE.*`, a job
-that is submitted, polled, and fetched; `LLAMA_CLOUD_API_KEY`). A `model`
-array is a fallback chain across engines; a chat model in the chain fails
-its attempt and the chain moves on — there is no OCR emulation.
+that is submitted, polled, and fetched; `LLAMA_CLOUD_API_KEY`). Every other
+provider answers through emulation, as `Llm.question` does: one structured
+`operate()` call per page. A `model` array is therefore a fallback chain
+across native engines and chat models alike.
 
 ```typescript
 import { Llm, LLM } from "@jaypie/llm";
 
-const { markdown, pages, usage } = await Llm.ocr("./scans/invoice.pdf", {
-  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE],
-  pages: "1,3-5", // 1-indexed; [1, 3, 4, 5] also works
-  tables: "markdown", // or "html"
-});
+const { emulated, markdown, pages, usage } = await Llm.ocr(
+  "./scans/invoice.pdf",
+  {
+    model: [
+      LLM.MODEL.MISTRAL.OCR,
+      LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE,
+      LLM.MODEL.HAIKU, // emulated: any provider that accepts files
+    ],
+    pages: "1,3-5", // 1-indexed; [1, 3, 4, 5] also works
+    tables: "markdown", // or "html"
+  },
+);
 
 pages[0].page; // 1
 pages[0].markdown;
+pages[0].confidence; // emulated only: the model's self-reported 0..1
+emulated; // true when a chat model transcribed the pages
 usage.pages; // pages billed
-usage.cost; // USD from LLM.PAGE_COST (LlamaParse: from recorded credits)
+usage.cost; // USD from LLM.PAGE_COST (LlamaParse: from recorded credits; emulated: from COST tokens)
+usage.tokens; // emulated only: every operate() call's usage
 ```
+
+Emulation sends each page alone (a PDF is trimmed to one page per call, so
+the model never numbers pages), asks for verbatim Markdown with
+`[UNCLEAR: best guess]` and `[ELEMENT: description]` markers, transcribes a
+page scored under 0.4 once more and keeps the higher score, and runs
+`concurrency` pages at a time (default 5); the first failure stops the rest
+so the next engine starts clean. Unreadable content fails the attempt so the
+chain moves on. A provider with native `ocr` (Mistral) always answers
+natively; a provider with neither `ocr` nor `operate` (`typesafe`) fails its
+attempt and the chain moves on.
 
 `document` is an `https://` URL (fetched by the vendor), a `data:` URI, an S3
 key (when `CDK_ENV_BUCKET` is set), a local path, or the `{ file, bucket?,

@@ -42,7 +42,7 @@ const DEFAULT_DOCUMENTS = [
 /** Strings the fixture pages contain; a caller-supplied document skips these */
 const EXPECTED_FIXTURE_TEXT = ["mock page"];
 
-/** Every OCR engine, cheapest LlamaParse tier first */
+/** Every native engine, cheapest LlamaParse tier first, then one emulated model per chat provider */
 const MODELS: Array<{ label: string; model: string }> = [
   { label: "mistral", model: LLM.MODEL.MISTRAL.OCR },
   { label: "llamaparse fast", model: LLM.MODEL.LLAMAPARSE.FAST },
@@ -55,6 +55,8 @@ const MODELS: Array<{ label: string; model: string }> = [
     label: "llamaparse agentic_plus",
     model: LLM.MODEL.LLAMAPARSE.AGENTIC_PLUS,
   },
+  { label: "anthropic (emulated)", model: LLM.MODEL.HAIKU },
+  { label: "openai (emulated)", model: LLM.MODEL.LUNA },
 ];
 
 //
@@ -89,15 +91,29 @@ function validate(response: LlmOcrResponse, expected: string[]): string[] {
 
 function report(response: LlmOcrResponse, elapsedMs: number): void {
   const failed = response.pages.filter((page) => !page.success).length;
-  console.log(`  model      ${response.model}`);
+  console.log(
+    `  model      ${response.model}${response.emulated ? " (emulated)" : ""}`,
+  );
   console.log(`  provider   ${response.provider}`);
   console.log(
     `  pages      ${response.pages.length}${failed ? ` (${failed} failed)` : ""}`,
   );
   console.log(`  images     ${response.images.length}`);
-  console.log(
-    `  usage      ${response.usage.pages} page(s)${response.usage.credits !== undefined ? `, ${response.usage.credits} credits` : ""}${response.usage.cost !== undefined ? `, $${response.usage.cost.toFixed(4)}` : ""}`,
+  const tokens = response.usage.tokens?.reduce(
+    (sum, item) => sum + item.total,
+    0,
   );
+  console.log(
+    `  usage      ${response.usage.pages} page(s)${response.usage.credits !== undefined ? `, ${response.usage.credits} credits` : ""}${tokens !== undefined ? `, ${tokens} tokens` : ""}${response.usage.cost !== undefined ? `, $${response.usage.cost.toFixed(4)}` : ""}`,
+  );
+  const confidences = response.pages
+    .map((page) => page.confidence)
+    .filter((value): value is number => value !== undefined);
+  if (confidences.length > 0) {
+    console.log(
+      `  confidence ${confidences.map((value) => value.toFixed(2)).join(", ")}`,
+    );
+  }
   console.log(`  elapsed    ${(elapsedMs / 1000).toFixed(1)}s`);
   const preview = response.markdown.replace(/\s+/g, " ").trim().slice(0, 160);
   console.log(
@@ -142,18 +158,23 @@ async function testDocument({
   }
 }
 
-/** A chain that starts on a tier nothing serves proves the fallback path. */
+/** A chain that starts on a tier nothing serves proves the fallback path into emulation. */
 async function testFallback(document: string): Promise<boolean> {
   console.log("\n============ OCR Test: fallback chain");
+  const started = Date.now();
   try {
     const response = await Llm.ocr(document, {
-      model: ["llamaparse-does-not-exist", LLM.MODEL.MISTRAL.OCR],
+      model: ["llamaparse-does-not-exist", LLM.MODEL.HAIKU],
     });
-    report(response, 0);
+    report(response, Date.now() - started);
     if (!response.fallbackUsed || response.fallbackAttempts !== 2) {
       console.error(
         `  ✗ expected a fallback, got attempts=${response.fallbackAttempts} used=${response.fallbackUsed}`,
       );
+      return false;
+    }
+    if (!response.emulated) {
+      console.error("  ✗ expected the fallback transcription to be emulated");
       return false;
     }
     console.log("  ✓ passed");
