@@ -84,6 +84,12 @@ export function determineModelProvider(input?: string): {
       provider: PROVIDER.GOOGLE.NAME,
     };
   }
+  if (input === PROVIDER.LLAMACLOUD.NAME) {
+    return {
+      model: PROVIDER.LLAMACLOUD.DEFAULT,
+      provider: PROVIDER.LLAMACLOUD.NAME,
+    };
+  }
   if (input === PROVIDER.META.NAME) {
     return {
       model: PROVIDER.META.DEFAULT,
@@ -165,6 +171,19 @@ export function determineModelProvider(input?: string): {
       return {
         model: input,
         provider: PROVIDER.MISTRAL.NAME,
+      };
+    }
+  }
+
+  // Check LlamaCloud match words (after Bedrock and the "/" rule — the
+  // words are "llamaparse", "llamacloud", and "llamaindex", never bare
+  // "llama", so "meta.llama-*" stays a Bedrock id and "meta-llama/*" an
+  // OpenRouter route)
+  for (const matchWord of PROVIDER.LLAMACLOUD.MODEL_MATCH_WORDS) {
+    if (lowerInput.includes(matchWord)) {
+      return {
+        model: input,
+        provider: PROVIDER.LLAMACLOUD.NAME,
       };
     }
   }

@@ -42,6 +42,7 @@ the alias rather than the id it currently resolves to. Read the id off
 | Meta | "muse" (plus the exact name `meta` and a `meta:` prefix) | `MODEL.MUSE_SPARK` |
 | Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO` |
 | TypeSafe | "jev", "typesafe" | `MODEL.JEV` |
+| LlamaCloud | "llamacloud", "llamaindex", "llamaparse" | `MODEL.LLAMAPARSE.AGENTIC` |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
@@ -51,10 +52,12 @@ Mistral's family names mostly do not contain the substring "mistral" (`ministral
 
 TypeSafe serves System One models (Jev), which answer typed questions and generate no text. The provider implements `question()` only: `operate()`, `send()`, and `stream()` throw. See [Questions](#questions-jev-shape).
 
+LlamaCloud serves LlamaParse, which extracts documents and generates no text. The provider implements `ocr()` only. The parse tier is the model id (`MODEL.LLAMAPARSE.FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`). See [OCR](#ocr).
+
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` serves `POST /v1/ocr` rather than chat completions: it is priced per page, carries no `COST` entry, and is reached through `MistralProvider.ocr()`. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - `MODEL.MUSE_SPARK` and `MODEL.MUSE_SPARK_CONTRIBUTOR` are the same Meta model at two tiers. The contributor tier is roughly a tenth of the price because prompts and completions may train Meta models; it is limited to 100 RPM and does not accept `reasoning.effort: "max"`. It is an explicit opt-in: `PROVIDER.META.DEFAULT` is `MODEL.MUSE_SPARK`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
@@ -485,6 +488,70 @@ an attempt with somewhere left to go skips the rate-limit wait. A provider
 that can neither `question` nor `operate` counts as a failed attempt and the
 chain moves on.
 
+## OCR
+
+`Llm.ocr(document, options?)` turns a document into per-page markdown. Two
+engines answer natively behind one request and response shape: Mistral OCR
+(`MODEL.MISTRAL.OCR`, one synchronous call, the default when no provider or
+model is named) and LlamaParse over LlamaCloud (`MODEL.LLAMAPARSE.*`, a job
+that is submitted, polled, and fetched; `LLAMA_CLOUD_API_KEY`). Every other
+provider answers through emulation, as `Llm.question` does: one structured
+`operate()` call per page. A `model` array is therefore a fallback chain
+across native engines and chat models alike.
+
+```typescript
+import { Llm, LLM } from "@jaypie/llm";
+
+const { emulated, markdown, pages, usage } = await Llm.ocr(
+  "./scans/invoice.pdf",
+  {
+    model: [
+      LLM.MODEL.MISTRAL.OCR,
+      LLM.MODEL.LLAMAPARSE.COST_EFFECTIVE,
+      LLM.MODEL.HAIKU, // emulated: any provider that accepts files
+    ],
+    pages: "1,3-5", // 1-indexed; [1, 3, 4, 5] also works
+    tables: "markdown", // or "html"
+  },
+);
+
+pages[0].page; // 1
+pages[0].markdown;
+pages[0].confidence; // emulated only: the model's self-reported 0..1
+emulated; // true when a chat model transcribed the pages
+usage.pages; // pages billed
+usage.cost; // USD from LLM.PAGE_COST (LlamaParse: from recorded credits; emulated: from COST tokens)
+usage.tokens; // emulated only: every operate() call's usage
+```
+
+Emulation sends each page alone (a PDF is trimmed to one page per call, so
+the model never numbers pages), asks for verbatim Markdown with
+`[UNCLEAR: best guess]` and `[ELEMENT: description]` markers, transcribes a
+page scored under 0.4 once more and keeps the higher score, and runs
+`concurrency` pages at a time (default 5); the first failure stops the rest
+so the next engine starts clean. Unreadable content fails the attempt so the
+chain moves on. A provider with native `ocr` (Mistral) always answers
+natively; a provider with neither `ocr` nor `operate` (`typesafe`) fails its
+attempt and the chain moves on.
+
+`document` is an `https://` URL (fetched by the vendor), a `data:` URI, an S3
+key (when `CDK_ENV_BUCKET` is set), a local path, or the `{ file, bucket?,
+data?, pages? }` / `{ image, ... }` objects `operate()` accepts. Set
+`images: true` to download extracted images as `data:` URIs onto
+`images[]` and `pages[].images`. `providerOptions` spreads last onto the
+vendor request: Mistral `OCRRequest` fields (`document_annotation_format`,
+`include_blocks`, ...) or LlamaParse `ParseRequestConfiguration` fields
+(`version`, `agentic_options.custom_prompt`, `processing_options`,
+`output_options`, `disable_cache`, ...). `timeout` (default ten minutes)
+bounds a LlamaParse job; expiry throws `LlmTransientError` so a chain can try
+the next engine. `retry` and `signal` behave as on `operate()`.
+
+LlamaParse's API version is pinned per tier in `PROVIDER.LLAMACLOUD.VERSION`
+(each tier accepts its own dated versions); the response `model` reads
+`llamaparse-agentic@2026-09-13` so usage records name the configuration. The
+fast tier returns text only, copied into `markdown`. Failed pages arrive with
+`success: false` and `error` rather than failing the call.
+
 ## Conversation History
 
 Continue conversations across calls:
@@ -734,6 +801,7 @@ OPENROUTER_API_KEY  # Required for OpenRouter
 XAI_API_KEY         # Required for xAI (Grok)
 META_API_KEY        # Required for Meta (Muse Spark); MODEL_API_KEY is read as a fallback
 TYPESAFE_API_KEY    # Required for TypeSafe (Jev); emulated questions use the answering provider's key
+LLAMA_CLOUD_API_KEY # Required for LlamaParse (Llm.ocr); Mistral OCR uses MISTRAL_API_KEY
 ```
 
 Keys are resolved via `getEnvSecret()` which supports AWS Secrets Manager.

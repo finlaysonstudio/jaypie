@@ -14,6 +14,12 @@ import type {
   LlmQuestionResponse,
   LlmQuestionState,
 } from "./LlmQuestion.interface.js";
+import type {
+  LlmOcrDocument,
+  LlmOcrOptions,
+  LlmOcrResolvedDocument,
+  LlmOcrResponse,
+} from "./LlmOcr.interface.js";
 import { LlmStreamChunk } from "./LlmStreamChunk.interface.js";
 import { Toolkit } from "../tools/Toolkit.class.js";
 
@@ -663,6 +669,15 @@ export interface LlmOperateResponse {
 // Main
 
 export interface LlmProvider {
+  /**
+   * Turn a document into per-page markdown. Implemented by document
+   * extraction providers (Mistral OCR, LlamaParse); a chat provider without
+   * it fails the attempt and a fallback chain moves on.
+   */
+  ocr?(
+    document: LlmOcrDocument | LlmOcrResolvedDocument,
+    options?: LlmOcrOptions,
+  ): Promise<LlmOcrResponse>;
   operate?(
     input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
     options?: LlmOperateOptions,

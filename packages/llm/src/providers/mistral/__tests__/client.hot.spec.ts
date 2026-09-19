@@ -135,15 +135,15 @@ describe.skipIf(!apiKey)("MistralClient (hot)", () => {
         const base64 = readFileSync(pdfPath).toString("base64");
 
         const provider = new MistralProvider(undefined, { apiKey: apiKey! });
-        const result = await provider.ocr({
-          document: {
-            type: "document_url",
-            document_url: `data:application/pdf;base64,${base64}`,
-          },
-        });
+        const result = await provider.ocr(
+          `data:application/pdf;base64,${base64}`,
+        );
 
         expect(result.pages.length).toBeGreaterThan(0);
+        expect(result.pages[0].page).toBe(1);
         expect(result.markdown.toLowerCase()).toContain("mock page");
+        expect(result.usage.pages).toBeGreaterThan(0);
+        expect(result.usage.cost).toBeGreaterThan(0);
       },
       TIMEOUT,
     );

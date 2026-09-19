@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { determineModelProvider } from "../util/determineModelProvider.js";
 
 // Subject
-import { COST, DEFAULT, MODEL, PROVIDER } from "../constants.js";
+import { COST, DEFAULT, MODEL, PAGE_COST, PROVIDER } from "../constants.js";
 
 describe("Constants", () => {
   it("Exports constants we expect", () => {
@@ -161,9 +161,12 @@ describe("Constants", () => {
     // first-class and priced.
     const proxyRoutes: string[] = [...Object.values(MODEL.OPENROUTER)];
     // Models billed by a unit LlmModelCost cannot express. Mistral's OCR
-    // models price per page ($4/1000), not per million tokens, so they carry
-    // no COST entry.
-    const perPageModels: string[] = [MODEL.MISTRAL.OCR];
+    // models and the LlamaParse tiers price per page, not per million
+    // tokens, so they carry no COST entry and live in PAGE_COST instead.
+    const perPageModels: string[] = [
+      MODEL.MISTRAL.OCR,
+      ...Object.values(MODEL.LLAMAPARSE),
+    ];
     const catalogIds = Object.values(MODEL).flatMap((value) =>
       typeof value === "string" ? [value] : Object.values(value),
     );
@@ -182,6 +185,13 @@ describe("Constants", () => {
     it("Prices every first-class model in MODEL.*", () => {
       const unpriced = firstClassModels.filter((model) => !COST[model]);
       expect(unpriced).toBeEmpty();
+    });
+
+    it("Prices every per-page model in PAGE_COST and nowhere else", () => {
+      for (const model of perPageModels) {
+        expect(PAGE_COST[model]).toBeGreaterThan(0);
+        expect(COST[model]).toBeUndefined();
+      }
     });
 
     it("Omits provider aliases, which have no stable price", () => {

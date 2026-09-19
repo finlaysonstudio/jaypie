@@ -28,7 +28,7 @@
 | `@jaypie/fabricator` | Data fabrication utilities |
 | `@jaypie/kit` | Utility functions for Jaypie applications |
 | `@jaypie/lambda` | AWS Lambda handler utilities |
-| `@jaypie/llm` | LLM provider interface (Anthropic, OpenAI) |
+| `@jaypie/llm` | LLM provider interface (Anthropic, OpenAI, and others) plus `Llm.ocr` document extraction (Mistral OCR, LlamaParse) |
 | `@jaypie/logger` | Logging utilities |
 | `@jaypie/mcp` | Model Context Protocol server |
 | `@jaypie/repokit` | Repository development tools |
@@ -73,6 +73,7 @@
 | `OPENAI_API_KEY` | OpenAI API key for LLM |
 | `META_API_KEY` | Meta Model API key for LLM (`MODEL_API_KEY`, Meta's documented name, is a fallback) |
 | `TYPESAFE_API_KEY` | TypeSafe API key for LLM System One models (Jev) |
+| `LLAMA_CLOUD_API_KEY` | LlamaCloud API key for LlamaParse document extraction (`Llm.ocr`) |
 | `AWS_SESSION_TOKEN` | AWS session token (set by Lambda runtime) |
 ## Commands and Skills
 - [VERSIONING.md](VERSIONING.md) for versioning and npm publishing

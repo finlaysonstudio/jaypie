@@ -36,7 +36,7 @@ interface ResolvedContent {
 /**
  * Load file data from source (provided data, S3, or local filesystem)
  */
-async function loadFileData(
+export async function loadFileData(
   item: LlmOperateInputFile | LlmOperateInputImage,
 ): Promise<Buffer> {
   // Get the path from either file or image property

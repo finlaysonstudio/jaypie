@@ -41,6 +41,16 @@ export {
   LlmResponseErrorReason,
 } from "./types/LlmProvider.interface.js";
 export type {
+  LlmOcrDocument,
+  LlmOcrImage,
+  LlmOcrOptions,
+  LlmOcrPage,
+  LlmOcrResolvedDocument,
+  LlmOcrResponse,
+  LlmOcrTableFormat,
+  LlmOcrUsage,
+} from "./types/LlmOcr.interface.js";
+export type {
   LlmAnswer,
   LlmChoiceAnswer,
   LlmChoiceQuestion,
@@ -125,13 +135,24 @@ export { FireworksProvider } from "./providers/fireworks/index.js";
 /** @deprecated Use GoogleProvider — "Google" is the provider; Gemini is the model family */
 export { GoogleProvider as GeminiProvider } from "./providers/google/index.js";
 export { GoogleProvider } from "./providers/google/index.js";
+export {
+  LlamaCloudClient,
+  LlamaCloudProvider,
+} from "./providers/llamacloud/index.js";
+export type {
+  LlamaCloudFailedPage,
+  LlamaCloudImageMetadata,
+  LlamaCloudMarkdownPage,
+  LlamaCloudParseConfiguration,
+  LlamaCloudParseJob,
+  LlamaCloudParseResult,
+  LlamaCloudParseStatus,
+  LlamaCloudParseTier,
+  LlamaCloudTextPage,
+} from "./providers/llamacloud/index.js";
 export { MetaProvider } from "./providers/meta/index.js";
 export { MistralProvider } from "./providers/mistral/index.js";
-export type {
-  MistralOcrPage,
-  MistralOcrResponse,
-  OcrRequest,
-} from "./providers/mistral/index.js";
+export type { OcrRequest } from "./providers/mistral/index.js";
 export { OpenRouterProvider } from "./providers/openrouter/index.js";
 export {
   TypeSafeClient,

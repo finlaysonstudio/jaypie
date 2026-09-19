@@ -17,11 +17,30 @@ export interface ChatCompletionOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Mistral `OCRRequest`. Every field outside this set is rejected with a 422
+ * `extra_forbidden`, so callers forwarding `providerOptions` see the field
+ * name in the error rather than a silent drop.
+ */
 export interface OcrRequest {
+  bbox_annotation_format?: JsonObject;
+  confidence_scores_granularity?: "page" | "word";
   /** Document reference, e.g. `{ type: "document_url", document_url: "data:application/pdf;base64,..." }` */
   document: JsonObject;
+  document_annotation_format?: JsonObject;
+  document_annotation_prompt?: string;
+  extract_footer?: boolean;
+  extract_header?: boolean;
+  id?: string;
+  image_limit?: number;
+  image_min_size?: number;
+  include_blocks?: boolean;
+  include_image_base64?: boolean;
   model?: string;
+  /** 0-indexed page selection */
   pages?: number[];
+  table_format?: "html" | "markdown";
+  [key: string]: unknown;
 }
 
 /**
@@ -249,14 +268,14 @@ export class MistralClient {
    * completion, so it does not pass through the operate loop.
    */
   async ocr(
-    { document, model = PROVIDER.MISTRAL.OCR, pages }: OcrRequest,
+    { model = PROVIDER.MISTRAL.OCR, pages, ...rest }: OcrRequest,
     { signal }: ChatCompletionOptions = {},
   ): Promise<JsonObject> {
     const response = await fetch(`${this.baseURL}/ocr`, {
       method: "POST",
       headers: this.headers(),
       body: JSON.stringify({
-        document,
+        ...rest,
         model,
         ...(pages ? { pages } : {}),
       }),

@@ -65,6 +65,10 @@ const MATRIX_EXCLUDE = new Set<string>([
   // Document extraction over POST /v1/ocr, not chat completions — every
   // capability cell would fail by construction.
   MODEL.MISTRAL.OCR,
+  // Document extraction over the LlamaCloud Parse API, not chat completions
+  // — same reasoning as MODEL.MISTRAL.OCR. Exercised by `tsx test/ocr.ts`
+  // and by the LlamaCloud hot spec instead.
+  ...Object.values(MODEL.LLAMAPARSE),
   // A System One model answers typed questions and generates no text, so it
   // implements neither operate() nor send() and every capability cell would
   // fail by construction. It is exercised by `tsx test/question.ts` and by

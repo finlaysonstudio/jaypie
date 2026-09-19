@@ -1,4 +1,5 @@
 export {
+  getExtensionForMimeType,
   getFileExtension,
   getMimeType,
   isImageExtension,
@@ -7,4 +8,4 @@ export {
 export { extractPdfPages, getPdfPageCount } from "./extractPdfPages.js";
 export { loadLocalFile } from "./loadLocalFile.js";
 export { loadS3File } from "./loadS3File.js";
-export { resolveOperateInput } from "./resolveOperateInput.js";
+export { loadFileData, resolveOperateInput } from "./resolveOperateInput.js";

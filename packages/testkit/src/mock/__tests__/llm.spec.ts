@@ -65,6 +65,23 @@ describe("LLM Mocks", () => {
       expect(response).toEqual("_MOCK_LLM_RESPONSE");
     });
 
+    it("ocr returns a mock result object", async () => {
+      const result = await llm.ocr("scan.pdf");
+      expect(result).toEqual({
+        emulated: false,
+        fallbackAttempts: 1,
+        fallbackUsed: false,
+        images: [],
+        markdown: "_MOCK_OCR_MARKDOWN",
+        model: "_MOCK_MODEL",
+        pages: expect.any(Array),
+        provider: "_MOCK_PROVIDER",
+        responses: [],
+        usage: expect.any(Object),
+      });
+      expect(Llm.ocr).toBeFunction();
+    });
+
     it("operate returns a mock result object", async () => {
       const result = await llm.operate("How's the weather?");
       expect(result).toEqual({
