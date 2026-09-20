@@ -321,6 +321,36 @@ describe("OpenRouterAdapter", () => {
         expect(result.stopReason).toBe("stop");
       });
 
+      it("reports why an incomplete response stopped", () => {
+        const result = openRouterAdapter.parseResponse({
+          model: PROVIDER.OPENROUTER.DEFAULT,
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "Half" },
+              finishReason: "content_filter",
+            },
+          ],
+        });
+
+        expect(result.incompleteReason).toBe("content_filter");
+      });
+
+      it("reports no incomplete reason when the model finished", () => {
+        const result = openRouterAdapter.parseResponse({
+          model: PROVIDER.OPENROUTER.DEFAULT,
+          choices: [
+            {
+              index: 0,
+              message: { role: "assistant", content: "Half" },
+              finishReason: "stop",
+            },
+          ],
+        });
+
+        expect(result.incompleteReason).toBeUndefined();
+      });
+
       it("detects tool use", () => {
         const response = {
           id: "resp-123",

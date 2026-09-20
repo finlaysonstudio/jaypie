@@ -6,6 +6,11 @@ import { PROVIDER } from "../../constants.js";
 import { logPaperedEffort, toAnthropicEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
+  INCOMPLETE_STOP_REASONS,
+  incompleteReasonFrom,
+} from "../incompleteReason.js";
+import { incompleteStop } from "../loopStop.js";
+import {
   LlmHistory,
   LlmInputContent,
   LlmMessageType,
@@ -879,6 +884,18 @@ export class AnthropicAdapter extends BaseProviderAdapter {
           currentToolCall = null;
         }
       } else if (event.type === "message_delta") {
+        // The provider cut the response short (max_tokens, refusal)
+        const incompleteReason = incompleteReasonFrom(
+          (event.delta as { stop_reason?: string | null } | undefined)
+            ?.stop_reason,
+          INCOMPLETE_STOP_REASONS.ANTHROPIC,
+        );
+        if (incompleteReason) {
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: incompleteStop(incompleteReason),
+          };
+        }
         // Extract final usage
         if (event.usage) {
           outputTokens = event.usage.output_tokens;
@@ -923,6 +940,10 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     return {
       content,
       hasToolCalls,
+      incompleteReason: incompleteReasonFrom(
+        anthropicResponse.stop_reason,
+        INCOMPLETE_STOP_REASONS.ANTHROPIC,
+      ),
       stopReason: anthropicResponse.stop_reason ?? undefined,
       usage: this.extractUsage(anthropicResponse, anthropicResponse.model),
       raw: anthropicResponse,
