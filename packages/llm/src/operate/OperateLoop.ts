@@ -38,7 +38,12 @@ import {
   isExchangeRequested,
 } from "./exchange/index.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
-import { ERROR, maxTurnsStop, toolErrorsStop } from "./loopStop.js";
+import {
+  ERROR,
+  incompleteStop,
+  maxTurnsStop,
+  toolErrorsStop,
+} from "./loopStop.js";
 import { InputProcessor, inputProcessor } from "./input/index.js";
 import { emitProgress } from "./progress/index.js";
 import { resolveResume } from "./resume/index.js";
@@ -734,6 +739,22 @@ export class OperateLoop {
       providerResponse: response,
       usage: currentUsage,
     });
+
+    // A response the provider cut short (output token ceiling, content
+    // filter) settles as incomplete with the partial text as content, so a
+    // caller can tell a truncated answer from a finished one instead of
+    // receiving prose that fails the format contract.
+    if (parsed.incompleteReason) {
+      const stop = incompleteStop(parsed.incompleteReason);
+      log.warn(stop.detail);
+      state.responseBuilder.setContent(parsed.content);
+      state.responseBuilder.setError(stop);
+      state.responseBuilder.incomplete();
+      for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
+        state.responseBuilder.appendToHistory(item);
+      }
+      return false; // Stop loop
+    }
 
     // Check for structured output (Anthropic magic tool pattern)
     if (this.adapter.hasStructuredOutput(response)) {

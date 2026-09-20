@@ -447,6 +447,31 @@ describe("OcrEmulator", () => {
       ).rejects.toThrow("refused");
     });
 
+    it("Wraps a settled error body so the chain sees its detail", async () => {
+      // The loop's own stops (a provider cut the response short) settle a
+      // plain error body rather than an Error instance
+      operate.mockResolvedValue(
+        operateResponse('{"markdown": "Half', {
+          error: {
+            detail: "Model stopped before finishing: content_filter",
+            status: 502,
+            title: "Incomplete Response",
+          },
+          status: "incomplete" as LlmOperateResponse["status"],
+        }),
+      );
+      const thrown = await emulateOcr({
+        document: pdfDocument(await makePdf(1)),
+        options: {},
+        provider,
+        providerName: PROVIDER_NAME,
+      }).catch((error: unknown) => error);
+      expect(thrown).toBeInstanceOf(LlmUnrecoverableError);
+      expect((thrown as Error).message).toBe(
+        "Model stopped before finishing: content_filter",
+      );
+    });
+
     it("Stops the remaining pages after the first failure", async () => {
       let calls = 0;
       operate.mockImplementation(async (_input: unknown, options: any) => {

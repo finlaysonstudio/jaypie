@@ -20,7 +20,22 @@ import {
 
 export const ERROR = {
   BAD_FUNCTION_CALL: "Bad Function Call",
+  INCOMPLETE_RESPONSE: "Incomplete Response",
 };
+
+/**
+ * The provider cut the model off before it finished (an output token
+ * ceiling, a content filter). The partial text is still the response content
+ * so a caller can see what came back, but it is not an answer.
+ */
+export function incompleteStop(reason: string): LlmError {
+  return {
+    detail: `Model stopped before finishing: ${reason}`,
+    reason: LlmResponseErrorReason.Incomplete,
+    status: 502,
+    title: ERROR.INCOMPLETE_RESPONSE,
+  };
+}
 
 /**
  * The model asked for another function call after the turn budget ran out.

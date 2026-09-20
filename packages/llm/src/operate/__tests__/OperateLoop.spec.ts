@@ -1118,6 +1118,37 @@ describe("OperateLoop", () => {
         }),
       );
     });
+
+    it("settles incomplete when the provider cut the response short", async () => {
+      // A content filter or output token ceiling leaves partial text that
+      // is not an answer; it must not complete, nor be treated as prose
+      // that failed the format contract
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: '{"total": 2',
+        hasToolCalls: false,
+        incompleteReason: "content_filter",
+        stopReason: "incomplete",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", {
+        format: { type: "object", properties: { total: { type: "number" } } },
+      });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.content).toBe('{"total": 2');
+      expect(response.error).toEqual({
+        detail: "Model stopped before finishing: content_filter",
+        reason: LlmResponseErrorReason.Incomplete,
+        status: 502,
+        title: "Incomplete Response",
+      });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
+    });
   });
 
   // Logger Context

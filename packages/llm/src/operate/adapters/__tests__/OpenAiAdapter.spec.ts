@@ -247,6 +247,128 @@ describe("OpenAiAdapter", () => {
 
         expect(result.hasToolCalls).toBe(true);
       });
+
+      it("reports no incomplete reason for a completed response", () => {
+        const result = openAiAdapter.parseResponse({
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: "Done" }],
+            },
+          ],
+          status: "completed",
+        });
+
+        expect(result.incompleteReason).toBeUndefined();
+      });
+
+      it("reports why an incomplete response stopped", () => {
+        // The API cuts a response short on an output token ceiling or a
+        // content filter and leaves the partial text in place
+        const result = openAiAdapter.parseResponse({
+          incomplete_details: { reason: "content_filter" },
+          output: [
+            {
+              type: "message",
+              content: [{ type: "output_text", text: '{"markdown": "Half' }],
+              status: "incomplete",
+            },
+          ],
+          status: "incomplete",
+        });
+
+        expect(result.content).toBe('{"markdown": "Half');
+        expect(result.incompleteReason).toBe("content_filter");
+        expect(result.stopReason).toBe("incomplete");
+      });
+
+      it("falls back to the status when an incomplete response names no reason", () => {
+        const result = openAiAdapter.parseResponse({
+          output: [],
+          status: "incomplete",
+        });
+
+        expect(result.incompleteReason).toBe("incomplete");
+      });
+    });
+
+    describe("executeStreamRequest", () => {
+      async function* events(items: Record<string, unknown>[]) {
+        for (const item of items) yield item;
+      }
+
+      async function collect(client: unknown) {
+        const chunks = [];
+        for await (const chunk of openAiAdapter.executeStreamRequest!(client, {
+          model: "gpt-test",
+        } as OperateRequest)) {
+          chunks.push(chunk);
+        }
+        return chunks;
+      }
+
+      it("emits an error chunk when the stream settles incomplete", async () => {
+        const client = {
+          responses: {
+            create: vi.fn(async () =>
+              events([
+                { type: "response.output_text.delta", delta: "Half" },
+                {
+                  type: "response.incomplete",
+                  response: {
+                    incomplete_details: { reason: "max_output_tokens" },
+                    status: "incomplete",
+                    usage: { input_tokens: 4, output_tokens: 2 },
+                  },
+                },
+                { type: "response.done" },
+              ]),
+            ),
+          },
+        };
+
+        const chunks = await collect(client);
+
+        expect(chunks.map((chunk) => chunk.type)).toEqual([
+          "text",
+          "error",
+          "done",
+        ]);
+        expect(chunks[1]).toMatchObject({
+          error: {
+            detail: "Model stopped before finishing: max_output_tokens",
+            reason: "incomplete",
+          },
+        });
+        // Usage still tallies from the incomplete event
+        expect(chunks[2]).toMatchObject({
+          usage: [expect.objectContaining({ input: 4, output: 2 })],
+        });
+      });
+
+      it("emits no error chunk when the stream completes", async () => {
+        const client = {
+          responses: {
+            create: vi.fn(async () =>
+              events([
+                { type: "response.output_text.delta", delta: "All" },
+                {
+                  type: "response.completed",
+                  response: {
+                    status: "completed",
+                    usage: { input_tokens: 4, output_tokens: 1 },
+                  },
+                },
+                { type: "response.done" },
+              ]),
+            ),
+          },
+        };
+
+        const chunks = await collect(client);
+
+        expect(chunks.map((chunk) => chunk.type)).toEqual(["text", "done"]);
+      });
     });
 
     describe("extractToolCalls", () => {

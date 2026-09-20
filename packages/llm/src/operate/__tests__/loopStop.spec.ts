@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { LlmResponseErrorReason } from "../../types/LlmProvider.interface.js";
-import { ERROR, maxTurnsStop, toolErrorsStop } from "../loopStop.js";
+import {
+  ERROR,
+  incompleteStop,
+  maxTurnsStop,
+  toolErrorsStop,
+} from "../loopStop.js";
 
 describe("loopStop", () => {
   describe("Base Cases", () => {
     it("is a function", () => {
+      expect(incompleteStop).toBeFunction();
       expect(maxTurnsStop).toBeFunction();
       expect(toolErrorsStop).toBeFunction();
     });
@@ -29,6 +35,16 @@ describe("loopStop", () => {
         reason: LlmResponseErrorReason.ToolErrors,
         status: 502,
         title: ERROR.BAD_FUNCTION_CALL,
+      });
+    });
+
+    it("builds the incomplete-response stop from the provider's reason", () => {
+      const stop = incompleteStop("content_filter");
+      expect(stop).toEqual({
+        detail: "Model stopped before finishing: content_filter",
+        reason: LlmResponseErrorReason.Incomplete,
+        status: 502,
+        title: ERROR.INCOMPLETE_RESPONSE,
       });
     });
   });

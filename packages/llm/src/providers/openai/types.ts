@@ -84,6 +84,7 @@ export interface OpenAIRawResponse {
   output_text?: string;
   error?: any | null;
   status?: string | any;
+  incomplete_details?: { reason?: string } | null;
   _request_id?: string | null;
   usage?: OpenAIUsage;
   meta?: { [key: string]: JsonValue };

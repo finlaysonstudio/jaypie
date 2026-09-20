@@ -334,7 +334,13 @@ export async function emulateOcr({
       user: options.user,
     });
     if (response.error) {
-      throw response.error;
+      // A settled error is a plain body (the loop's own stops are); wrap it so
+      // the chain logs its detail and classifies it like any other failure
+      throw response.error instanceof Error
+        ? response.error
+        : new LlmUnrecoverableError(
+            response.error.detail ?? response.error.title,
+          );
     }
     return {
       ...parseOcrContent({ content: response.content, page }),

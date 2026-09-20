@@ -60,6 +60,7 @@ export enum LlmResponseStatus {
  * the request.
  */
 export enum LlmResponseErrorReason {
+  Incomplete = "incomplete",
   MaxTurns = "max_turns",
   ToolErrors = "tool_errors",
 }

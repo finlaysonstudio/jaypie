@@ -36,10 +36,12 @@ function isReasoningModel(model: string): boolean {
   return REASONING_MODEL_PATTERNS.some((pattern) => pattern.test(model));
 }
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import { incompleteStop } from "../loopStop.js";
 import {
   LlmHistory,
   LlmMessageType,
   LlmOperateOptions,
+  LlmResponseStatus,
   LlmToolResult,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
@@ -97,6 +99,18 @@ const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
   /^gpt-5\.5/, // gpt-5.5 series deprecated temperature
   /^o\d/, // o-series reasoning models (o1, o3, o4, ...)
 ];
+
+/**
+ * Why a Responses API payload stopped short, or undefined when it finished.
+ * The API marks a cut-off answer `status: "incomplete"` and names the cause
+ * in `incomplete_details.reason` (`max_output_tokens`, `content_filter`).
+ */
+function incompleteReasonOf(
+  response: OpenAIRawResponse | undefined,
+): string | undefined {
+  if (response?.status !== LlmResponseStatus.Incomplete) return undefined;
+  return response.incomplete_details?.reason || LlmResponseStatus.Incomplete;
+}
 
 function isTemperatureDeprecationError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -472,14 +486,25 @@ export class OpenAiAdapter extends BaseProviderAdapter {
           };
           currentFunctionCall = null;
         }
-      } else if (eventType === "response.completed") {
-        // Response completed - extract final usage
+      } else if (
+        eventType === "response.completed" ||
+        eventType === "response.incomplete"
+      ) {
+        // Response settled - extract final usage; an incomplete response
+        // (output token ceiling, content filter) also reports why it stopped
         const response = (event as { response?: OpenAIRawResponse }).response;
         if (response?.usage) {
           inputTokens = response.usage.input_tokens || 0;
           outputTokens = response.usage.output_tokens || 0;
           reasoningTokens =
             response.usage.output_tokens_details?.reasoning_tokens || 0;
+        }
+        const incompleteReason = incompleteReasonOf(response);
+        if (incompleteReason) {
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: incompleteStop(incompleteReason),
+          };
         }
       } else if (eventType === "response.done") {
         // Stream done - emit final chunk with usage
@@ -516,6 +541,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     return {
       content,
       hasToolCalls,
+      incompleteReason: incompleteReasonOf(openaiResponse),
       stopReason: openaiResponse.status as string | undefined,
       usage: this.extractUsage(
         openaiResponse,
