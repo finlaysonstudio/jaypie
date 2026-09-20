@@ -259,18 +259,19 @@ const REFUSAL_STOP_REASON = "refusal";
 /**
  * Settle a cell early when the response carries no verdict.
  *
- * An error settles through `errorResult`. A provider refusal is the third
- * outcome that says nothing about the capability: the classifier, not the
- * model, ended the response, and the same cell answers on the next call (the
- * `claude-opus-5` pdf cell refused on five of seven CI runs and answered on
- * every local one). The stop reason only reaches the result on the exchange
- * envelope, which `observed` requests for every cell. The detail still reaches
- * the ISSUES block, so a model that keeps refusing stays visible.
+ * A provider refusal is the outcome that says nothing about the capability:
+ * the classifier, not the model, ended the response, and the same cell
+ * answers on the next call (the `claude-opus-5` pdf cell refused on five of
+ * seven CI runs and answered on every local one). The stop reason reaches the
+ * result on the exchange envelope, which `observed` requests for every cell,
+ * whether the call completed or settled as incomplete — a refusal now
+ * settles as `result.error` (issue: OpenAI `incomplete` status), so this
+ * check runs before `errorResult` rather than after it. The detail still
+ * reaches the ISSUES block, so a model that keeps refusing stays visible.
  */
 export function earlyResult(
   result: LlmOperateResponse,
 ): CapabilityResult | undefined {
-  if (result.error) return errorResult(result.error);
   const stopReason = result.exchange?.response.stopReason;
   if (stopReason === REFUSAL_STOP_REASON) {
     return {
@@ -279,6 +280,7 @@ export function earlyResult(
       inconclusive: true,
     };
   }
+  if (result.error) return errorResult(result.error);
   return undefined;
 }
 
