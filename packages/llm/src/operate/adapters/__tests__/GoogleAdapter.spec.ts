@@ -407,6 +407,32 @@ describe("GoogleAdapter", () => {
         expect(result.stopReason).toBe("STOP");
       });
 
+      it("reports why an incomplete response stopped", () => {
+        const result = googleAdapter.parseResponse({
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "Half" }] },
+              finishReason: "MAX_TOKENS",
+            },
+          ],
+        });
+
+        expect(result.incompleteReason).toBe("MAX_TOKENS");
+      });
+
+      it("reports no incomplete reason when the model finished", () => {
+        const result = googleAdapter.parseResponse({
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "Half" }] },
+              finishReason: "STOP",
+            },
+          ],
+        });
+
+        expect(result.incompleteReason).toBeUndefined();
+      });
+
       it("detects function calls", () => {
         const response = {
           candidates: [

@@ -1323,6 +1323,40 @@ describe("StreamLoop", () => {
     });
 
     describe("Error Handling", () => {
+      it("settles the exchange incomplete when the adapter reports the provider cut the response short", async () => {
+        mockAdapter.executeStreamRequest = vi.fn(
+          async function* (): AsyncIterable<LlmStreamChunk> {
+            yield { type: LlmStreamChunkType.Text, content: "Half" };
+            yield {
+              type: LlmStreamChunkType.Error,
+              error: {
+                detail: "Model stopped before finishing: content_filter",
+                status: 502,
+                title: "Incomplete Response",
+              },
+            };
+            yield { type: LlmStreamChunkType.Done, usage: [] };
+          },
+        );
+        const onExchange = vi.fn();
+        const loop = new StreamLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const chunks = await collectChunks(
+          loop.execute("Hello", { onExchange }),
+        );
+
+        expect(chunks.some((c) => c.type === LlmStreamChunkType.Error)).toBe(
+          true,
+        );
+        expect(onExchange).toHaveBeenCalledOnce();
+        const envelope = onExchange.mock.calls[0][0];
+        expect(envelope.response.status).toBe("incomplete");
+        expect(envelope.response.error.title).toBe("Incomplete Response");
+      });
+
       it("yields error chunks for tool execution failures", async () => {
         const toolkit = new Toolkit([
           {

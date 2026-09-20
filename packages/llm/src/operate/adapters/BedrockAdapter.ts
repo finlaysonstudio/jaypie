@@ -10,6 +10,11 @@ import { z } from "zod/v4";
 import { PROVIDER } from "../../constants.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
+  INCOMPLETE_STOP_REASONS,
+  incompleteReasonFrom,
+} from "../incompleteReason.js";
+import { incompleteStop } from "../loopStop.js";
+import {
   LlmHistory,
   LlmInputContent,
   LlmMessageType,
@@ -629,6 +634,17 @@ export class BedrockAdapter extends BaseProviderAdapter {
         inputTokens = event.metadata.usage.inputTokens ?? 0;
         outputTokens = event.metadata.usage.outputTokens ?? 0;
       } else if (event.messageStop) {
+        // The provider cut the response short (max_tokens, a guardrail)
+        const incompleteReason = incompleteReasonFrom(
+          event.messageStop.stopReason,
+          INCOMPLETE_STOP_REASONS.BEDROCK,
+        );
+        if (incompleteReason) {
+          yield {
+            type: LlmStreamChunkType.Error,
+            error: incompleteStop(incompleteReason),
+          };
+        }
         yield {
           type: LlmStreamChunkType.Done,
           usage: [
@@ -678,6 +694,10 @@ export class BedrockAdapter extends BaseProviderAdapter {
     return {
       content,
       hasToolCalls,
+      incompleteReason: incompleteReasonFrom(
+        bedrockResponse.stopReason,
+        INCOMPLETE_STOP_REASONS.BEDROCK,
+      ),
       stopReason: bedrockResponse.stopReason ?? undefined,
       usage: this.extractUsage(
         bedrockResponse,

@@ -384,7 +384,19 @@ used by both loops in-loop and on resume). Those errors carry
 them: `max_turns` is a 429, exactly like a provider rate limit. `max_turns`
 means the model asked for another tool call after `turns` ran out — nothing
 failed, the run did not converge — and `tool_errors` means tool execution failed
-`MAX_CONSECUTIVE_TOOL_ERRORS` times in a row. The live matrix uses the
+`MAX_CONSECUTIVE_TOOL_ERRORS` times in a row. `incomplete` (502) means the
+provider cut the model off before it finished: the adapter reports the
+provider's reason on `ParsedResponse.incompleteReason` (OpenAI, xAI, and Meta
+read `status: "incomplete"` plus `incomplete_details.reason`, such as
+`max_output_tokens` or `content_filter`; every other adapter maps its stop
+reason through `src/operate/incompleteReason.ts`: Anthropic `max_tokens` and
+`refusal`, Google `MAX_TOKENS` and the safety finishes, Bedrock `max_tokens`
+and the guardrail stops, and Chat Completions `length` and `content_filter`;
+streams emit an error chunk from the same event), and the loop settles with
+the partial text as
+`content` rather than completing or treating it as prose that failed the
+format contract. The OCR emulator wraps that body in `LlmUnrecoverableError`
+so a chain logs the reason and moves on. The live matrix uses the
 discriminator to report an exhausted budget as inconclusive rather than as a
 missing capability (issue #505).
 

@@ -60,6 +60,11 @@ export interface ParsedResponse {
   content?: string | JsonObject;
   /** Whether the response contains tool calls */
   hasToolCalls: boolean;
+  /**
+   * The provider's reason the model stopped before finishing (an output
+   * token ceiling, a content filter); undefined when the model finished
+   */
+  incompleteReason?: string;
   /** The stop reason from the provider */
   stopReason?: string;
   /** Usage information for this response */

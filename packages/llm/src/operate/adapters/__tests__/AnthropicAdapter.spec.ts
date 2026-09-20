@@ -349,6 +349,28 @@ describe("AnthropicAdapter", () => {
         expect(result.stopReason).toBe("end_turn");
       });
 
+      it("reports why an incomplete response stopped", () => {
+        const result = anthropicAdapter.parseResponse({
+          content: [{ type: "text", text: '{"markdown": "Half' }],
+          stop_reason: "max_tokens",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        expect(result.incompleteReason).toBe("max_tokens");
+      });
+
+      it("reports no incomplete reason when the model finished", () => {
+        const result = anthropicAdapter.parseResponse({
+          content: [{ type: "text", text: '{"markdown": "Half' }],
+          stop_reason: "end_turn",
+          model: PROVIDER.ANTHROPIC.MODEL.LARGE,
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        expect(result.incompleteReason).toBeUndefined();
+      });
+
       it("warns naming stop_reason and blocks when no text block is present", () => {
         const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
         const response = {

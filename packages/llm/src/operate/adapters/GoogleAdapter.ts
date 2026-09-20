@@ -11,6 +11,11 @@ import {
 } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
+  INCOMPLETE_STOP_REASONS,
+  incompleteReasonFrom,
+} from "../incompleteReason.js";
+import { incompleteStop } from "../loopStop.js";
+import {
   LlmHistory,
   LlmMessageRole,
   LlmMessageType,
@@ -511,8 +516,19 @@ export class GoogleAdapter extends BaseProviderAdapter {
     const model = geminiRequest.model || this.defaultModel;
 
     for await (const chunk of stream) {
-      // Extract text content from the chunk
       const candidate = chunk.candidates?.[0];
+      // The provider cut the response short (MAX_TOKENS, a safety finish)
+      const incompleteReason = incompleteReasonFrom(
+        candidate?.finishReason,
+        INCOMPLETE_STOP_REASONS.GOOGLE,
+      );
+      if (incompleteReason) {
+        yield {
+          type: LlmStreamChunkType.Error,
+          error: incompleteStop(incompleteReason),
+        };
+      }
+      // Extract text content from the chunk
       if (candidate?.content?.parts) {
         for (const part of candidate.content.parts) {
           // Handle text content (excluding thought parts)
@@ -590,10 +606,16 @@ export class GoogleAdapter extends BaseProviderAdapter {
     const content = this.extractContent(geminiResponse, options);
     const hasToolCalls = this.hasToolCalls(geminiResponse);
 
+    const stopReason = this.getFinishReason(geminiResponse);
+
     return {
       content,
       hasToolCalls,
-      stopReason: this.getFinishReason(geminiResponse),
+      incompleteReason: incompleteReasonFrom(
+        stopReason,
+        INCOMPLETE_STOP_REASONS.GOOGLE,
+      ),
+      stopReason,
       usage: this.extractUsage(
         geminiResponse,
         options?.model || this.defaultModel,

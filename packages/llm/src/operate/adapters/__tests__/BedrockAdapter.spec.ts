@@ -268,6 +268,21 @@ describe("BedrockAdapter", () => {
       expect(result.hasToolCalls).toBe(true);
       expect(result.stopReason).toBe("tool_use");
     });
+
+    it("Reports why an incomplete response stopped", () => {
+      const result = adapter.parseResponse({
+        ...mockConverseResponse,
+        stopReason: "guardrail_intervened",
+      });
+
+      expect(result.incompleteReason).toBe("guardrail_intervened");
+    });
+
+    it("Reports no incomplete reason when the model finished", () => {
+      const result = adapter.parseResponse(mockConverseResponse);
+
+      expect(result.incompleteReason).toBeUndefined();
+    });
   });
 
   describe("extractToolCalls", () => {

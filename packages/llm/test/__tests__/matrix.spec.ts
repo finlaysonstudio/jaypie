@@ -85,9 +85,20 @@ describe("Matrix classification", () => {
         );
       });
 
-      it("settles an error through errorResult first", () => {
+      it("prioritizes a refusal stop reason over a settled error", () => {
+        // A refusal now settles as an incomplete error (issue: OpenAI
+        // `incomplete` status), so the stop reason check runs first and
+        // still classifies the cell as inconclusive rather than a failure.
         const outcome = earlyResult(
           settled({ error: RATE_LIMIT_ERROR, stopReason: "refusal" }),
+        );
+        expect(outcome?.inconclusive).toBe(true);
+        expect(classifyActual(outcome!, [])).toBe("warn");
+      });
+
+      it("falls through to errorResult when the error carries no refusal", () => {
+        const outcome = earlyResult(
+          settled({ error: RATE_LIMIT_ERROR, stopReason: "end_turn" }),
         );
         expect(outcome).toEqual(errorResult(RATE_LIMIT_ERROR));
       });

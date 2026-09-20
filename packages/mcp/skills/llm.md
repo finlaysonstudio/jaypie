@@ -918,6 +918,7 @@ exactly like a provider rate limit.
 |----------|--------|---------|
 | `max_turns` | 429 | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge. |
 | `tool_errors` | 502 | Tool execution failed six times in a row and the loop stopped. |
+| `incomplete` | 502 | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";

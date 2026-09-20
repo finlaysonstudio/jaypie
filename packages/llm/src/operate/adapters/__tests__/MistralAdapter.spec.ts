@@ -442,6 +442,25 @@ describe("MistralAdapter", () => {
         expect(parsed.hasToolCalls).toBe(true);
         expect(parsed.stopReason).toBe("tool_calls");
       });
+
+      it("reports why an incomplete response stopped", () => {
+        const parsed = adapter.parseResponse({
+          ...textResponse("Half"),
+          choices: [
+            {
+              index: 0,
+              finishReason: "length",
+              message: { role: "assistant", content: "Half" },
+            },
+          ],
+        });
+        expect(parsed.incompleteReason).toBe("length");
+      });
+
+      it("reports no incomplete reason when the model finished", () => {
+        const parsed = adapter.parseResponse(textResponse("Done"));
+        expect(parsed.incompleteReason).toBeUndefined();
+      });
     });
 
     describe("extractToolCalls", () => {

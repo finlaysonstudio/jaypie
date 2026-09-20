@@ -8,6 +8,11 @@ import { logPaperedEffort, toMistralEffort } from "../../util/effort.js";
 import { resolveMaxOutputTokens } from "../../util/maxOutputTokens.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
+  INCOMPLETE_STOP_REASONS,
+  incompleteReasonFrom,
+} from "../incompleteReason.js";
+import { incompleteStop } from "../loopStop.js";
+import {
   LlmHistory,
   LlmInputContent,
   LlmMessageRole,
@@ -894,6 +899,17 @@ export class MistralAdapter extends BaseProviderAdapter {
 
         // Check for finish reason
         if (choices[0].finish_reason) {
+          // The provider cut the response short (length, content_filter)
+          const incompleteReason = incompleteReasonFrom(
+            choices[0].finish_reason,
+            INCOMPLETE_STOP_REASONS.CHAT_COMPLETIONS,
+          );
+          if (incompleteReason) {
+            yield {
+              type: LlmStreamChunkType.Error,
+              error: incompleteStop(incompleteReason),
+            };
+          }
           // Emit any pending tool call
           if (currentToolCall) {
             yield {
@@ -956,6 +972,10 @@ export class MistralAdapter extends BaseProviderAdapter {
     return {
       content,
       hasToolCalls,
+      incompleteReason: incompleteReasonFrom(
+        stopReason,
+        INCOMPLETE_STOP_REASONS.CHAT_COMPLETIONS,
+      ),
       stopReason,
       usage: this.extractUsage(mistralResponse, mistralResponse.model),
       raw: mistralResponse,

@@ -689,9 +689,12 @@ export class StreamLoop {
               state.usageItems.push(...chunk.usage);
             }
 
-            // Pass through error chunks
+            // Pass through error chunks; an adapter emits one when the
+            // provider cut the response short, which settles the exchange
+            // as incomplete
             if (chunk.type === LlmStreamChunkType.Error) {
               chunksYielded = true;
+              state.error ??= chunk.error;
               yield chunk;
             }
           }
