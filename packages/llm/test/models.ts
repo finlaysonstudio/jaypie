@@ -126,7 +126,8 @@ const MATRIX_EXPECT: Record<
   // narrated a tool call in a cell that configures no tools and returned none
   // of the document's text. Grok 4.6 reads it 9 for 9 (2026-08-17), so the skip
   // is gone and every Grok cell is expected to pass. Grok 4.3 also passed 2 for
-  // 2, which makes 4.5 the outlier rather than the fixture.
+  // 2, which makes 4.5 the outlier rather than the fixture. Grok 4.7, which the
+  // alias names as of 2026-09-21, passed all seven cells on its first live run.
   //
   // Mistral sends response_format and tools together natively. mistral-medium
   // could not do so reliably and is no longer cataloged — see the note in

@@ -110,7 +110,7 @@ export const MODEL = {
   // API, which echoes the resolved id) at $1.25/$2.50, while Grok 4.5 bills
   // $2.00/$6.00. The day xAI moves the alias, an unpinned catalog understates
   // output cost by 140% with nothing to signal it.
-  GROK: "grok-4.6",
+  GROK: "grok-4.7",
   // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
   OPENROUTER: {
     GLM: "z-ai/glm-5.2",
@@ -451,6 +451,7 @@ export const COST: Record<string, LlmModelCost> = {
   "grok-4.3": { cachedInputRead: 0.2, input: 1.25, output: 2.5 },
   "grok-4.5": { cachedInputRead: 0.3, input: 2.0, output: 6.0 },
   "grok-4.6": { cachedInputRead: 0.5, input: 2.0, output: 6.0 },
+  "grok-4.7": { cachedInputRead: 0.5, input: 2.0, output: 6.0 },
   "grok-build-0.1": { cachedInputRead: 0.2, input: 1.0, output: 2.0 },
   // Meta — https://dev.meta.ai/docs/pricing-rate-limits
   // Every Muse Spark id serves a 1,048,576-token context. Reasoning tokens
