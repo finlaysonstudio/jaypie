@@ -25,7 +25,7 @@ export const MODEL = {
   NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
   FABLE: "claude-fable-5-1",
-  OPUS: "claude-opus-5",
+  OPUS: "claude-opus-5-5",
   SONNET: "claude-sonnet-5",
   HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
@@ -87,14 +87,14 @@ export const MODEL = {
   },
   // OpenAI
   ASTRA: "gpt-6-astra",
-  SOL: "gpt-5.6-sol",
+  SOL: "gpt-6-sol",
   TERRA: "gpt-5.6-terra",
-  LUNA: "gpt-5.6-luna",
-  /** @deprecated use MODEL.SOL (gpt-5.6-sol) */
+  LUNA: "gpt-6-luna",
+  /** @deprecated use MODEL.SOL (gpt-6-sol) */
   GPT: "gpt-5.5",
   /** @deprecated use MODEL.TERRA (gpt-5.6-terra) */
   GPT_MINI: "gpt-5.4-mini",
-  /** @deprecated use MODEL.LUNA (gpt-5.6-luna) */
+  /** @deprecated use MODEL.LUNA (gpt-6-luna) */
   GPT_NANO: "gpt-5.4-nano",
   // TypeSafe (System One; answers typed questions, generates no text)
   // Pinned to the versioned id the API echoes on every response. `jev-latest`
@@ -114,7 +114,7 @@ export const MODEL = {
   // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
   OPENROUTER: {
     GLM: "z-ai/glm-5.2",
-    LUNA: "openai/gpt-5.6-luna",
+    LUNA: "openai/gpt-6-luna",
     SONNET: "anthropic/claude-sonnet-5",
   },
 };
@@ -271,6 +271,14 @@ export const COST: Record<string, LlmModelCost> = {
     input: 5.0,
     output: 25.0,
   },
+  // Opus 5.5 undercuts Opus 5 at $4/$20 and reads cache at $0.20/MTok —
+  // 0.05x input, half the standard 0.1x multiplier.
+  "claude-opus-5-5": {
+    cachedInputRead: 0.2,
+    cachedInputWrite: { "1h": 8.0, "5m": 5.0 },
+    input: 4.0,
+    output: 20.0,
+  },
   "claude-sonnet-4-20250514": {
     cachedInputRead: 0.3,
     cachedInputWrite: { "1h": 6.0, "5m": 3.75 },
@@ -407,10 +415,14 @@ export const COST: Record<string, LlmModelCost> = {
   "gpt-5.6-luna": { cachedInputRead: 0.02, input: 0.2, output: 1.2 },
   "gpt-5.6-sol": { cachedInputRead: 0.5, input: 5.0, output: 30.0 },
   "gpt-5.6-terra": { cachedInputRead: 0.2, input: 2.0, output: 12.0 },
-  // Sol's standard rate is the $5/$30 above; the $4/$20 on the pricing page
-  // runs through 2026-11-21 and is excluded as promotional. Astra launched at
-  // its standard rate.
+  // GPT-5.6 Sol's standard rate is the $5/$30 above; the $4/$20 on the pricing
+  // page runs through 2026-11-21 and is excluded as promotional. The GPT-6
+  // trio all launched at their standard rates, with no promotional window
+  // footnoted. Their long-context tiers (roughly double input, and $15/$0.75
+  // output for Sol and Luna) are the long-prompt surcharge COST excludes.
   "gpt-6-astra": { cachedInputRead: 1.0, input: 10.0, output: 50.0 },
+  "gpt-6-luna": { cachedInputRead: 0.01, input: 0.1, output: 0.5 },
+  "gpt-6-sol": { cachedInputRead: 0.2, input: 2.0, output: 10.0 },
   // xAI — https://docs.x.ai/docs/models
   // Rates are the sub-200K tier; xAI doubles every figure at or above 200K
   // input tokens, which is the long-prompt surcharge COST excludes by policy.
