@@ -114,7 +114,7 @@ interface StorableEntity {
 
   // Timestamps (ISO 8601) — managed by indexEntity
   createdAt?: string;         // Backfilled on first write
-  updatedAt?: string;         // Bumped on every write
+  updatedAt?: string;         // Bumped on every write (kept with preserveTimestamps)
   archivedAt?: string;
   deletedAt?: string;
 
@@ -174,14 +174,23 @@ await destroyEntity({ id: "abc-123" });
 
 | Function | Description |
 |----------|-------------|
-| `createEntity({ entity })` | Create entity; returns `null` if `id` exists (conditional `attribute_not_exists(id)`) |
+| `createEntity({ entity, preserveTimestamps? })` | Create entity; returns `null` if `id` exists (conditional `attribute_not_exists(id)`) |
 | `getEntity({ id })` | Get by primary key (id only) |
-| `updateEntity({ entity, condition?, names?, values? })` | Update (sets `updatedAt`, re-indexes). Pass `condition` (a ConditionExpression, with `names`/`values` bindings) to guard the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `updateEntity({ entity, condition?, names?, preserveTimestamps?, values? })` | Update (sets `updatedAt`, re-indexes). Pass `condition` (a ConditionExpression, with `names`/`values` bindings) to guard the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
 | `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race, `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (`deletedAt`, `#deleted` suffix on GSI pk) |
 | `archiveEntity({ id })` | Archive (`archivedAt`, `#archived` suffix on GSI pk) |
 | `destroyEntity({ id })` | Hard delete (permanent) |
-| `transactWriteEntities({ entities, conditionalCreate?, condition? })` | Write many entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (`condition` for a custom expression), throwing `ConflictError` (409) when a conditional check fails |
+| `transactWriteEntities({ entities, conditionalCreate?, condition?, preserveTimestamps? })` | Write many entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (`condition` for a custom expression), throwing `ConflictError` (409) when a conditional check fails |
+
+### Preserving Timestamps (Imports)
+
+Every write stamps `updatedAt` with the write time, and every `scope#updatedAt` sort key follows it. Migrations, restores, and replays pass `preserveTimestamps: true` to `createEntity`, `updateEntity`, `transactWriteEntities`, or `seedEntities` (as an option) to keep the entity's own `createdAt`/`updatedAt`. Missing values fall back to now. TTL handling, date serialization, and conditional-write error mapping still apply, so raw `PutCommand` workarounds are unnecessary.
+
+```typescript
+await createEntity({ entity: historicalMessage, preserveTimestamps: true });
+await seedEntities(entities, { preserveTimestamps: true });
+```
 
 ### Conditional Writes
 
@@ -428,6 +437,9 @@ await seedEntities(entities, { dryRun: true });
 // Replace existing
 await seedEntities(entities, { replace: true });
 
+// Keep original createdAt/updatedAt (migrations, restores)
+await seedEntities(entities, { preserveTimestamps: true });
+
 // Export entities
 const { entities, count } = await exportEntities("vocabulary", APEX);
 
@@ -647,7 +659,7 @@ initClient({ tableName: NEW });        // singleton → destination
 await createTable({ tableName: NEW }); // new schema, waits ACTIVE
 for await (const item of scanTable({ tableName: OLD })) {
   const { sequence, pk, sk, ...rest } = item;   // 0.4 → 0.6 transform
-  await updateEntity({ entity: rest });          // re-indexes + re-timestamps
+  await updateEntity({ entity: rest, preserveTimestamps: true }); // re-indexes, keeps timestamps
 }
 ```
 

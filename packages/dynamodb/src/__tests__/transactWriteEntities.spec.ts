@@ -166,6 +166,44 @@ describe("transactWriteEntities", () => {
     });
   });
 
+  describe("preserveTimestamps", () => {
+    it("keeps each entity's own updatedAt and sort key", async () => {
+      const updatedAt = "2026-01-02T00:00:00.000Z";
+      await transactWriteEntities({
+        entities: [
+          {
+            id: "a",
+            model: "migration",
+            scope: "@",
+            updatedAt,
+          } as StorableEntity,
+        ],
+        preserveTimestamps: true,
+      });
+
+      const item = mockSend.mock.calls[0][0].input.TransactItems[0].Put.Item;
+      expect(item.updatedAt).toBe(updatedAt);
+      expect(item.indexModelSk).toBe(`@#${updatedAt}`);
+    });
+
+    it("bumps updatedAt by default", async () => {
+      const updatedAt = "2026-01-02T00:00:00.000Z";
+      await transactWriteEntities({
+        entities: [
+          {
+            id: "a",
+            model: "migration",
+            scope: "@",
+            updatedAt,
+          } as StorableEntity,
+        ],
+      });
+
+      const item = mockSend.mock.calls[0][0].input.TransactItems[0].Put.Item;
+      expect(item.updatedAt).not.toBe(updatedAt);
+    });
+  });
+
   describe("conflict handling", () => {
     it("throws a ConflictError when a conditional check fails", async () => {
       const cancelled = Object.assign(

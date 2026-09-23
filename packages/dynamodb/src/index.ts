@@ -39,6 +39,7 @@ export {
   calculateScope,
   indexEntity,
 } from "./keyBuilders.js";
+export type { IndexEntityOptions } from "./keyBuilders.js";
 
 // Query utilities (legacy named functions)
 export {

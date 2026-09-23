@@ -20,6 +20,8 @@ export interface SeedResult {
 export interface SeedOptions {
   /** Preview without writing (default: false) */
   dryRun?: boolean;
+  /** Keep provided createdAt/updatedAt instead of the write time (default: false) */
+  preserveTimestamps?: boolean;
   /** Overwrite existing entities (default: false) */
   replace?: boolean;
 }
@@ -89,7 +91,11 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
   entities: T[],
   options: SeedOptions = {},
 ): Promise<SeedResult> {
-  const { dryRun = false, replace = false } = options;
+  const {
+    dryRun = false,
+    preserveTimestamps = false,
+    replace = false,
+  } = options;
   const result: SeedResult = {
     created: [],
     errors: [],
@@ -140,9 +146,9 @@ export async function seedEntities<T extends Partial<StorableEntity>>(
       } as StorableEntity;
 
       if (isReplace) {
-        await updateEntity({ entity: completeEntity });
+        await updateEntity({ entity: completeEntity, preserveTimestamps });
       } else {
-        await createEntity({ entity: completeEntity });
+        await createEntity({ entity: completeEntity, preserveTimestamps });
       }
       result.created.push(alias);
     } catch (error) {

@@ -231,6 +231,35 @@ describe("Seed and Export Utilities", () => {
       expect(callArg.entity.id).toBe("existing-id");
     });
 
+    it("passes preserveTimestamps through to createEntity and updateEntity", async () => {
+      vi.mocked(queriesModule.queryByAlias)
+        .mockResolvedValueOnce(createTestEntity({ id: "existing-id" }))
+        .mockResolvedValueOnce(null);
+      vi.mocked(entitiesModule.createEntity).mockResolvedValue(
+        createTestEntity(),
+      );
+      vi.mocked(entitiesModule.updateEntity).mockResolvedValue(
+        createTestEntity(),
+      );
+
+      await seedEntities(
+        [
+          { alias: "existing", model: "record", scope: "@" },
+          { alias: "new-one", model: "record", scope: "@" },
+        ],
+        { preserveTimestamps: true, replace: true },
+      );
+
+      expect(
+        vi.mocked(entitiesModule.updateEntity).mock.calls[0][0]
+          .preserveTimestamps,
+      ).toBe(true);
+      expect(
+        vi.mocked(entitiesModule.createEntity).mock.calls[0][0]
+          .preserveTimestamps,
+      ).toBe(true);
+    });
+
     it("does not write when dryRun is true", async () => {
       vi.mocked(queriesModule.queryByAlias).mockResolvedValue(null);
 

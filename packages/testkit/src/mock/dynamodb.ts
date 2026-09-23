@@ -4,6 +4,7 @@ import type {
   CreateTableResult,
   DynamoClientConfig,
   ExportResult,
+  IndexEntityOptions,
   ParentReference,
   QueryParams,
   QueryResult,
@@ -62,9 +63,9 @@ export const calculateScope = createMockFunction<
 >((parent) => original.calculateScope(parent));
 
 export const indexEntity = createMockFunction<
-  <T extends StorableEntity>(entity: T, suffix?: string) => T
->(<T extends StorableEntity>(entity: T, suffix?: string) =>
-  original.indexEntity(entity, suffix),
+  <T extends StorableEntity>(entity: T, options?: IndexEntityOptions) => T
+>(<T extends StorableEntity>(entity: T, options?: IndexEntityOptions) =>
+  original.indexEntity(entity, options),
 );
 
 // Client functions
@@ -98,10 +99,13 @@ export const getEntity = createMockFunction<
 export const createEntity = createMockFunction<
   (params: {
     entity: StorableEntity;
+    preserveTimestamps?: boolean;
     ttl?: TtlInput | false;
   }) => Promise<StorableEntity | null>
 >(async (params) =>
-  original.indexEntity(applyMockTtl(params.entity, params.ttl)),
+  original.indexEntity(applyMockTtl(params.entity, params.ttl), {
+    preserveTimestamps: params.preserveTimestamps,
+  }),
 );
 
 export const updateEntity = createMockFunction<
@@ -109,11 +113,14 @@ export const updateEntity = createMockFunction<
     condition?: string;
     entity: StorableEntity;
     names?: Record<string, string>;
+    preserveTimestamps?: boolean;
     ttl?: TtlInput | false;
     values?: Record<string, unknown>;
   }) => Promise<StorableEntity>
 >(async (params) =>
-  original.indexEntity(applyMockTtl(params.entity, params.ttl)),
+  original.indexEntity(applyMockTtl(params.entity, params.ttl), {
+    preserveTimestamps: params.preserveTimestamps,
+  }),
 );
 
 // Defaults to a successful transition. Simulate a conditional-check failure by
@@ -145,6 +152,7 @@ export const transactWriteEntities = createMockFunction<
     condition?: string;
     conditionalCreate?: boolean;
     entities: StorableEntity[];
+    preserveTimestamps?: boolean;
   }) => Promise<void>
 >(async () => {
   // No-op in mock
@@ -307,6 +315,7 @@ export type {
   CreateTableOptions,
   CreateTableResult,
   ExportResult,
+  IndexEntityOptions,
   ParentReference,
   QueryParams,
   QueryResult,

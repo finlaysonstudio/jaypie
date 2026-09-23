@@ -126,6 +126,23 @@ describe("Entity Operations", () => {
       expect(result.createdAt).toBeDefined();
     });
 
+    it("keeps provided timestamps and sorts on them with preserveTimestamps", async () => {
+      const entity = {
+        ...createTestEntity(),
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      };
+      const result = (await createEntity({
+        entity,
+        preserveTimestamps: true,
+      })) as StorableEntity & { indexModelSk?: string };
+      expect(result.createdAt).toBe("2026-01-01T00:00:00.000Z");
+      expect(result.updatedAt).toBe("2026-01-02T00:00:00.000Z");
+      expect(result.indexModelSk).toBe("@#2026-01-02T00:00:00.000Z");
+      const cmd = mockSend.mock.calls[0][0];
+      expect(cmd.input.Item.updatedAt).toBe("2026-01-02T00:00:00.000Z");
+    });
+
     it("writes via PutCommand", async () => {
       const entity = createTestEntity();
       await createEntity({ entity });
@@ -196,6 +213,20 @@ describe("Entity Operations", () => {
       };
       const result = await updateEntity({ entity });
       expect(result.updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
+    });
+
+    it("keeps provided updatedAt with preserveTimestamps", async () => {
+      const entity = {
+        ...createTestEntity(),
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      };
+      const result = (await updateEntity({
+        entity,
+        preserveTimestamps: true,
+      })) as StorableEntity & { indexModelSk?: string };
+      expect(result.updatedAt).toBe("2026-01-02T00:00:00.000Z");
+      expect(result.indexModelSk).toBe("@#2026-01-02T00:00:00.000Z");
     });
 
     it("preserves createdAt on updates", async () => {

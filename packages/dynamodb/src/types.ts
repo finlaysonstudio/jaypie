@@ -113,7 +113,8 @@ export interface QueryResult<T = StorableEntity> {
  * `indexModelSk`) are auto-populated by `indexEntity` on every write.
  *
  * `createdAt` and `updatedAt` are both ISO 8601 strings. `updatedAt` is
- * managed by `indexEntity` on every write; callers never set it manually.
+ * managed by `indexEntity` on every write; callers never set it manually
+ * (except imports, which pass `preserveTimestamps`).
  */
 export interface StorableEntity extends Omit<
   FabricModel,
@@ -130,7 +131,7 @@ export interface StorableEntity extends Omit<
 
   /** Creation timestamp (ISO 8601). Backfilled by indexEntity if missing. */
   createdAt?: string;
-  /** Last-write timestamp (ISO 8601). Managed by indexEntity on every write. */
+  /** Last-write timestamp (ISO 8601). Managed by indexEntity on every write unless `preserveTimestamps`. */
   updatedAt?: string;
   /** Archive timestamp — presence drives #archived suffix on GSI pk */
   archivedAt?: string;
