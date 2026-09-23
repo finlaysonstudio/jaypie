@@ -116,12 +116,16 @@ export const getEntity = fabricService({
  * Create an entity. Fails the conditional write if `id` already exists,
  * returning `null` instead of throwing. Use `updateEntity` to overwrite.
  * `indexEntity` auto-bumps `updatedAt` and backfills `createdAt`.
+ * Pass `preserveTimestamps` to keep the entity's own `createdAt`/`updatedAt`
+ * (imports, restores, replays); missing values still fall back to now.
  */
 export async function createEntity({
   entity,
+  preserveTimestamps,
   ttl,
 }: {
   entity: StorableEntity;
+  preserveTimestamps?: boolean;
   ttl?: TtlInput | false;
 }): Promise<StorableEntity | null> {
   const docClient = getDocClient();
@@ -129,6 +133,7 @@ export async function createEntity({
 
   const indexedEntity = indexEntity(
     prepareTtl(entity, ttl, { useModelDefault: true }),
+    { preserveTimestamps },
   );
 
   const command = new PutCommand({
@@ -153,6 +158,7 @@ export async function createEntity({
 /**
  * Update an existing entity.
  * `indexEntity` auto-bumps `updatedAt` — callers never set it manually.
+ * Pass `preserveTimestamps` to keep the entity's own `updatedAt` instead.
  *
  * Pass `condition` to guard the write with a DynamoDB ConditionExpression
  * (mirroring `transactWriteEntities`), supplying `names`/`values` for any
@@ -165,12 +171,14 @@ export async function updateEntity({
   condition,
   entity,
   names,
+  preserveTimestamps,
   ttl,
   values,
 }: {
   condition?: string;
   entity: StorableEntity;
   names?: Record<string, string>;
+  preserveTimestamps?: boolean;
   ttl?: TtlInput | false;
   values?: Record<string, unknown>;
 }): Promise<StorableEntity> {
@@ -179,6 +187,7 @@ export async function updateEntity({
 
   const updatedEntity = indexEntity(
     prepareTtl(entity, ttl, { useModelDefault: false }),
+    { preserveTimestamps },
   );
 
   const command = new PutCommand({
@@ -313,7 +322,7 @@ export const deleteEntity = fabricService({
     };
 
     const suffix = calculateEntitySuffix(updatedEntity);
-    const deletedEntity = indexEntity(updatedEntity, suffix);
+    const deletedEntity = indexEntity(updatedEntity, { suffix });
 
     const command = new PutCommand({
       Item: deletedEntity,
@@ -352,7 +361,7 @@ export const archiveEntity = fabricService({
     };
 
     const suffix = calculateEntitySuffix(updatedEntity);
-    const archivedEntity = indexEntity(updatedEntity, suffix);
+    const archivedEntity = indexEntity(updatedEntity, { suffix });
 
     const command = new PutCommand({
       Item: archivedEntity,
@@ -398,15 +407,19 @@ export const destroyEntity = fabricService({
  * pattern), or `condition` to supply your own ConditionExpression applied to
  * every Put. When a conditional check fails the transaction is cancelled and a
  * `ConflictError` (409) is thrown so callers can map it to a 4xx.
+ *
+ * Pass `preserveTimestamps` to keep each entity's own `createdAt`/`updatedAt`.
  */
 export async function transactWriteEntities({
   condition,
   conditionalCreate,
   entities,
+  preserveTimestamps,
 }: {
   condition?: string;
   conditionalCreate?: boolean;
   entities: StorableEntity[];
+  preserveTimestamps?: boolean;
 }): Promise<void> {
   const docClient = getDocClient();
   const tableName = getTableName();
@@ -420,7 +433,7 @@ export async function transactWriteEntities({
         ...(conditionExpression
           ? { ConditionExpression: conditionExpression }
           : {}),
-        Item: indexEntity(entity),
+        Item: indexEntity(entity, { preserveTimestamps }),
         TableName: tableName,
       },
     })),

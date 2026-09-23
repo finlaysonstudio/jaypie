@@ -202,10 +202,78 @@ describe("indexEntity", () => {
     expect(result.indexModelAliasSk).toBe(`chat#abc-123#${result.updatedAt}`);
   });
 
+  describe("preserveTimestamps", () => {
+    const createdAt = "2026-01-01T00:00:00.000Z";
+    const updatedAt = "2026-01-02T00:00:00.000Z";
+
+    it("keeps provided createdAt and updatedAt", () => {
+      const entity = { ...createBaseEntity(), createdAt, updatedAt };
+      const result = indexEntity(entity, { preserveTimestamps: true });
+      expect(result.createdAt).toBe(createdAt);
+      expect(result.updatedAt).toBe(updatedAt);
+    });
+
+    it("builds sort keys from the provided updatedAt", () => {
+      const entity = {
+        ...createBaseEntity(),
+        alias: "my-alias",
+        createdAt,
+        updatedAt,
+      };
+      const result = indexEntity(entity, {
+        preserveTimestamps: true,
+      }) as StorableEntity & {
+        indexModelAliasSk?: string;
+        indexModelSk?: string;
+      };
+      expect(result.indexModelSk).toBe(`@#${updatedAt}`);
+      expect(result.indexModelAliasSk).toBe(`@#${updatedAt}`);
+    });
+
+    it("serializes a Date updatedAt before preserving it", () => {
+      const entity = {
+        ...createBaseEntity(),
+        updatedAt: new Date(updatedAt),
+      } as unknown as StorableEntity;
+      const result = indexEntity(entity, { preserveTimestamps: true });
+      expect(result.updatedAt).toBe(updatedAt);
+    });
+
+    it("falls back to now when timestamps are missing", () => {
+      const before = Date.now();
+      const result = indexEntity(createBaseEntity(), {
+        preserveTimestamps: true,
+      });
+      const after = Date.now();
+      const ts = new Date(result.updatedAt as string).getTime();
+      expect(ts).toBeGreaterThanOrEqual(before);
+      expect(ts).toBeLessThanOrEqual(after);
+      expect(result.createdAt).toBe(result.updatedAt);
+    });
+
+    it("combines with suffix", () => {
+      const entity = { ...createBaseEntity(), updatedAt };
+      const result = indexEntity(entity, {
+        preserveTimestamps: true,
+        suffix: "#deleted",
+      }) as StorableEntity & { indexModel?: string };
+      expect(result.indexModel).toBe("record#deleted");
+      expect(result.updatedAt).toBe(updatedAt);
+    });
+
+    it("bumps updatedAt when false", () => {
+      const entity = { ...createBaseEntity(), updatedAt };
+      const result = indexEntity(entity, { preserveTimestamps: false });
+      expect(result.updatedAt).not.toBe(updatedAt);
+    });
+  });
+
   describe("suffix on pk", () => {
     it("deleted suffix appended to indexModel pk", () => {
       const entity = createBaseEntity();
-      const result = indexEntity(entity, "#deleted") as StorableEntity & {
+      const result = indexEntity(entity, {
+        suffix: "#deleted",
+      }) as StorableEntity & {
         indexModel?: string;
         indexModelSk?: string;
       };

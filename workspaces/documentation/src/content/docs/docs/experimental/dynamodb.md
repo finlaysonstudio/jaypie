@@ -75,7 +75,7 @@ interface StorableEntity {
   xid?: string;         // External ID
 
   createdAt?: string;   // Backfilled by indexEntity
-  updatedAt?: string;   // Managed by indexEntity on every write
+  updatedAt?: string;   // Managed by indexEntity on every write (kept with preserveTimestamps)
   archivedAt?: string;  // Set by archiveEntity
   deletedAt?: string;   // Set by deleteEntity
 
@@ -238,6 +238,20 @@ const entity = {
 
 const indexed = indexEntity(entity);
 // Sets updatedAt, backfills createdAt, populates indexModel, indexModelSk, etc.
+
+indexEntity(entity, { preserveTimestamps: true }); // keep provided createdAt/updatedAt
+indexEntity(entity, { suffix: "#deleted" });       // override the pk suffix
+```
+
+## Preserving Timestamps
+
+Every write stamps `updatedAt` with the write time, and every `scope#updatedAt` sort key follows it. Migrations, restores, and replays pass `preserveTimestamps: true` so imported history sorts by when it happened. Missing timestamps fall back to now.
+
+```typescript
+await createEntity({ entity: historical, preserveTimestamps: true });
+await updateEntity({ entity: historical, preserveTimestamps: true });
+await transactWriteEntities({ entities, preserveTimestamps: true });
+await seedEntities(entities, { preserveTimestamps: true });
 ```
 
 ## CDK Integration
@@ -287,6 +301,7 @@ const result = await seedEntities([
 // Options
 await seedEntities(entities, { dryRun: true });  // Preview
 await seedEntities(entities, { replace: true }); // Overwrite
+await seedEntities(entities, { preserveTimestamps: true }); // Keep original timestamps
 ```
 
 ### Export Entities
@@ -332,7 +347,7 @@ await createTable({ tableName: NEW }); // new schema, waits until ACTIVE
 
 for await (const item of scanTable({ tableName: OLD })) {
   const { sequence, pk, sk, ...rest } = item; // 0.4 → 0.6 transform
-  await updateEntity({ entity: rest });        // re-indexes + re-timestamps
+  await updateEntity({ entity: rest, preserveTimestamps: true }); // re-indexes, keeps timestamps
 }
 
 if ((await countTable({ tableName: OLD })) !== (await countTable())) {
@@ -341,7 +356,7 @@ if ((await countTable({ tableName: OLD })) !== (await countTable())) {
 // Validated. Flip CDK_ENV to NEW, deploy, then later: destroyTable({ tableName: OLD })
 ```
 
-`scanTable` issues a raw `Scan`, so it reads the old table despite its mismatched GSIs. The transform is application-specific; `updateEntity` recomputes every GSI key and timestamp on write.
+`scanTable` issues a raw `Scan`, so it reads the old table despite its mismatched GSIs. The transform is application-specific; `updateEntity` recomputes every GSI key on write, and `preserveTimestamps: true` keeps each item's original `createdAt`/`updatedAt` so `scope#updatedAt` ordering survives the copy.
 
 ## MCP Tools
 

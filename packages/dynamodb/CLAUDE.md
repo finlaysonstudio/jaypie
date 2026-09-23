@@ -9,7 +9,7 @@ This package provides utilities for:
 - **Key Builders**: Composite key construction via `buildCompositeKey` (delegates to `@jaypie/fabric`)
 - **Entity Operations**: CRUD operations with soft delete and archive support
 - **Query Utilities**: Named query functions (not gsi1, gsi2, etc.)
-- **Auto Timestamps**: `indexEntity` bumps `updatedAt` on every write and backfills `createdAt`
+- **Auto Timestamps**: `indexEntity` bumps `updatedAt` on every write and backfills `createdAt` (opt out with `preserveTimestamps` for imports)
 - **Seed and Export**: Idempotent seeding and data export for migrations
 - **Client Management**: Singleton DynamoDB Document Client
 
@@ -47,21 +47,21 @@ src/
 |--------|-------------|
 | `buildCompositeKey(entity, fields, suffix?)` | Build a composite key from entity fields joined by `SEPARATOR` |
 | `calculateScope(parent?)` | Returns `APEX` if no parent, else `"{parent.model}#{parent.id}"` |
-| `indexEntity(entity, suffix?)` | Auto-populate GSI keys, bump `updatedAt`, backfill `createdAt` |
+| `indexEntity(entity, { preserveTimestamps?, suffix? }?)` | Auto-populate GSI keys, bump `updatedAt`, backfill `createdAt`. `preserveTimestamps` keeps provided `createdAt`/`updatedAt` (falling back to now) |
 
 ### Entity Operations
 
 | Export | Description |
 |--------|-------------|
 | `getEntity({ id })` | Get a single entity by primary key (id only) |
-| `createEntity({ entity, ttl? })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`). Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; without it the model's registered default applies |
-| `updateEntity({ entity, condition?, names?, ttl?, values? })` | Create or replace entity (auto-indexes, auto-timestamps). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; the model default is **not** applied on update |
+| `createEntity({ entity, preserveTimestamps?, ttl? })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`). `preserveTimestamps: true` keeps the entity's own `createdAt`/`updatedAt`. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; without it the model's registered default applies |
+| `updateEntity({ entity, condition?, names?, preserveTimestamps?, ttl?, values? })` | Create or replace entity (auto-indexes, auto-timestamps; `preserveTimestamps: true` keeps the entity's own `updatedAt`). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; the model default is **not** applied on update |
 | `resolveTtl(input)` | Resolve a `TtlInput` (future epoch-seconds `number`, duration string like `"30 days"`, or ISO 8601 date) to epoch seconds. Throws `BadRequestError` on unparseable input; logs at `error` when the result is not in the future |
 | `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race and `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
 | `archiveEntity({ id })` | Archive (sets `archivedAt`, re-indexes with `#archived` suffix) |
 | `destroyEntity({ id })` | Hard delete (permanently removes) |
-| `transactWriteEntities({ entities, conditionalCreate?, condition? })` | Write multiple entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (or pass `condition` for a custom ConditionExpression), throwing `ConflictError` (409) when a conditional check fails |
+| `transactWriteEntities({ entities, conditionalCreate?, condition?, preserveTimestamps? })` | Write multiple entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (or pass `condition` for a custom ConditionExpression), throwing `ConflictError` (409) when a conditional check fails |
 
 ### Client Functions
 
@@ -103,7 +103,7 @@ All query functions use object parameters. `scope` is always optional -- when om
 | Export | Description |
 |--------|-------------|
 | `seedEntityIfNotExists(entity)` | Seed a single entity if it doesn't already exist by alias |
-| `seedEntities(entities, options?)` | Seed multiple entities (idempotent) with optional replace/dryRun |
+| `seedEntities(entities, options?)` | Seed multiple entities (idempotent) with optional replace/dryRun/preserveTimestamps |
 | `exportEntities(model, scope, limit?)` | Export entities by model + scope, sorted by `updatedAt` descending |
 | `exportEntitiesToJson(model, scope, pretty?)` | Export as JSON string (default: pretty printed) |
 
@@ -294,6 +294,17 @@ const record = await createEntity({
 // record.indexModelSk -> "@#2026-01-07T..."
 // record.indexModelAlias -> "record#2026-01-07"
 // record.indexModelCategory -> "record#memory"
+```
+
+### Import With Original Timestamps
+
+Migrations, restores, and replays pass `preserveTimestamps: true` so `createdAt`/`updatedAt` (and every `scope#updatedAt` sort key) reflect when the item happened, not the write time. Missing timestamps still fall back to now. Reruns keep the same order.
+
+```typescript
+await createEntity({ entity: historical, preserveTimestamps: true });
+await updateEntity({ entity: historical, preserveTimestamps: true });
+await transactWriteEntities({ entities, preserveTimestamps: true });
+await seedEntities(entities, { preserveTimestamps: true });
 ```
 
 ### Hierarchical Entities
@@ -531,7 +542,8 @@ initClient({ tableName: NEW });
 
 // 0.4 → 0.6 transform: drop `sequence`, strip the old pk/sk attrs.
 // `model` and `scope` survive as plain attributes; indexEntity (inside
-// updateEntity) recomputes every GSI key and the timestamps on write.
+// updateEntity) recomputes every GSI key on write. `preserveTimestamps` keeps
+// each item's original createdAt/updatedAt so sort order survives the copy.
 function transform(item: Record<string, unknown>): StorableEntity {
   const { sequence, pk, sk, ...rest } = item;
   void sequence;
@@ -544,7 +556,7 @@ await createTable({ tableName: NEW }); // waits until ACTIVE
 
 let migrated = 0;
 for await (const item of scanTable({ tableName: OLD })) {
-  await updateEntity({ entity: transform(item) });
+  await updateEntity({ entity: transform(item), preserveTimestamps: true });
   migrated += 1;
 }
 

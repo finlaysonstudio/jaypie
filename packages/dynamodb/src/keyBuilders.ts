@@ -66,9 +66,24 @@ function serializeDates<T>(value: T): T {
 }
 
 /**
+ * Options for `indexEntity`
+ */
+export interface IndexEntityOptions {
+  /**
+   * Keep the entity's own `createdAt` and `updatedAt` instead of stamping the
+   * write time. Each falls back to now when missing. Use for migrations,
+   * restores, and replays so sort keys reflect when the item happened.
+   */
+  preserveTimestamps?: boolean;
+  /** Suffix override (defaults to archived/deleted state) */
+  suffix?: string;
+}
+
+/**
  * Auto-populate GSI index keys on an entity and advance its write timestamps.
  *
- * - Bumps `updatedAt` to now on every call.
+ * - Bumps `updatedAt` to now on every call (unless `preserveTimestamps` and
+ *   the entity already carries `updatedAt`).
  * - Backfills `createdAt` to the same now if not already set.
  * - Serializes any `Date` instances on the entity to ISO 8601 strings so the
  *   DynamoDB document client can marshall them.
@@ -80,19 +95,19 @@ function serializeDates<T>(value: T): T {
  * always fresh and never forgotten.
  *
  * @param entity - The entity to index
- * @param suffix - Optional suffix override (defaults to archived/deleted state)
+ * @param options - `preserveTimestamps` and `suffix` overrides
  * @returns A new entity with timestamps bumped and index keys populated
  */
 export function indexEntity<T extends StorableEntity>(
   entity: T,
-  suffix?: string,
+  { preserveTimestamps = false, suffix }: IndexEntityOptions = {},
 ): T {
   const now = new Date().toISOString();
   const serialized = serializeDates(entity);
   const bumped = {
     ...serialized,
     createdAt: serialized.createdAt ?? now,
-    updatedAt: now,
+    updatedAt: preserveTimestamps ? (serialized.updatedAt ?? now) : now,
   } as T;
 
   const indexes = getModelIndexes(entity.model);
