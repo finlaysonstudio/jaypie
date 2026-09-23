@@ -96,7 +96,11 @@ const MATRIX_EXPECT: Record<
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
   [MODEL.FIREWORKS.DEEPSEEK]: { pdf: "skip", image: "skip" },
+  // DEEPSEEK_FLASH and GLM_FLASH advertise supports_image_input; GLM
+  // (glm-5p3) does not (Fireworks models API, 2026-09-23).
+  [MODEL.FIREWORKS.DEEPSEEK_FLASH]: { pdf: "skip" },
   [MODEL.FIREWORKS.GLM]: { pdf: "skip", image: "skip" },
+  [MODEL.FIREWORKS.GLM_FLASH]: { pdf: "skip" },
   [MODEL.FIREWORKS.GPT_OSS]: { pdf: "skip", image: "skip" },
   // INKLING and KIMI both advertise supports_image_input (Fireworks models API,
   // 2026-08-02), so neither skips the image cell.

@@ -13,7 +13,9 @@ Unified interface for calling LLM providers with multi-turn conversations, tool 
 import Llm from "@jaypie/llm";
 
 // Auto-detect provider from model name
-const response = await Llm.operate("What is 2+2?", { model: "claude-sonnet-5" });
+const response = await Llm.operate("What is 2+2?", {
+  model: "claude-sonnet-5",
+});
 console.log(response.content); // "4"
 ```
 
@@ -30,19 +32,19 @@ Each `PROVIDER.*.DEFAULT` is itself a `MODEL.*` reference, so this table names
 the alias rather than the id it currently resolves to. Read the id off
 `constants.ts`, which is the only place any id lives.
 
-| Provider | Match Keywords | Default Model (`PROVIDER.*.DEFAULT`) |
-|----------|----------------|---------------|
-| OpenAI | "openai", "gpt", "astra", "sol", "terra", "luna", /^o\d/ | `MODEL.SOL` |
-| Anthropic | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet" | `MODEL.SONNET` |
-| Google | "google", "gemini" | `MODEL.GEMINI_FLASH` |
-| Fireworks | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`) | `MODEL.FIREWORKS.GLM` |
-| Mistral | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral" | `MODEL.MISTRAL.LARGE` |
-| OpenRouter | "openrouter" | `MODEL.OPENROUTER.SONNET` |
-| xAI | "xai", "grok" | `MODEL.GROK` |
-| Meta | "muse" (plus the exact name `meta` and a `meta:` prefix) | `MODEL.MUSE_SPARK` |
-| Bedrock | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO` |
-| TypeSafe | "jev", "typesafe" | `MODEL.JEV` |
-| LlamaCloud | "llamacloud", "llamaindex", "llamaparse" | `MODEL.LLAMAPARSE.AGENTIC` |
+| Provider   | Match Keywords                                                                                                   | Default Model (`PROVIDER.*.DEFAULT`) |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| OpenAI     | "openai", "gpt", "astra", "sol", "terra", "luna", /^o\d/                                                         | `MODEL.SOL`                          |
+| Anthropic  | "anthropic", "claude", "fable", "haiku", "mythos", "opus", "sonnet"                                              | `MODEL.SONNET`                       |
+| Google     | "google", "gemini"                                                                                               | `MODEL.GEMINI_FLASH`                 |
+| Fireworks  | "fireworks" (also matched inside ids like `accounts/fireworks/models/...`)                                       | `MODEL.FIREWORKS.GLM`                |
+| Mistral    | "mistral", "ministral", "codestral", "devstral", "magistral", "pixtral", "voxtral"                               | `MODEL.MISTRAL.LARGE`                |
+| OpenRouter | "openrouter"                                                                                                     | `MODEL.OPENROUTER.SONNET`            |
+| xAI        | "xai", "grok"                                                                                                    | `MODEL.GROK`                         |
+| Meta       | "muse" (plus the exact name `meta` and a `meta:` prefix)                                                         | `MODEL.MUSE_SPARK`                   |
+| Bedrock    | "amazon.nova", "anthropic.claude", "meta.llama", "deepseek.", "google.gemma", "moonshotai.", "openai.gpt-oss", … | `MODEL.NOVA_PRO`                     |
+| TypeSafe   | "jev", "typesafe"                                                                                                | `MODEL.JEV`                          |
+| LlamaCloud | "llamacloud", "llamaindex", "llamaparse"                                                                         | `MODEL.LLAMAPARSE.AGENTIC`           |
 
 The provider name for Gemini models is `"google"` — `"gemini"` is accepted as a deprecated alias.
 
@@ -57,7 +59,7 @@ LlamaCloud serves LlamaParse, which extracts documents and generates no text. Th
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `MIMO`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - `MODEL.MUSE_SPARK` and `MODEL.MUSE_SPARK_CONTRIBUTOR` are the same Meta model at two tiers. The contributor tier is roughly a tenth of the price because prompts and completions may train Meta models; it is limited to 100 RPM and does not accept `reasoning.effort: "max"`. It is an explicit opt-in: `PROVIDER.META.DEFAULT` is `MODEL.MUSE_SPARK`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
@@ -70,24 +72,26 @@ LlamaCloud serves LlamaParse, which extracts documents and generates no text. Th
 import { LLM, type LlmModelCost } from "@jaypie/llm";
 
 const rate: LlmModelCost | undefined = LLM.COST[response.model];
-const dollars = rate ? (usage.input * rate.input + usage.output * rate.output) / 1e6 : 0;
+const dollars = rate
+  ? (usage.input * rate.input + usage.output * rate.output) / 1e6
+  : 0;
 ```
 
-| Field | Meaning |
-|-------|---------|
-| `input` | Uncached input tokens |
-| `output` | Output tokens |
-| `cachedInputRead` | Cache-read (hit) tokens. Omitted when the provider does not price reads separately |
+| Field              | Meaning                                                                                                                                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `input`            | Uncached input tokens                                                                                                                                                                                                                                |
+| `output`           | Output tokens                                                                                                                                                                                                                                        |
+| `cachedInputRead`  | Cache-read (hit) tokens. Omitted when the provider does not price reads separately                                                                                                                                                                   |
 | `cachedInputWrite` | Cache-write tokens. Scalar when TTL-invariant (`0` where the provider publishes a free write, as Bedrock does for Nova), or keyed `{ "5m", "1h" }` matching `LlmCache`. Omitted means writes bill at `input` (a TTL-keyed premium is Anthropic-only) |
-| `reasoning` | Reasoning tokens when billed apart from `output`. Unset everywhere today |
+| `reasoning`        | Reasoning tokens when billed apart from `output`. Unset everywhere today                                                                                                                                                                             |
 
 Rates are the standard short-context text tier. Introductory, batch, flex, priority, fast-mode, and data-residency pricing are excluded, as are long-prompt surcharges (Gemini 3.1 Pro above 200K, Grok at 200K, GPT-5.5 above 272K). Amazon's Nova models are priced at the standard US on-demand rate (`us.` geo profile for Nova 2 Lite; the cheaper `global.` profile is not modeled). **Gateway routes are deliberately unpriced**: `MODEL.OPENROUTER.*`, and any Bedrock id reselling a third-party model, cost per route and per region, so `COST` returns `undefined` for them — price those against the backend model or the gateway's own published rate. Unlisted ids return `undefined` — always handle a miss.
 
 ```typescript
 // Provider auto-detected from the model string. Literal ids here on purpose:
 // the match is on a keyword inside the id, which an alias would hide.
-await Llm.operate(input, { model: "gpt-5.6-sol" });    // "gpt"    -> OpenAI
-await Llm.operate(input, { model: "claude-opus-5" });  // "claude" -> Anthropic
+await Llm.operate(input, { model: "gpt-5.6-sol" }); // "gpt"    -> OpenAI
+await Llm.operate(input, { model: "claude-opus-5" }); // "claude" -> Anthropic
 await Llm.operate(input, { model: "gemini-3.8-flash" }); // "gemini" -> Google
 ```
 
@@ -106,11 +110,11 @@ const response = await Llm.operate(input, {
 });
 
 // Response structure
-response.content;    // string | object (structured output)
-response.history;    // LlmHistory - for follow-up calls
-response.usage;      // Token usage per turn
-response.reasoning;  // Extended thinking (if available)
-response.status;     // "completed" | "incomplete" | "in_progress"
+response.content; // string | object (structured output)
+response.history; // LlmHistory - for follow-up calls
+response.usage; // Token usage per turn
+response.reasoning; // Extended thinking (if available)
+response.status; // "completed" | "incomplete" | "in_progress"
 ```
 
 ### send() - Simple Completions
@@ -129,7 +133,9 @@ const response = await Llm.send("Explain REST APIs", {
 For real-time output:
 
 ```typescript
-for await (const chunk of Llm.stream("Tell me a story", { model: LLM.MODEL.SOL })) {
+for await (const chunk of Llm.stream("Tell me a story", {
+  model: LLM.MODEL.SOL,
+})) {
   switch (chunk.type) {
     case "text":
       process.stdout.write(chunk.content);
@@ -184,7 +190,7 @@ import Llm, { tools, JaypieToolkit } from "@jaypie/llm";
 // Use individual tools
 const response = await Llm.operate("Roll 2d6", {
   model: LLM.MODEL.SOL,
-  tools,  // Includes: random, roll, time, weather
+  tools, // Includes: random, roll, time, weather
 });
 
 // Or use the pre-configured toolkit
@@ -217,6 +223,7 @@ const response = await Llm.operate("What's the weather?", {
 ```
 
 When enabled:
+
 - Each tool receives an `__Explanation` parameter requiring the model to state why it's calling the tool
 - The explanation is stripped before the tool executes (tools receive clean arguments)
 - Useful for debugging and understanding LLM decision-making
@@ -239,6 +246,7 @@ const toolkit = new Toolkit([
 ```
 
 The resolved message surfaces in three places during `operate()`/`stream()`:
+
 - The Toolkit's `log` option: `new Toolkit(tools, { log: (message, { name, args }) => ... })`
 - The `beforeEachTool`, `afterEachTool`, and `onToolError` hooks as `message`
 - The `tool_call` progress event as `tool.message` (`operate()` only)
@@ -251,12 +259,12 @@ Tools may declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to state the
 
 ```typescript
 const toolkit = new Toolkit([
-  { name: "search_docs", readOnly: true, /* ... */ },
-  { name: "post_message", /* ... */ },
+  { name: "search_docs", readOnly: true /* ... */ },
+  { name: "post_message" /* ... */ },
 ]);
 
 const verification = toolkit.filter({ readOnly: true }); // search_docs only
-const effectful = toolkit.filter({ readOnly: false });   // post_message only
+const effectful = toolkit.filter({ readOnly: false }); // post_message only
 const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
 ```
 
@@ -316,14 +324,17 @@ const done = await Llm.operate(undefined, {
 ### Natural Schema
 
 ```typescript
-const result = await Llm.operate("Extract contact info from: John Doe, john@example.com, 555-1234", {
-  model: LLM.MODEL.SOL,
-  format: {
-    name: String,
-    email: String,
-    phone: String,
+const result = await Llm.operate(
+  "Extract contact info from: John Doe, john@example.com, 555-1234",
+  {
+    model: LLM.MODEL.SOL,
+    format: {
+      name: String,
+      email: String,
+      phone: String,
+    },
   },
-});
+);
 // result.content = { name: "John Doe", email: "john@example.com", phone: "555-1234" }
 ```
 
@@ -365,10 +376,13 @@ const PersonSchema = z.object({
   hobbies: z.array(z.string()),
 });
 
-const result = await Llm.operate("Parse: Alice is 30 and likes hiking and reading", {
-  model: LLM.MODEL.SOL,
-  format: PersonSchema,
-});
+const result = await Llm.operate(
+  "Parse: Alice is 30 and likes hiking and reading",
+  {
+    model: LLM.MODEL.SOL,
+    format: PersonSchema,
+  },
+);
 ```
 
 ### Bare JSON Schema
@@ -392,7 +406,10 @@ const result = await Llm.operate("Analyze this chargeback", {
 ### Converting between Natural Schema and JSON Schema
 
 ```typescript
-import { jsonSchemaToNaturalSchema, naturalSchemaToJsonSchema } from "@jaypie/llm";
+import {
+  jsonSchemaToNaturalSchema,
+  naturalSchemaToJsonSchema,
+} from "@jaypie/llm";
 
 naturalSchemaToJsonSchema({ name: String, age: Number });
 // { type: "object", properties: { name: { type: "string" }, age: { type: "number" } }, required: ["name", "age"] }
@@ -442,17 +459,17 @@ const { answers, emulated } = await Llm.question(ticket, {
 });
 
 answers.department; // { type: "choice", choice: "billing", confidence: 0.98, probabilities: {...} }
-answers.is_urgent;  // { type: "noul", noul: 0.94 }
+answers.is_urgent; // { type: "noul", noul: 0.94 }
 answers.frustration; // { type: "score", score: 1.7, confidence: 0.56, legend: {...}, probabilities: {...} }
 ```
 
 ### Question Types
 
-| Type | Criteria | Answer |
-|------|----------|--------|
-| `noul` | optional `{ true, false }` descriptions | `{ type, noul }` — probability 0 to 1, no confidence: the number is the degree of belief |
-| `choice` | `Record<option, description \| null>`, 1 to 255 options | `{ type, choice, confidence, probabilities }` — `choice` is the argmax, `probabilities` keyed by option name |
-| `score` | ordered `string[]`, 2 to 10 levels lowest first | `{ type, score, confidence, legend, probabilities }` — `score` is the probability-weighted level index, `legend` and `probabilities` keyed by level index as a string |
+| Type     | Criteria                                                | Answer                                                                                                                                                                |
+| -------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `noul`   | optional `{ true, false }` descriptions                 | `{ type, noul }` — probability 0 to 1, no confidence: the number is the degree of belief                                                                              |
+| `choice` | `Record<option, description \| null>`, 1 to 255 options | `{ type, choice, confidence, probabilities }` — `choice` is the argmax, `probabilities` keyed by option name                                                          |
+| `score`  | ordered `string[]`, 2 to 10 levels lowest first         | `{ type, score, confidence, legend, probabilities }` — `score` is the probability-weighted level index, `legend` and `probabilities` keyed by level index as a string |
 
 `instructions` and every criteria value accept a string, an object, or an
 array. `state` accepts the same three and is text only: no files, no images,
@@ -569,13 +586,16 @@ const second = await Llm.operate("What's my name?", {
 ## Input with Files and Images
 
 ```typescript
-const response = await Llm.operate([
-  "Analyze these documents",
-  { file: "report.pdf", bucket: "my-bucket" },
-  { image: "chart.png" },
-], {
-  model: LLM.MODEL.SONNET,
-});
+const response = await Llm.operate(
+  [
+    "Analyze these documents",
+    { file: "report.pdf", bucket: "my-bucket" },
+    { image: "chart.png" },
+  ],
+  {
+    model: LLM.MODEL.SONNET,
+  },
+);
 ```
 
 ## Placeholders and Data
@@ -639,16 +659,16 @@ const response = await Llm.operate(input, {
 
 Fields carried by each event (`turn` is 1-indexed):
 
-| Event | Fields |
-|-------|--------|
-| `start` | `model`, `provider`, `maxTurns` |
-| `model_request` | `turn`, `model` |
-| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
-| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
-| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
-| `retry` | `turn`, `error` (message string) |
-| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
+| Event            | Fields                                                                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`          | `model`, `provider`, `maxTurns`                                                                                                                                                   |
+| `model_request`  | `turn`, `model`                                                                                                                                                                   |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn)                                                                              |
+| `tool_call`      | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_result`    | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it                                     |
+| `tool_error`     | `turn`, `tool: { name }`, `error` (message string)                                                                                                                                |
+| `retry`          | `turn`, `error` (message string)                                                                                                                                                  |
+| `done`           | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative)                                                                                      |
 
 Errors thrown by the callback are logged and never interrupt the loop. Hooks remain the right choice when you need the full provider request/response payloads. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
@@ -693,7 +713,7 @@ Set `LLM_EXCHANGE_ENABLED` (truthy, except `false`/`0`) and every `operate()` an
 
 ### Registering the Store
 
-The lazy resolution loads `@jaypie/dynamodb` from `node_modules`. When the host's copy is bundler-managed instead — a Next.js server bundle, for example — that is a *second* instance: the host initialized its copy, the loaded one is uninitialized, and every exchange is dropped with `[storeExchange] DynamoDB client is not initialized`. Register the instance at bootstrap to name which copy to use:
+The lazy resolution loads `@jaypie/dynamodb` from `node_modules`. When the host's copy is bundler-managed instead — a Next.js server bundle, for example — that is a _second_ instance: the host initialized its copy, the loaded one is uninitialized, and every exchange is dropped with `[storeExchange] DynamoDB client is not initialized`. Register the instance at bootstrap to name which copy to use:
 
 ```typescript
 import * as dynamodb from "@jaypie/dynamodb";
@@ -761,8 +781,8 @@ const response = await Llm.operate(input, {
 ### Fallback Response Metadata
 
 ```typescript
-response.provider;        // Which provider handled the request
-response.fallbackUsed;    // true if a fallback was used
+response.provider; // Which provider handled the request
+response.fallbackUsed; // true if a fallback was used
 response.fallbackAttempts; // Number of providers tried (1 = primary only)
 ```
 
@@ -785,7 +805,7 @@ The first constructor argument may be a provider name **or** a model name. When 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
-const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, retained verbatim
+const llm = new Llm("claude-sonnet-4-6"); // -> anthropic, retained verbatim
 const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, whatever the alias names
 ```
 
@@ -820,7 +840,12 @@ Inside a Jaypie handler (`expressHandler`, `lambdaHandler`, and stream variants)
     "tools": { "get_weather": 2, "roll": 1 },
     "turns": 5,
     "usage": {
-      "anthropic:claude-sonnet-4-6": { "input": 1840, "output": 912, "reasoning": 0, "total": 2752 }
+      "anthropic:claude-sonnet-4-6": {
+        "input": 1840,
+        "output": 912,
+        "reasoning": 0,
+        "total": 2752
+      }
     }
   }
 }
@@ -847,7 +872,7 @@ DD_LLMOBS_ML_APP=my-app  # ML app name (dd-trace standard)
 Behavior:
 
 - **Opt-in and lazy** — `dd-trace` is resolved at runtime via a computed module specifier, so it is **bundler-safe** (esbuild will not bundle it) and **not** a dependency. Absence is a silent no-op; instrumentation failures never break the LLM call.
-- **Parenting is AsyncLocalStorage-based** — spans attach to whatever LLMObs span is active when created. Wrapping a call in a consumer span (e.g. `llmobs.trace({ kind: "workflow" }, () => Llm.operate(...))`) nests ours under it. The Datadog Lambda layer provides APM spans automatically, but not an enclosing *LLMObs* span around an arbitrary handler.
+- **Parenting is AsyncLocalStorage-based** — spans attach to whatever LLMObs span is active when created. Wrapping a call in a consumer span (e.g. `llmobs.trace({ kind: "workflow" }, () => Llm.operate(...))`) nests ours under it. The Datadog Lambda layer provides APM spans automatically, but not an enclosing _LLMObs_ span around an arbitrary handler.
 - **`operate()`** spans form a full tree (model + tool nest under the enclosing span).
 - **`stream()`** spans attach to any active enclosing span, but within a single stream the `llm` and `tool` spans are **siblings** — the streamed model span is held open across `yield` boundaries, so it is not the active span when tools run.
 
@@ -914,11 +939,11 @@ budget runs out. Those errors carry `error.reason` (`LlmResponseErrorReason`)
 because status alone cannot identify them: an exhausted turn budget is a 429,
 exactly like a provider rate limit.
 
-| `reason` | Status | Meaning |
-|----------|--------|---------|
-| `max_turns` | 429 | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge. |
-| `tool_errors` | 502 | Tool execution failed six times in a row and the loop stopped. |
-| `incomplete` | 502 | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason. |
+| `reason`      | Status | Meaning                                                                                                                                                                      |
+| ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                       |
+| `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                               |
+| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";
@@ -971,27 +996,27 @@ describe("LLM Integration", () => {
 
 ```typescript
 interface LlmOperateOptions {
-  cache?: boolean | 0 | "5m" | "1h";    // Prompt caching (default on: 1h Anthropic, 5m elsewhere; false/0 disables)
-  data?: Record<string, any>;           // Placeholder substitution data
-  effort?: LlmEffort;                   // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
+  cache?: boolean | 0 | "5m" | "1h"; // Prompt caching (default on: 1h Anthropic, 5m elsewhere; false/0 disables)
+  data?: Record<string, any>; // Placeholder substitution data
+  effort?: LlmEffort; // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
   format?: NaturalSchema | JsonObject | ZodType; // Structured output schema (natural syntax preferred)
-  history?: LlmHistory;                 // Previous conversation
-  hooks?: LlmHooks;                     // Lifecycle callbacks
-  instructions?: string;                // Additional instructions
-  model?: string;                       // Model override
-  providerOptions?: JsonObject;         // Provider-specific request fields (passthrough)
-  system?: string;                      // System prompt
-  temperature?: number;                 // Sampling temperature (0-2)
-  tools?: LlmTool[] | Toolkit;         // Available tools
-  turns?: boolean | number;             // Max conversation turns
-  user?: string;                        // User ID for logging
+  history?: LlmHistory; // Previous conversation
+  hooks?: LlmHooks; // Lifecycle callbacks
+  instructions?: string; // Additional instructions
+  model?: string; // Model override
+  providerOptions?: JsonObject; // Provider-specific request fields (passthrough)
+  system?: string; // System prompt
+  temperature?: number; // Sampling temperature (0-2)
+  tools?: LlmTool[] | Toolkit; // Available tools
+  turns?: boolean | number; // Max conversation turns
+  user?: string; // User ID for logging
 }
 
 interface LlmFallbackConfig {
-  provider: string;   // Provider name (e.g., "openai", "anthropic", "google")
-  model?: string;     // Model to use (optional, uses provider default)
-  apiKey?: string;    // API key (optional, uses environment variable)
+  provider: string; // Provider name (e.g., "openai", "anthropic", "google")
+  model?: string; // Model to use (optional, uses provider default)
+  apiKey?: string; // API key (optional, uses environment variable)
 }
 ```
 
@@ -1010,7 +1035,7 @@ import Llm, { LLM } from "@jaypie/llm";
 
 await Llm.operate("Solve this step by step", {
   model: LLM.MODEL.SOL,
-  effort: "high",          // or LLM.EFFORT.HIGH
+  effort: "high", // or LLM.EFFORT.HIGH
 });
 ```
 
@@ -1018,12 +1043,12 @@ Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
 | `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | Meta `reasoning.effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
-|-----------|---------------------------|----------------------------------|--------------------------|-----------------------------|-------------------------|-------------------------|-------------------------------|------------------------------|----------------------------|
-| `lowest`  | minimal | low    | MINIMAL | 512   | low    | minimal | minimal | low    | none |
-| `low`     | low     | low    | LOW     | 4096  | low    | low     | low     | low    | high |
-| `medium`  | medium  | medium | MEDIUM  | 8192  | medium | medium  | medium  | medium | high |
-| `high`    | high    | high   | HIGH    | 16384 | high   | high    | high    | high   | high |
-| `highest` | xhigh   | max    | HIGH    | 24576 | high   | max     | xhigh   | high   | high |
+| --------- | ------------------------- | -------------------------------- | ------------------------ | --------------------------- | ----------------------- | ----------------------- | ----------------------------- | ---------------------------- | -------------------------- |
+| `lowest`  | minimal                   | low                              | MINIMAL                  | 512                         | low                     | minimal                 | minimal                       | low                          | none                       |
+| `low`     | low                       | low                              | LOW                      | 4096                        | low                     | low                     | low                           | low                          | high                       |
+| `medium`  | medium                    | medium                           | MEDIUM                   | 8192                        | medium                  | medium                  | medium                        | medium                       | high                       |
+| `high`    | high                      | high                             | HIGH                     | 16384                       | high                    | high                    | high                          | high                         | high                       |
+| `highest` | xhigh                     | max                              | HIGH                     | 24576                       | high                    | max                     | xhigh                         | high                         | high                       |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 it is "papered over." Papering that follows from the provider's native scale
@@ -1080,7 +1105,7 @@ tool-calling loop is billed at the provider's cache-read rate (~0.1x input)
 after the first write. Control with the scalar `cache` option:
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM });             // cached (1h Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM }); // cached (1h Anthropic, else 5m)
 await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```

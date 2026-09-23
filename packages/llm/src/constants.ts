@@ -32,7 +32,9 @@ export const MODEL = {
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
     DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro-0813",
-    GLM: "accounts/fireworks/models/glm-5p2",
+    DEEPSEEK_FLASH: "accounts/fireworks/models/deepseek-v4p1-flash",
+    GLM: "accounts/fireworks/models/glm-5p3",
+    GLM_FLASH: "accounts/fireworks/models/glm-5p3-flash",
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
     INKLING: "accounts/fireworks/models/inkling",
     KIMI: "accounts/fireworks/models/kimi-k3",
@@ -115,6 +117,7 @@ export const MODEL = {
   OPENROUTER: {
     GLM: "z-ai/glm-5.2",
     LUNA: "openai/gpt-6-luna",
+    MIMO: "xiaomi/mimo-v2.6-flash",
     SONNET: "anthropic/claude-sonnet-5",
   },
 };
@@ -318,10 +321,27 @@ export const COST: Record<string, LlmModelCost> = {
     input: 1.32,
     output: 3.96,
   },
+  "accounts/fireworks/models/deepseek-v4p1-flash": {
+    cachedInputRead: 0.006,
+    input: 0.3,
+    output: 1.2,
+  },
+  // Superseded by glm-5p3 on 2026-09-23; priced here so historic usage stays
+  // replayable.
   "accounts/fireworks/models/glm-5p2": {
     cachedInputRead: 0.14,
     input: 1.4,
     output: 4.4,
+  },
+  "accounts/fireworks/models/glm-5p3": {
+    cachedInputRead: 0.26,
+    input: 1.4,
+    output: 4.4,
+  },
+  "accounts/fireworks/models/glm-5p3-flash": {
+    cachedInputRead: 0.03,
+    input: 0.15,
+    output: 0.5,
   },
   "accounts/fireworks/models/gpt-oss-120b": {
     cachedInputRead: 0.015,
