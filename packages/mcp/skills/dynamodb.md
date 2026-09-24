@@ -77,7 +77,7 @@ Schema-agnostic table operations that honor the `initClient` config (real AWS or
 | `scanTable({ tableName?, pageSize? })` | Async generator yielding every raw item via a full `Scan` (paginates internally). Reads any table regardless of GSI shape -- pass the old table during a rebuild. |
 | `countTable({ tableName? })` | Total item count via paginated `COUNT` scan (validation) |
 | `createTable({ tableName?, billingMode?, wait? })` | Create a table with the registered-model GSI schema; waits until `ACTIVE` by default |
-| `destroyTable({ tableName })` | Delete a table; `tableName` required (no default) |
+| `destroyTable({ tableName })` | Delete a table; `tableName` required (no default; throws `ConfigurationError` when missing) |
 
 ### Constants
 

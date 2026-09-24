@@ -83,7 +83,7 @@ These power table rebuilds (see [Rebuilding a table](#rebuilding-a-table-04--06)
 | `scanTable({ tableName?, pageSize? })` | Async generator yielding every raw item via a schema-agnostic `Scan` (paginates internally). `tableName` defaults to the initialized table -- pass the **old** table to read it. |
 | `countTable({ tableName? })` | Total item count via a paginated `COUNT` scan (validation) |
 | `createTable({ tableName?, billingMode?, wait? })` | Create a table with the current registered-model GSI schema; waits until `ACTIVE` by default. Returns `{ created, message, tableName }` |
-| `destroyTable({ tableName })` | Delete a table. `tableName` is **required** (no default) -- destroying is intentional |
+| `destroyTable({ tableName })` | Delete a table. `tableName` is **required** (no default; throws `ConfigurationError` when missing) -- destroying is intentional |
 
 ### Query Functions
 
