@@ -1,6 +1,6 @@
 {
   "name": "@jaypie/llm",
-  "version": "1.3.48",
+  "version": "1.3.49",
   "description": "Large language model utilities",
   "repository": {
     "type": "git",
