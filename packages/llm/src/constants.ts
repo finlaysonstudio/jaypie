@@ -48,6 +48,14 @@ export const MODEL = {
     // baseline expectation of operate(), so the model is not cataloged. Its
     // COST entry is retained per policy.
     NEMOTRON: "accounts/fireworks/models/nemotron-3-ultra-nvfp4",
+    // NEMOTRON_LIGHTNING is deliberately absent. nemotron-lightning-3p5-30b-a3b
+    // does not support tools or structured output: a json_schema
+    // response_format hangs with no response, and after a tool call it answers
+    // in prose, so the tools, structured, and both cells time out at 180s
+    // (2026-09-24). Tools and structured output are baseline expectations of
+    // operate(), so the model is not listed as supported. Its COST entry is
+    // retained per policy.
+    // NEMOTRON_LIGHTNING: "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
     QWEN: "accounts/fireworks/models/qwen3p8-max",
   },
   // Google
@@ -391,6 +399,13 @@ export const COST: Record<string, LlmModelCost> = {
     cachedInputRead: 0.12,
     input: 0.6,
     output: 2.4,
+  },
+  // Priced but not in MODEL.FIREWORKS: it does not support tools or structured
+  // output. A caller can still pass the id directly.
+  "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b": {
+    cachedInputRead: 0.01,
+    input: 0.05,
+    output: 0.2,
   },
   // Withdrawn from serverless 2026-09-10, superseded by qwen3p8-max; priced per
   // policy so historical tallies still resolve.
