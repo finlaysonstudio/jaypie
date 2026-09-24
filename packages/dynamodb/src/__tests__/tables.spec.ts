@@ -1,3 +1,4 @@
+import { ConfigurationError } from "@jaypie/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as clientModule from "../client.js";
@@ -119,6 +120,19 @@ describe("Table Administration", () => {
       expect(DeleteTableCommand).toHaveBeenCalledWith({
         TableName: "old-table",
       });
+    });
+
+    it("throws ConfigurationError when called with no arguments", async () => {
+      // @ts-expect-error - verifying runtime guard for JavaScript callers
+      await expect(destroyTable()).rejects.toThrow(ConfigurationError);
+      expect(send).not.toHaveBeenCalled();
+    });
+
+    it("throws ConfigurationError when tableName is empty", async () => {
+      await expect(destroyTable({ tableName: "" })).rejects.toThrow(
+        ConfigurationError,
+      );
+      expect(send).not.toHaveBeenCalled();
     });
   });
 });

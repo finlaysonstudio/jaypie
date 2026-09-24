@@ -56,7 +56,7 @@ npm install @jaypie/dynamodb
 | `scanTable` | Async generator over every raw item (schema-agnostic `Scan`) |
 | `countTable` | Total item count via paginated `COUNT` scan |
 | `createTable` | Create a table with the registered-model GSI schema |
-| `destroyTable` | Delete a table (`tableName` required) |
+| `destroyTable` | Delete a table (`tableName` required; throws `ConfigurationError` when missing) |
 
 ## StorableEntity Interface
 

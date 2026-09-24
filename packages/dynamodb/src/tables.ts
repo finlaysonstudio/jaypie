@@ -4,6 +4,7 @@ import {
   DescribeTableCommand,
   waitUntilTableExists,
 } from "@aws-sdk/client-dynamodb";
+import { ConfigurationError } from "@jaypie/errors";
 
 import { getClient, getTableName } from "./client.js";
 import { type BillingMode, createTableParams } from "./tableSchema.js";
@@ -89,12 +90,16 @@ export async function createTable(
  * and must be intentional. Uses the initialized client (`initClient`).
  *
  * @param params - Must specify the table name to delete
+ * @throws ConfigurationError if `tableName` is missing
  */
-export async function destroyTable({
-  tableName,
-}: {
-  tableName: string;
-}): Promise<{ destroyed: boolean; tableName: string }> {
+export async function destroyTable(
+  { tableName }: { tableName: string } = {} as { tableName: string },
+): Promise<{ destroyed: boolean; tableName: string }> {
+  if (!tableName) {
+    throw new ConfigurationError(
+      "destroyTable requires an explicit tableName; it does not default to the initialized table",
+    );
+  }
   const client = getClient();
   await client.send(new DeleteTableCommand({ TableName: tableName }));
   return { destroyed: true, tableName };
