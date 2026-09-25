@@ -122,7 +122,7 @@ log.teardown();
 // => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
 ```
 
-`log.report()` warns when a key is written twice. Use `log.tally()` for data written repeatedly — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively.
+`log.report()` records values once. Plain objects merge recursively, so separate calls can fill sibling keys under one parent (`report({ agent: { a: {...} } })` then `report({ agent: { b: {...} } })` keeps both). Arrays and scalars are leaves: the last write wins, and a changed leaf logs `[logger] Overwriting report key: <dotted.path>` at `debug`. Use `log.tally()` for data that accumulates — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively.
 
 ```typescript
 log.tally({ llm: { operates: 1, turns: 2 } });
