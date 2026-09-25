@@ -36,7 +36,7 @@ new JaypieDatadogForwarder(scope, id, props);
 | `id` | string | `"DatadogForwarder"` | Construct ID |
 | `datadogApiKey` | string | `CDK_ENV_DATADOG_API_KEY` | Datadog API key |
 | `account` | string | `CDK_ENV_ACCOUNT` | Account identifier for tags |
-| `reservedConcurrency` | string | `"10"` | Lambda reserved concurrency (must be string) |
+| `reservedConcurrency` | string | `"30"` | Lambda reserved concurrency (must be string) |
 | `additionalTags` | string | undefined | Extra Datadog tags (comma-separated) |
 | `service` | string | `"datadog"` | Service tag value |
 | `project` | string | undefined | Project tag value |

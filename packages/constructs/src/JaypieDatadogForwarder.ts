@@ -12,7 +12,7 @@ import { extendDatadogRole } from "./helpers/extendDatadogRole";
 
 const DATADOG_FORWARDER_TEMPLATE_URL =
   "https://datadog-cloudformation-template.s3.amazonaws.com/aws/forwarder/latest.yaml";
-const DEFAULT_RESERVED_CONCURRENCY = "10";
+const DEFAULT_RESERVED_CONCURRENCY = "30";
 const RULE_UNRESOLVED_ENVIRONMENT_WARNING =
   "@aws-cdk/aws-events:ruleUnresolvedEnvironment";
 const SAME_ENVIRONMENT_JUSTIFICATION =
@@ -40,7 +40,7 @@ export interface JaypieDatadogForwarderProps {
   /**
    * Reserved concurrency for the forwarder Lambda
    * Must be a string as required by the CloudFormation template
-   * @default "10"
+   * @default "30"
    */
   reservedConcurrency?: string;
 
