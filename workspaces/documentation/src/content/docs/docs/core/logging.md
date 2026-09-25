@@ -233,7 +233,7 @@ log.teardown();
 
 `log.report()` only accumulates data while a session is active (after `setup()`, before `teardown()`); calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
 
-`log.report()` warns when a key is written twice. Use `log.tally()` for data written repeatedly — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively. Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally.
+`log.report()` records values once. Plain objects merge recursively, so separate calls can fill sibling keys under one parent (`report({ agent: { a: {...} } })` then `report({ agent: { b: {...} } })` keeps both). Arrays and scalars are leaves: the last write wins, and a changed leaf logs `[logger] Overwriting report key: <dotted.path>` at `debug`. Use `log.tally()` for data that accumulates — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively. Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally.
 
 ```typescript
 log.tally({ llm: { operates: 1, turns: 2 } });

@@ -5,6 +5,7 @@ import { SerializationLimitOptions } from "./limits";
 import { logTags } from "./logTags";
 import { logVar } from "./logVar";
 import { RedactionOptions } from "./redact";
+import { reportMerge } from "./reportMerge";
 import { tallyMerge } from "./tallyMerge";
 
 interface JaypieLoggerOptions
@@ -292,19 +293,23 @@ export class JaypieLogger {
   /**
    * Merge data into the current session's report. Requires an active
    * session (started via setup()); logs a warning and is a no-op otherwise.
-   * Logs at debug when overwriting an existing key. Emitted by teardown().
+   * Plain objects merge recursively; arrays and scalars are leaves where the
+   * last write wins. Logs the dotted path of each changed leaf at debug.
+   * Emitted by teardown().
    */
   public report(data: Record<string, unknown>): void {
     if (!this._sessionActive) {
       this.warn("[logger] report() called without active session");
       return;
     }
-    for (const key of Object.keys(data)) {
-      if (key in this._report) {
-        this.debug(`[logger] Overwriting report key: ${key}`);
-      }
+    const { merged, overwrites } = reportMerge({
+      existing: this._report,
+      incoming: data,
+    });
+    for (const path of overwrites) {
+      this.debug(`[logger] Overwriting report key: ${path}`);
     }
-    Object.assign(this._report, data);
+    this._report = merged;
   }
 
   /**

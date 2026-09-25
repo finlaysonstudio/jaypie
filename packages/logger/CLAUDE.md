@@ -22,6 +22,7 @@ src/
 ├── logVar.ts             # Applies pipelines to logged variables
 ├── pipelines.ts          # Filters for axios responses and errors
 ├── redact.ts             # Recursive redaction: name denylist with renders, value heuristics, secret() brand, pluggable hook
+├── reportMerge.ts        # Merge report values (objects recurse, leaves last-write-wins, collects overwritten paths)
 ├── sanitizeAuth.ts       # Compatibility shim re-exporting from redact.ts
 ├── tallyMerge.ts         # Combine tally values (numbers sum, strings collect, booleans AND)
 └── utils.ts              # stringify, forceString, out, parse utilities
@@ -127,7 +128,7 @@ log.teardown();                                           // Emits report, reset
 
 - `setup(tags?)` starts a session, applies tags, resets counters
 - `teardown()` emits `log.info.var({ report })` with accumulated data + `{ log: { warn, warns, error, errors } }`
-- `report(data)` merges key-value data into the report; warns on duplicate keys
+- `report(data)` merges record-once data into the report: plain objects merge recursively, arrays and scalars are leaves where the last write wins; a changed leaf logs its dotted path at debug (`src/reportMerge.ts`)
 - `tally(data)` merges combining data into the report: numbers sum, strings collect into an array of strings, booleans AND, objects merge recursively (`src/tallyMerge.ts`); silently no-ops without an active session so libraries can tally unconditionally (`@jaypie/llm` tallies an `llm` key automatically)
 - `sessionActive` is a read-only boolean, true between `setup()` and `teardown()`; libraries guard optional `report()`/`tally()` calls with it (compare against `false`, since an older logger reports `undefined`)
 - Warn and error calls are auto-counted during an active session
@@ -215,6 +216,7 @@ Factory function returning a `JaypieLogger` instance.
 - `init()` - Reset logger state (used between Lambda invocations)
 - `lib({ lib?, level?, tags? })` - Create library logger (silent by default)
 - `tag(tags)` - Add tags to all loggers
+- `report(data)` - Merge record-once data into the session report (objects recurse, leaves last-write-wins)
 - `sessionActive` - Read-only boolean, true between `setup()` and `teardown()`
 - `tally(data)` - Merge combining data into the session report (numbers sum, strings collect, booleans AND)
 - `untag(key)` - Remove tags
