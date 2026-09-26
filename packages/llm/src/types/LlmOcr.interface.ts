@@ -59,7 +59,10 @@ export interface LlmOcrOptions {
   retry?: LlmRetryOptions;
   /** Caller-owned cancellation */
   signal?: AbortSignal;
-  /** Table rendering inside markdown. Default "markdown". */
+  /**
+   * Table syntax inside markdown. Tables are always inline; this picks
+   * markdown pipes or HTML. Omit for the engine default (markdown).
+   */
   tables?: LlmOcrTableFormat;
   /** Upper bound on an asynchronous job, in milliseconds. Default 10 minutes. */
   timeout?: number;
@@ -68,13 +71,22 @@ export interface LlmOcrOptions {
 }
 
 export interface LlmOcrImage {
+  /** The engine's structured annotation of the image, when it made one */
+  annotation?: JsonObject;
   /** `data:` URI when fetched (`images: true`), else undefined */
   data?: string;
+  /**
+   * Short label for the image, e.g. "Notary signature of Jane Doe". It is also
+   * the alt text of the image's link in `markdown`.
+   */
+  description?: string;
   /** Vendor filename, e.g. "img-0.jpeg" or "image_0.png" */
   id: string;
   mimeType?: string;
   /** 1-indexed page the image was extracted from, when the vendor reports it */
   page?: number;
+  /** Kind of element, e.g. "signature", "seal", "photo", when annotated */
+  type?: string;
 }
 
 export interface LlmOcrPage {

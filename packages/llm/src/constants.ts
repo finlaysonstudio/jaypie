@@ -567,6 +567,17 @@ export const PAGE_COST: Record<string, number> = {
   "mistral-ocr-4-1": 4,
 };
 
+/**
+ * Price of one thousand annotated pages, in US dollars, for engines that bill
+ * annotation as its own page rate. Mistral OCR 4.1 bills $5 per 1,000
+ * annotated pages in place of the $4 base rate (verified 2026-09-25).
+ * `Llm.ocr` always annotates images on Mistral, so this is the rate it
+ * reports unless the caller opts out through `providerOptions`.
+ */
+export const PAGE_COST_ANNOTATED: Record<string, number> = {
+  "mistral-ocr-4-1": 5,
+};
+
 const GOOGLE_PROVIDER = {
   // https://ai.google.dev/gemini-api/docs/models
   DEFAULT: MODEL.GEMINI_FLASH,

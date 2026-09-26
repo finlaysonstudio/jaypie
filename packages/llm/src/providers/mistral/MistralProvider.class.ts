@@ -29,13 +29,16 @@ import {
 import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import {
   LlmOcrDocument,
-  LlmOcrImage,
   LlmOcrOptions,
-  LlmOcrPage,
   LlmOcrResolvedDocument,
   LlmOcrResponse,
 } from "../../types/LlmOcr.interface.js";
-import { getMimeType, isImageExtension } from "../../upload/index.js";
+import { isImageExtension } from "../../upload/index.js";
+import {
+  DEFAULT_BBOX_ANNOTATION_FORMAT,
+  MistralOcrPage,
+  toOcrPage,
+} from "./ocrPage.js";
 import {
   getDefaultModel,
   getLogger,
@@ -50,27 +53,6 @@ import {
 
 const OCR_MODEL_MARKER = "ocr";
 const PAGE_SEPARATOR = "\n\n";
-
-//
-//
-// Types
-//
-
-/** One page of Mistral's `OCRResponse`, 0-indexed on the wire */
-interface MistralOcrPage {
-  footer?: string | null;
-  header?: string | null;
-  images?: MistralOcrImage[];
-  index: number;
-  markdown?: string;
-  [key: string]: unknown;
-}
-
-interface MistralOcrImage {
-  id: string;
-  image_base64?: string | null;
-  [key: string]: unknown;
-}
 
 //
 //
@@ -90,43 +72,6 @@ function toMistralDocument(document: LlmOcrResolvedDocument): JsonObject {
     document_name: document.filename,
     document_url: url,
     type: "document_url",
-  };
-}
-
-/** Base64 arrives with or without a `data:` prefix depending on the route */
-function toImageDataUri(
-  image: MistralOcrImage,
-  mimeType?: string,
-): string | undefined {
-  const base64 = image.image_base64;
-  if (!base64) {
-    return undefined;
-  }
-  if (base64.startsWith("data:")) {
-    return base64;
-  }
-  return `data:${mimeType ?? "image/jpeg"};base64,${base64}`;
-}
-
-function toOcrPage(page: MistralOcrPage): LlmOcrPage {
-  const pageNumber = page.index + 1;
-  const images: LlmOcrImage[] = (page.images ?? []).map((image) => {
-    const mimeType = getMimeType(image.id);
-    return {
-      data: toImageDataUri(image, mimeType),
-      id: image.id,
-      mimeType,
-      page: pageNumber,
-    };
-  });
-  return {
-    ...(page.footer ? { footer: page.footer } : {}),
-    ...(page.header ? { header: page.header } : {}),
-    images,
-    markdown: page.markdown ?? "",
-    page: pageNumber,
-    raw: page as JsonObject,
-    success: true,
   };
 }
 
@@ -289,10 +234,12 @@ export class MistralProvider implements LlmProvider {
       document: toMistralDocument(resolved),
       model,
       ...(pages ? { pages } : {}),
+      bbox_annotation_format: DEFAULT_BBOX_ANNOTATION_FORMAT,
       ...(options.tables ? { table_format: options.tables } : {}),
       ...(options.images ? { include_image_base64: true } : {}),
       ...(options.providerOptions ?? {}),
     };
+    const annotated = Boolean(request.bbox_annotation_format);
 
     const client = await this.getClient();
     const raw = await runOcrAttempts({
@@ -333,7 +280,11 @@ export class MistralProvider implements LlmProvider {
       provider: PROVIDER.MISTRAL.NAME,
       responses: [raw as JsonReturn],
       usage: {
-        cost: pageCost({ model: servedModel, pages: pagesProcessed }),
+        cost: pageCost({
+          annotated,
+          model: servedModel,
+          pages: pagesProcessed,
+        }),
         model: servedModel,
         pages: pagesProcessed,
         provider: PROVIDER.MISTRAL.NAME,

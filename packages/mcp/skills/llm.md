@@ -528,7 +528,7 @@ const { emulated, markdown, pages, usage } = await Llm.ocr(
       LLM.MODEL.HAIKU, // emulated: any provider that accepts files
     ],
     pages: "1,3-5", // 1-indexed; [1, 3, 4, 5] also works
-    tables: "markdown", // or "html"
+    tables: "markdown", // table syntax; tables are always inline
   },
 );
 
@@ -540,6 +540,15 @@ usage.pages; // pages billed
 usage.cost; // USD from LLM.PAGE_COST (LlamaParse: from recorded credits; emulated: from COST tokens)
 usage.tokens; // emulated only: every operate() call's usage
 ```
+
+Mistral markdown is self-contained. Tables are inlined in place of
+`[tbl-0.md](tbl-0.md)` placeholders. Every image is annotated, and its
+description becomes the alt text (`![Notary signature of Jane Doe](img-1.jpeg)`)
+and lands on `images[].description`, `.type` (`signature`, `seal`, `stamp`,
+`photo`, ...), and `.annotation`. Typed blocks are rendered, so a signature
+reads `[Signature: Jane Q Doe]` rather than a bare name. Annotation bills at
+`LLM.PAGE_COST_ANNOTATED`; replace the schema with
+`providerOptions.bbox_annotation_format` or pass `null` to disable it.
 
 Emulation sends each page alone (a PDF is trimmed to one page per call, so
 the model never numbers pages), asks for verbatim Markdown with

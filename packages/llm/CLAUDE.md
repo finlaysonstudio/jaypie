@@ -24,7 +24,7 @@ src/
 ├── ocr/                      # Llm.ocr support
 │   ├── expandPageSelection.ts # "1,3-5" or [1, 3] → sorted 1-indexed pages
 │   ├── OcrEmulator.ts        # Per-page operate() transcription for chat models
-│   ├── pageCost.ts           # USD from PAGE_COST
+│   ├── pageCost.ts           # USD from PAGE_COST (PAGE_COST_ANNOTATED when annotated)
 │   ├── resolveOcrDocument.ts # URL, data: URI, S3, or disk → url | buffer
 │   └── runOcrAttempts.ts     # Shared rate-limit / transient retry loop
 ├── operate/                  # Core operation loop
@@ -76,6 +76,7 @@ src/
 │   ├── mistral/
 │   │   ├── client.ts         # Chat Completions plus POST /v1/ocr
 │   │   ├── MistralProvider.class.ts
+│   │   ├── ocrPage.ts        # OCR page → markdown: blocks, tables, image descriptions
 │   │   └── utils.ts
 │   ├── typesafe/
 │   │   ├── client.ts
@@ -558,7 +559,7 @@ resolved once (`src/ocr/resolveOcrDocument.ts`) before the fallback chain runs,
 so S3 and disk are read a single time per call.
 
 Options: `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
-(`"markdown"` default or `"html"`), `images` (fetch extracted images as
+(table syntax, `"markdown"` or `"html"`; tables are always inline), `images` (fetch extracted images as
 `data:` URIs; off by default), `timeout` (asynchronous job ceiling, default
 ten minutes), `retry`, `signal`, `providerOptions` — vendor fields spread
 last onto the request (Mistral `OCRRequest` fields such as
@@ -576,6 +577,35 @@ from `COST` tokens when emulated, and `tokens` when emulated), `responses[]`
 `fallbackAttempts`/`fallbackUsed` fields `operate` carries. Mistral pages are
 0-indexed on the wire and converted on both sides; Mistral
 `document_annotation` surfaces as `annotations`.
+
+**Mistral markdown is self-contained** (`src/providers/mistral/ocrPage.ts`).
+Mistral replaces extracted elements with links to entries elsewhere on the
+page: `[tbl-0.md](tbl-0.md)` whenever `table_format` is sent, and
+`![img-0.jpeg](img-0.jpeg)` for every image. The provider resolves both, with
+no option to turn it on:
+
+- **Tables are inlined.** Each placeholder becomes the table's `content`, in
+  the syntax `tables` selects.
+- **Images are described.** Every request carries
+  `DEFAULT_BBOX_ANNOTATION_FORMAT`, a `{ image_type, description }` schema
+  whose enum names signatures, seals, and stamps (a generic schema labeled a
+  signature a "line graph"). The parsed annotation lands on the image as
+  `annotation`, `description`, and `type`, and the description replaces the
+  alt text: `![Notary seal](img-2.jpeg)`. A caller replaces the schema with
+  `providerOptions.bbox_annotation_format` or disables it with `null`; a
+  non-JSON annotation is used as the description verbatim.
+- **Blocks are rendered.** OCR 4 returns `blocks` in reading order, typed
+  (`title`, `text`, `table`, `image`, `caption`, `signature`, `header`,
+  `footer`, ...). When present, page markdown is rebuilt from them so the
+  type survives: a `signature` block, which the vendor markdown flattens to a
+  bare name, renders as `[Signature: Jane Q Doe]`. Header and footer blocks
+  are skipped once `extract_header`/`extract_footer` moves them to their own
+  fields. A page without blocks keeps the vendor markdown with placeholders
+  resolved.
+
+Annotation bills at `PAGE_COST_ANNOTATED` ($5 per 1,000 pages on
+`mistral-ocr-4-1`, against $4 unannotated), so `usage.cost` uses that rate
+unless the caller disables annotation.
 
 **Emulation.** A provider with `operate` but no `ocr` transcribes through
 `src/ocr/OcrEmulator.ts`, which mirrors `question`'s emulator: one
@@ -616,7 +646,8 @@ A provider with neither (`typesafe`) fails the attempt with
 
 **Pricing.** OCR bills per page, which `LlmModelCost` cannot express, so the
 engines are absent from `COST` and priced in `PAGE_COST` (USD per 1,000
-pages, keyed by literal id). LlamaParse bills credits at
+pages, keyed by literal id). An engine that bills annotated pages at their own
+rate carries it in `PAGE_COST_ANNOTATED`. LlamaParse bills credits at
 `PROVIDER.LLAMACLOUD.CREDIT_COST` per 1,000; a job's recorded `credits` win
 over the per-page estimate when the API has them.
 
