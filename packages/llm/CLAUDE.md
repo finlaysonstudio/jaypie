@@ -22,6 +22,7 @@ src/
 ├── constants.ts              # Provider/model constants
 ├── index.ts                  # Package exports
 ├── ocr/                      # Llm.ocr support
+│   ├── answerOcr.ts          # instructions/format answered over finished markdown
 │   ├── expandPageSelection.ts # "1,3-5" or [1, 3] → sorted 1-indexed pages
 │   ├── OcrEmulator.ts        # Per-page operate() transcription for chat models
 │   ├── pageCost.ts           # USD from PAGE_COST (PAGE_COST_ANNOTATED when annotated)
@@ -311,7 +312,13 @@ route and per region, so no single rate is correct. Unlisted ids return
 
 ### Fallback Providers
 
-Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.
+Configure a chain of fallback providers. While working down the chain, any
+error (rate limit, 5xx, network flake, bad request) moves to the next entry at
+once: every entry, the last included, runs with `retry: { rateLimit: false,
+transient: false }`. When the whole chain fails, the primary runs once more
+with its full retry policy (the **linger pass**), and its error is final. A
+caller abort (`LlmAbortError`) is terminal and never falls over. The loop lives
+in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
@@ -344,7 +351,7 @@ const response = await Llm.operate(input, {
 
 - `provider`: Which provider actually handled the request
 - `fallbackUsed`: `true` if a fallback provider was used
-- `fallbackAttempts`: Number of providers tried (1 = primary only)
+- `fallbackAttempts`: Attempts made (1 = primary only; chain length + 2 when the linger pass served it)
 
 ### Error Handling
 
@@ -439,10 +446,12 @@ await Llm.operate(input, {
 ```
 
 **A configured fallback chain wins over waiting.** Reaching for another
-provider is strictly faster than sleeping a minute, so the facade tells every
-attempt that has somewhere left to go not to wait; only the final entry in the
-chain keeps its budget. An explicit `retry` option from the caller overrides
-that and applies to every attempt.
+provider is strictly faster than sleeping or backing off, so every chain
+attempt fails fast on rate limits and transient errors alike. Only the linger
+pass on the primary keeps a budget, and an explicit `retry` option from the
+caller applies there. `retry: { transient: false }` disables transient
+retries on a single call. The Bedrock SDK client is built with
+`maxAttempts: 1` so `RetryExecutor` is the only retry authority.
 
 **Model array sugar:**
 
@@ -558,7 +567,7 @@ data?, pages? }` / `{ image, ... }` objects `operate()` accepts. It is
 resolved once (`src/ocr/resolveOcrDocument.ts`) before the fallback chain runs,
 so S3 and disk are read a single time per call.
 
-Options: `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
+Options: `instructions` and `format` (see below), `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
 (table syntax, `"markdown"` or `"html"`; tables are always inline), `images` (fetch extracted images as
 `data:` URIs; off by default), `timeout` (asynchronous job ceiling, default
 ten minutes), `retry`, `signal`, `providerOptions` — vendor fields spread
@@ -576,7 +585,32 @@ from `COST` tokens when emulated, and `tokens` when emulated), `responses[]`
 (the raw vendor payloads), `emulated`, and the `provider`/`model`/
 `fallbackAttempts`/`fallbackUsed` fields `operate` carries. Mistral pages are
 0-indexed on the wire and converted on both sides; Mistral
-`document_annotation` surfaces as `annotations`.
+`document_annotation` arrives as a JSON string and surfaces parsed as
+`annotations`.
+
+**Instructions and format.** `instructions` (a task such as "Classify the
+document and describe it in one sentence") and `format` (Natural Schema,
+JSON Schema, or Zod, as on `operate()`) ask for more than transcription. The
+answer lands on `content`: an object shaped by `format`, or a string when
+only `instructions` is given. Each engine answers its own way:
+
+- **Mistral** answers in the same call: `format` becomes a strict
+  `document_annotation_format` (through `mistralAdapter.formatOutputSchema`)
+  and `instructions` becomes `document_annotation_prompt`. Mistral rejects a
+  prompt without a format, so bare instructions ride in a `{ content: String
+  }` schema that is unwrapped to a string. Document annotation reads only the
+  first 8 pages and says nothing past them (a 10-page PDF returns 200), so
+  when `pages_processed` exceeds 8 the answer comes from one text-only
+  `operate()` over the markdown on `PROVIDER.MISTRAL.DEFAULT`; its tokens join
+  `usage.tokens` and `usage.cost`, and the truncated native answer stays on
+  `annotations`. `providerOptions.document_annotation_format` still wins.
+- **Emulated** engines see one page per call, so no call sees the document.
+  After transcription, `src/ocr/answerOcr.ts` makes one more text-only
+  `operate()` on the same model: the markdown in `<document>` tags, then the
+  task last so a long document does not pull the model back into
+  transcribing.
+- **LlamaParse** generates no text and throws `NotImplementedError` before
+  submitting a job, so a chain moves to the next engine at no cost.
 
 **Mistral markdown is self-contained** (`src/providers/mistral/ocrPage.ts`).
 Mistral replaces extracted elements with links to entries elsewhere on the

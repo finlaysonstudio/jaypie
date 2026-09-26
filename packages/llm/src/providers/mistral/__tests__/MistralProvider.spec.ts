@@ -511,6 +511,152 @@ describe("MistralProvider", () => {
         expect(result.annotations).toEqual({ title: "T" });
       });
 
+      it("Parses document annotations sent as a JSON string", async () => {
+        mockOcrClient({ document_annotation: '{"title": "T"}', pages: [] });
+        const provider = new MistralProvider();
+        const result = await provider.ocr(DOCUMENT_URL);
+        expect(result.annotations).toEqual({ title: "T" });
+        expect(result.content).toBeUndefined();
+      });
+
+      describe("Instructions and Format", () => {
+        const ONE_PAGE = {
+          pages: [{ index: 0, markdown: "Deed text" }],
+          usage_info: { pages_processed: 1 },
+        };
+
+        it("Sends neither annotation field without them", async () => {
+          const mockOcr = mockOcrClient({ pages: [] });
+          const provider = new MistralProvider();
+          await provider.ocr(DOCUMENT_URL);
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_format).toBeUndefined();
+          expect(request.document_annotation_prompt).toBeUndefined();
+        });
+
+        it("Sends a natural format as a strict JSON schema with the prompt", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"category": "deed", "summary": "A deed"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { category: ["deed", "invoice"], summary: String },
+            instructions: "Classify and summarize",
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_prompt).toBe(
+            "Classify and summarize",
+          );
+          expect(request.document_annotation_format).toMatchObject({
+            json_schema: {
+              name: "document",
+              schema: {
+                additionalProperties: false,
+                properties: {
+                  category: { enum: ["deed", "invoice"] },
+                  summary: { type: "string" },
+                },
+                type: "object",
+              },
+              strict: true,
+            },
+            type: "json_schema",
+          });
+          expect(result.content).toEqual({
+            category: "deed",
+            summary: "A deed",
+          });
+        });
+
+        it("Sends a format alone without a prompt", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"taco": "al pastor"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_prompt).toBeUndefined();
+          expect(request.document_annotation_format).toBeDefined();
+          expect(result.content).toEqual({ taco: "al pastor" });
+        });
+
+        it("Answers bare instructions as a string", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"content": "A deed"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            instructions: "Describe it",
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(
+            request.document_annotation_format.json_schema.schema.properties,
+          ).toEqual({ content: { type: "string" } });
+          expect(result.content).toBe("A deed");
+        });
+
+        it("Lets providerOptions replace the format", async () => {
+          const custom = { json_schema: { name: "x" }, type: "json_schema" };
+          const mockOcr = mockOcrClient(ONE_PAGE);
+          const provider = new MistralProvider();
+          await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+            providerOptions: { document_annotation_format: custom },
+          });
+          expect(mockOcr.mock.calls[0][0].document_annotation_format).toBe(
+            custom,
+          );
+        });
+
+        it("Answers over markdown past the annotation page limit", async () => {
+          const { createOperateLoop } =
+            await import("../../../operate/index.js");
+          const execute = vi.fn().mockResolvedValue({
+            content: { taco: "carnitas" },
+            responses: [{ id: "chat" }],
+            usage: [
+              {
+                input: 1000,
+                model: PROVIDER.MISTRAL.DEFAULT,
+                output: 10,
+                reasoning: 0,
+              },
+            ],
+          });
+          vi.mocked(createOperateLoop).mockReturnValue({ execute } as any);
+          mockOcrClient({
+            document_annotation: '{"taco": "partial"}',
+            pages: Array.from({ length: 9 }, (_page, index) => ({
+              index,
+              markdown: `Page ${index + 1}`,
+            })),
+            usage_info: { pages_processed: 9 },
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+            instructions: "Name the taco",
+          });
+          expect(execute).toHaveBeenCalledTimes(1);
+          const [input, options] = execute.mock.calls[0];
+          expect(input).toContain("Page 9");
+          expect(options.model).toBe(PROVIDER.MISTRAL.DEFAULT);
+          expect(input).toMatch(/Name the taco$/);
+          expect(result.content).toEqual({ taco: "carnitas" });
+          expect(result.annotations).toEqual({ taco: "partial" });
+          expect(result.responses).toHaveLength(2);
+          expect(result.usage.tokens).toHaveLength(1);
+          expect(result.usage.cost).toBeGreaterThan(
+            (PAGE_COST_ANNOTATED[MODEL.MISTRAL.OCR] * 9) / 1000,
+          );
+        });
+      });
+
       it("Returns empty markdown when no pages come back", async () => {
         mockOcrClient({});
         const provider = new MistralProvider();

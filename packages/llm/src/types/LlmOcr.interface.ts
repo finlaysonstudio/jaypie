@@ -1,4 +1,5 @@
-import { JsonObject, JsonReturn } from "@jaypie/types";
+import { JsonObject, JsonReturn, NaturalSchema } from "@jaypie/types";
+import { z } from "zod/v4";
 
 import { type LlmProviderName } from "../constants.js";
 import { type LlmRetryOptions } from "../operate/retry/RetryPolicy.js";
@@ -43,8 +44,22 @@ export interface LlmOcrOptions {
   concurrency?: number;
   /** Chain of fallback providers; `false` disables instance-level fallback */
   fallback?: LlmFallbackConfig[] | false;
+  /**
+   * Shape of `content`, as on `operate()`: Natural Schema (`{ category:
+   * ["deed", "invoice"], summary: String }`), JSON Schema, or Zod. Mistral
+   * answers natively; emulated engines answer in one more `operate()` call
+   * over the markdown; LlamaParse does not support it and fails over.
+   */
+  format?: JsonObject | NaturalSchema | z.ZodType;
   /** Fetch extracted images as base64 data URIs. Default false. */
   images?: boolean;
+  /**
+   * What to do with the document beyond transcription, e.g. "Classify the
+   * document and describe it in one sentence." The answer lands in
+   * `content`: an object when `format` is set, else a string. Supported
+   * where `format` is.
+   */
+  instructions?: string;
   /** Static form only: provider name */
   llm?: LlmProviderName;
   model?: LlmModelOption;
@@ -121,8 +136,13 @@ export interface LlmOcrUsage {
 }
 
 export interface LlmOcrResponse {
-  /** Mistral `document_annotation`, when requested through providerOptions */
+  /** Mistral `document_annotation`, parsed, whenever the engine made one */
   annotations?: JsonObject;
+  /**
+   * Answer to `instructions` and `format`: an object shaped by `format`, or
+   * a string when only `instructions` was given. Absent when neither was.
+   */
+  content?: string | JsonObject;
   /**
    * True when a chat model transcribed the pages through `operate()`
    * rather than a native OCR engine answering.

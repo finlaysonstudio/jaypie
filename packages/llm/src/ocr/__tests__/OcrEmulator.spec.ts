@@ -404,6 +404,58 @@ describe("OcrEmulator", () => {
       expect(result.model).toBe("mystery");
       expect(result.usage.cost).toBeUndefined();
     });
+
+    it("Makes no answer call without instructions or format", async () => {
+      const result = await emulateOcr({
+        document: pdfDocument(await makePdf(2)),
+        options: {},
+        provider,
+        providerName: PROVIDER_NAME,
+      });
+      expect(operate).toHaveBeenCalledTimes(2);
+      expect(result.content).toBeUndefined();
+    });
+
+    it("Answers instructions and format in one call over the whole document", async () => {
+      operate
+        .mockResolvedValueOnce(page("First page"))
+        .mockResolvedValueOnce(page("Second page"))
+        .mockResolvedValueOnce(operateResponse({ category: "deed" }));
+      const result = await emulateOcr({
+        document: pdfDocument(await makePdf(2)),
+        options: {
+          format: { category: ["deed", "invoice"] },
+          instructions: "Classify the document",
+        },
+        provider,
+        providerName: PROVIDER_NAME,
+      });
+      expect(operate).toHaveBeenCalledTimes(3);
+      const [input, options] = operate.mock.calls[2];
+      expect(input).toContain("First page");
+      expect(input).toContain("Second page");
+      expect(options.format).toEqual({ category: ["deed", "invoice"] });
+      expect(options.model).toBe(MODEL.HAIKU);
+      expect(input).toMatch(/<\/document>\n\nClassify the document$/);
+      expect(result.content).toEqual({ category: "deed" });
+      expect(result.markdown).toBe("First page\n\nSecond page");
+      expect(result.responses).toHaveLength(3);
+      expect(result.usage.tokens).toHaveLength(3);
+    });
+
+    it("Answers bare instructions as a string", async () => {
+      operate
+        .mockResolvedValueOnce(page("Only page"))
+        .mockResolvedValueOnce(operateResponse("A one-page deed"));
+      const result = await emulateOcr({
+        document: pdfDocument(await makePdf(1)),
+        options: { instructions: "Describe it" },
+        provider,
+        providerName: PROVIDER_NAME,
+      });
+      expect(operate.mock.calls[1][1].format).toBeUndefined();
+      expect(result.content).toBe("A one-page deed");
+    });
   });
 
   describe("Error Conditions", () => {
