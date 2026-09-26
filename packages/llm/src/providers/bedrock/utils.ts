@@ -29,7 +29,12 @@ export async function initializeClient({
   const resolvedRegion = region || process.env.AWS_REGION || "us-east-1";
 
   const sdk = await loadSdk();
-  const client = new sdk.BedrockRuntimeClient({ region: resolvedRegion });
+  // RetryExecutor owns retries; SDK retries would linger inside a fallback
+  // chain's fail-fast attempt
+  const client = new sdk.BedrockRuntimeClient({
+    maxAttempts: 1,
+    region: resolvedRegion,
+  });
   logger.trace("Initialized Bedrock client");
   return client;
 }

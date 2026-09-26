@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Subject
 import Llm from "../Llm.js";
 import { DEFAULT, PROVIDER } from "../constants.js";
+import { LlmAbortError } from "../errors/LlmError.js";
 
 // Track mock calls for testing
 let openAiOperateMock = vi.fn();
@@ -321,16 +322,27 @@ describe("Llm Class", () => {
           ],
         });
 
-        await expect(llm.operate("test")).rejects.toThrow("Gemini failed");
+        // The chain is spent, so the primary lingers and its error is final
+        await expect(llm.operate("test")).rejects.toThrow("OpenAI failed");
+        expect(openAiOperateMock).toHaveBeenCalledTimes(2);
+        expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+        expect(geminiOperateMock).toHaveBeenCalledTimes(1);
       });
-    });
 
-    describe("rate limit waits", () => {
-      // Reaching for another provider beats sleeping out a rate limit, so
-      // every attempt with somewhere left to go is told not to wait
-      it("disables the wait on every attempt but the last", async () => {
-        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+      it("lingers on the primary once the chain is spent", async () => {
+        openAiOperateMock
+          .mockRejectedValueOnce(new Error("OpenAI failed"))
+          .mockResolvedValueOnce({
+            content: "Lingered",
+            history: [],
+            output: [],
+            reasoning: [],
+            responses: [],
+            status: "completed",
+            usage: [],
+          });
         anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+        geminiOperateMock.mockRejectedValue(new Error("Gemini failed"));
 
         const llm = new Llm(PROVIDER.OPENAI.NAME, {
           fallback: [
@@ -339,16 +351,49 @@ describe("Llm Class", () => {
           ],
         });
 
-        await llm.operate("test");
+        const result = await llm.operate("test");
 
-        expect(openAiOperateMock.mock.calls[0][1]).toMatchObject({
-          retry: { rateLimit: false },
+        expect(result.content).toBe("Lingered");
+        expect(result.fallbackAttempts).toBe(4);
+        expect(result.provider).toBe(PROVIDER.OPENAI.NAME);
+      });
+
+      it("never falls over on a caller abort", async () => {
+        openAiOperateMock.mockRejectedValue(new LlmAbortError());
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
         });
-        expect(anthropicOperateMock.mock.calls[0][1]).toMatchObject({
-          retry: { rateLimit: false },
+
+        await expect(llm.operate("test")).rejects.toBeInstanceOf(LlmAbortError);
+        expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+        expect(anthropicOperateMock).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("rate limit waits", () => {
+      // Working down a chain, every attempt fails fast on any error; only the
+      // linger pass on the primary keeps the retry policy
+      it("fails fast on every chain attempt and lingers on the primary", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+        geminiOperateMock.mockRejectedValue(new Error("Gemini failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [
+            { provider: PROVIDER.ANTHROPIC.NAME },
+            { provider: PROVIDER.GOOGLE.NAME },
+          ],
         });
-        // The last provider has nowhere left to go, so it keeps the wait
-        expect(geminiOperateMock.mock.calls[0][1].retry).toBeUndefined();
+
+        await expect(llm.operate("test")).rejects.toThrow("OpenAI failed");
+
+        const failFast = { retry: { rateLimit: false, transient: false } };
+        expect(openAiOperateMock.mock.calls[0][1]).toMatchObject(failFast);
+        expect(anthropicOperateMock.mock.calls[0][1]).toMatchObject(failFast);
+        expect(geminiOperateMock.mock.calls[0][1]).toMatchObject(failFast);
+        // The linger pass keeps the full policy
+        expect(openAiOperateMock.mock.calls[1][1].retry).toBeUndefined();
       });
 
       it("leaves the wait in place when no fallback is configured", async () => {
@@ -359,18 +404,23 @@ describe("Llm Class", () => {
         expect(openAiOperateMock.mock.calls[0][1].retry).toBeUndefined();
       });
 
-      it("honors an explicit retry option over the fallback default", async () => {
+      it("applies an explicit retry option to the linger pass only", async () => {
         openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
 
         const llm = new Llm(PROVIDER.OPENAI.NAME, {
           fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
         });
 
-        await llm.operate("test", { retry: { rateLimit: true } });
+        const retry = { rateLimit: { maxRetries: 1 } };
+        await expect(llm.operate("test", { retry })).rejects.toThrow(
+          "OpenAI failed",
+        );
 
         expect(openAiOperateMock.mock.calls[0][1]).toMatchObject({
-          retry: { rateLimit: true },
+          retry: { rateLimit: false, transient: false },
         });
+        expect(openAiOperateMock.mock.calls[1][1].retry).toEqual(retry);
       });
     });
 

@@ -173,27 +173,35 @@ describe("Llm.question", () => {
       expect(response.provider).toBe(PROVIDER.OPENAI.NAME);
     });
 
-    it("Skips the rate-limit wait while a fallback remains", async () => {
+    it("Fails fast on every chain attempt", async () => {
       typeSafeQuestionMock.mockRejectedValue(new Error("Jev is down"));
       await Llm.question("Charged twice", {
         model: ["jev-1.13.0", "claude-haiku-4-5"],
         questions: QUESTIONS,
       });
+      const failFast = { rateLimit: false, transient: false };
       const [, nativeOptions] = typeSafeQuestionMock.mock.calls[0];
-      expect(nativeOptions.retry).toEqual({ rateLimit: false });
+      expect(nativeOptions.retry).toEqual(failFast);
       const [, lastOptions] = anthropicOperateMock.mock.calls[0];
-      expect(lastOptions.retry).toBeUndefined();
+      expect(lastOptions.retry).toEqual(failFast);
     });
 
-    it("Honors an explicit retry option over the fallback default", async () => {
+    it("Applies an explicit retry option to the linger pass only", async () => {
       typeSafeQuestionMock.mockRejectedValue(new Error("Jev is down"));
-      await Llm.question("Charged twice", {
-        model: ["jev-1.13.0", "claude-haiku-4-5"],
-        questions: QUESTIONS,
-        retry: { rateLimit: true },
+      anthropicOperateMock.mockRejectedValue(new Error("Anthropic is down"));
+      const retry = { rateLimit: { maxRetries: 1 } };
+      await expect(
+        Llm.question("Charged twice", {
+          model: ["jev-1.13.0", "claude-haiku-4-5"],
+          questions: QUESTIONS,
+          retry,
+        }),
+      ).rejects.toThrow("Jev is down");
+      expect(typeSafeQuestionMock.mock.calls[0][1].retry).toEqual({
+        rateLimit: false,
+        transient: false,
       });
-      const [, nativeOptions] = typeSafeQuestionMock.mock.calls[0];
-      expect(nativeOptions.retry).toEqual({ rateLimit: true });
+      expect(typeSafeQuestionMock.mock.calls[1][1].retry).toEqual(retry);
     });
   });
 
@@ -218,7 +226,8 @@ describe("Llm.question", () => {
           model: ["jev-1.13.0", "claude-haiku-4-5"],
           questions: QUESTIONS,
         }),
-      ).rejects.toThrow("Anthropic is down");
+      ).rejects.toThrow("Jev is down");
+      expect(typeSafeQuestionMock).toHaveBeenCalledTimes(2);
     });
 
     it("Does not fall back when fallback is false", async () => {

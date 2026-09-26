@@ -46,6 +46,11 @@ export interface LlmRetryOptions {
    * tunes the budget.
    */
   rateLimit?: boolean | { maxRetries?: number; maxDelayMs?: number };
+  /**
+   * Whether a transient failure (5xx, network flake) backs off and retries.
+   * `true` (the default) uses the policy budget; `false` throws at once.
+   */
+  transient?: boolean;
 }
 
 //
@@ -136,7 +141,8 @@ export function resolveRetryPolicy({
   retry,
 }: { policy?: RetryPolicy; retry?: LlmRetryOptions } = {}): RetryPolicy {
   const rateLimit = retry?.rateLimit;
-  if (rateLimit === undefined) {
+  const transient = retry?.transient;
+  if (rateLimit === undefined && transient === undefined) {
     return policy;
   }
 
@@ -151,11 +157,15 @@ export function resolveRetryPolicy({
 
   if (rateLimit === false) {
     overrides.rateLimitRetries = 0;
-  } else if (rateLimit !== true) {
+  } else if (rateLimit !== undefined && rateLimit !== true) {
     overrides.rateLimitRetries =
       rateLimit.maxRetries ?? overrides.rateLimitRetries;
     overrides.rateLimitMaxDelayMs =
       rateLimit.maxDelayMs ?? overrides.rateLimitMaxDelayMs;
+  }
+
+  if (transient === false) {
+    overrides.maxRetries = 0;
   }
 
   return new RetryPolicy(overrides);
