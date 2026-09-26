@@ -204,16 +204,29 @@ describe("Llm.ocr", () => {
       expect(result.fallbackUsed).toBe(true);
     });
 
-    it("Fails fast on rate limits when a fallback remains", async () => {
+    it("Fails fast on any error while working down a chain", async () => {
       await Llm.ocr(DOCUMENT_URL, {
         model: [MODEL.MISTRAL.OCR, MODEL.LLAMAPARSE.AGENTIC],
       });
       expect(mistralOcrMock.mock.calls[0][1].retry).toEqual({
         rateLimit: false,
+        transient: false,
       });
     });
 
-    it("Keeps the wait on the last attempt", async () => {
+    it("Lingers on the primary once the chain is spent", async () => {
+      mistralOcrMock.mockRejectedValueOnce(new LlmUnrecoverableError("one"));
+      llamaCloudOcrMock.mockRejectedValueOnce(new LlmUnrecoverableError("two"));
+      const result = await Llm.ocr(DOCUMENT_URL, {
+        model: [MODEL.MISTRAL.OCR, MODEL.LLAMAPARSE.AGENTIC],
+      });
+      expect(mistralOcrMock).toHaveBeenCalledTimes(2);
+      expect(mistralOcrMock.mock.calls[1][1].retry).toBeUndefined();
+      expect(result.fallbackAttempts).toBe(3);
+      expect(result.provider).toBe(PROVIDER.MISTRAL.NAME);
+    });
+
+    it("Keeps the wait on a lone model", async () => {
       await Llm.ocr(DOCUMENT_URL, { model: MODEL.MISTRAL.OCR });
       expect(mistralOcrMock.mock.calls[0][1].retry).toBeUndefined();
     });
@@ -333,7 +346,9 @@ describe("Llm.ocr", () => {
         Llm.ocr(DOCUMENT_URL, {
           model: [MODEL.MISTRAL.OCR, MODEL.LLAMAPARSE.AGENTIC],
         }),
-      ).rejects.toThrow("two");
+      ).rejects.toThrow("one");
+      expect(mistralOcrMock).toHaveBeenCalledTimes(2);
+      expect(llamaCloudOcrMock).toHaveBeenCalledTimes(1);
     });
   });
 });

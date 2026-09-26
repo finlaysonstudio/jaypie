@@ -13,6 +13,7 @@ import {
   pageCost,
   resolveOcrDocument,
   runOcrAttempts,
+  wantsOcrAnswer,
 } from "../../ocr/index.js";
 import {
   LlmOcrDocument,
@@ -157,6 +158,12 @@ export class LlamaCloudProvider implements LlmProvider {
     document: LlmOcrDocument | LlmOcrResolvedDocument,
     options: LlmOcrOptions = {},
   ): Promise<LlmOcrResponse> {
+    // Thrown before any job is submitted, so a fallback chain moves on at no cost
+    if (wantsOcrAnswer(options)) {
+      throw new NotImplementedError(
+        `Provider ${PROVIDER.LLAMACLOUD.NAME} does not support OCR instructions or format`,
+      );
+    }
     const model =
       (typeof options.model === "string" && options.model) || this.model;
     const tier = resolveTier(model);

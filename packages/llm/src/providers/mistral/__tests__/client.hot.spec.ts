@@ -154,6 +154,64 @@ describe.skipIf(!apiKey)("MistralClient (hot)", () => {
       TIMEOUT,
     );
 
+    it(
+      "inlines tables, describes images, and labels signatures",
+      async () => {
+        const { readFileSync } = await import("node:fs");
+        const { fileURLToPath } = await import("node:url");
+        const scanPath = fileURLToPath(
+          new URL("../../../../test/fixtures/notarized.png", import.meta.url),
+        );
+        const base64 = readFileSync(scanPath).toString("base64");
+
+        const provider = new MistralProvider(undefined, { apiKey: apiKey! });
+        const result = await provider.ocr(`data:image/png;base64,${base64}`, {
+          tables: "markdown",
+        });
+
+        // Table content, not a [tbl-0.md](tbl-0.md) placeholder
+        expect(result.markdown).toContain("A-101");
+        expect(result.markdown).not.toMatch(/\[tbl-\d+\.\w+\]/);
+        // Every image is described, and the description is its alt text
+        expect(result.images.length).toBeGreaterThan(0);
+        for (const image of result.images) {
+          expect(image.description).toBeTruthy();
+          expect(result.markdown).not.toContain(`![${image.id}]`);
+        }
+        expect(result.markdown).toMatch(/\[Signature: [^\]]+\]/);
+      },
+      TIMEOUT,
+    );
+
+    it(
+      "answers instructions and format alongside the transcription",
+      async () => {
+        const { readFileSync } = await import("node:fs");
+        const { fileURLToPath } = await import("node:url");
+        const scanPath = fileURLToPath(
+          new URL("../../../../test/fixtures/notarized.png", import.meta.url),
+        );
+        const base64 = readFileSync(scanPath).toString("base64");
+
+        const provider = new MistralProvider(undefined, { apiKey: apiKey! });
+        const result = await provider.ocr(`data:image/png;base64,${base64}`, {
+          format: {
+            category: ["affidavit", "invoice", "medical intake", "other"],
+            description: String,
+          },
+          instructions:
+            "Classify the document and describe it in one sentence.",
+        });
+
+        expect(result.markdown).toContain("A-101");
+        expect(result.content).toMatchObject({ category: "affidavit" });
+        expect(
+          (result.content as { description: string }).description,
+        ).toBeTruthy();
+      },
+      TIMEOUT,
+    );
+
     describe("Fallback", () => {
       it(
         "falls from an engine the API rejects to Mistral OCR",

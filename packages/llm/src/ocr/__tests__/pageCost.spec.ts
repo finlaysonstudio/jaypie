@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MODEL, PAGE_COST } from "../../constants.js";
+import { MODEL, PAGE_COST, PAGE_COST_ANNOTATED } from "../../constants.js";
 import { pageCost } from "../pageCost.js";
 
 describe("pageCost", () => {
@@ -15,6 +15,18 @@ describe("pageCost", () => {
     expect(pageCost({ model: MODEL.LLAMAPARSE.FAST, pages: 8 })).toBeCloseTo(
       0.01,
     );
+  });
+
+  it("Prices annotated pages from the annotated table", () => {
+    expect(
+      pageCost({ annotated: true, model: MODEL.MISTRAL.OCR, pages: 1000 }),
+    ).toBe(PAGE_COST_ANNOTATED[MODEL.MISTRAL.OCR]);
+  });
+
+  it("Falls back to the base rate when an id has no annotated rate", () => {
+    expect(
+      pageCost({ annotated: true, model: MODEL.LLAMAPARSE.FAST, pages: 1000 }),
+    ).toBe(PAGE_COST[MODEL.LLAMAPARSE.FAST]);
   });
 
   it("Returns undefined for an unpriced id", () => {

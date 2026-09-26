@@ -4,11 +4,13 @@ import { PROVIDER } from "../../constants.js";
 import { LlmError } from "../../errors/LlmError.js";
 import { toLlmError } from "../../errors/toLlmError.js";
 import {
+  answerOcr,
   expandPageSelection,
   pageCost,
   resolveOcrDocument,
   runOcrAttempts,
   toDataUri,
+  wantsOcrAnswer,
 } from "../../ocr/index.js";
 import {
   createOperateLoop,
@@ -25,17 +27,22 @@ import {
   LlmOperateResponse,
   LlmProvider,
   LlmHistoryItem,
+  LlmUsage,
 } from "../../types/LlmProvider.interface.js";
 import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import {
   LlmOcrDocument,
-  LlmOcrImage,
   LlmOcrOptions,
-  LlmOcrPage,
   LlmOcrResolvedDocument,
   LlmOcrResponse,
 } from "../../types/LlmOcr.interface.js";
-import { getMimeType, isImageExtension } from "../../upload/index.js";
+import { isImageExtension } from "../../upload/index.js";
+import { tokenCost } from "../../util/tokenCost.js";
+import {
+  DEFAULT_BBOX_ANNOTATION_FORMAT,
+  MistralOcrPage,
+  toOcrPage,
+} from "./ocrPage.js";
 import {
   getDefaultModel,
   getLogger,
@@ -48,29 +55,13 @@ import {
 // Constants
 //
 
+/** Mistral reads only this many pages for `document_annotation` and says nothing past it */
+const DOCUMENT_ANNOTATION_PAGE_LIMIT = 8;
+const DOCUMENT_ANNOTATION_SCHEMA_NAME = "document";
+/** Mistral requires a format with a prompt, so bare instructions answer into this key */
+const INSTRUCTIONS_ONLY_KEY = "content";
 const OCR_MODEL_MARKER = "ocr";
 const PAGE_SEPARATOR = "\n\n";
-
-//
-//
-// Types
-//
-
-/** One page of Mistral's `OCRResponse`, 0-indexed on the wire */
-interface MistralOcrPage {
-  footer?: string | null;
-  header?: string | null;
-  images?: MistralOcrImage[];
-  index: number;
-  markdown?: string;
-  [key: string]: unknown;
-}
-
-interface MistralOcrImage {
-  id: string;
-  image_base64?: string | null;
-  [key: string]: unknown;
-}
 
 //
 //
@@ -93,41 +84,49 @@ function toMistralDocument(document: LlmOcrResolvedDocument): JsonObject {
   };
 }
 
-/** Base64 arrives with or without a `data:` prefix depending on the route */
-function toImageDataUri(
-  image: MistralOcrImage,
-  mimeType?: string,
-): string | undefined {
-  const base64 = image.image_base64;
-  if (!base64) {
-    return undefined;
-  }
-  if (base64.startsWith("data:")) {
-    return base64;
-  }
-  return `data:${mimeType ?? "image/jpeg"};base64,${base64}`;
+/**
+ * `document_annotation_prompt` and `document_annotation_format` for the
+ * caller's `instructions` and `format`. Bare instructions ride in a
+ * one-string schema because Mistral rejects a prompt without a format.
+ */
+function toDocumentAnnotation({
+  format,
+  instructions,
+}: Pick<LlmOcrOptions, "format" | "instructions">): Partial<OcrRequest> {
+  const prompt = instructions?.trim();
+  const schema = mistralAdapter.formatOutputSchema(
+    format ?? { [INSTRUCTIONS_ONLY_KEY]: String },
+  );
+  return {
+    ...(prompt ? { document_annotation_prompt: prompt } : {}),
+    document_annotation_format: {
+      json_schema: {
+        name: DOCUMENT_ANNOTATION_SCHEMA_NAME,
+        schema,
+        strict: true,
+      },
+      type: "json_schema",
+    },
+  };
 }
 
-function toOcrPage(page: MistralOcrPage): LlmOcrPage {
-  const pageNumber = page.index + 1;
-  const images: LlmOcrImage[] = (page.images ?? []).map((image) => {
-    const mimeType = getMimeType(image.id);
-    return {
-      data: toImageDataUri(image, mimeType),
-      id: image.id,
-      mimeType,
-      page: pageNumber,
-    };
-  });
-  return {
-    ...(page.footer ? { footer: page.footer } : {}),
-    ...(page.header ? { header: page.header } : {}),
-    images,
-    markdown: page.markdown ?? "",
-    page: pageNumber,
-    raw: page as JsonObject,
-    success: true,
-  };
+/** `document_annotation` arrives as a JSON string */
+function parseDocumentAnnotation(value: unknown): JsonObject | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as JsonObject;
+  }
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as JsonObject;
+    }
+  } catch {
+    // Not JSON; there is no object to return
+  }
+  return undefined;
 }
 
 export class MistralProvider implements LlmProvider {
@@ -285,14 +284,18 @@ export class MistralProvider implements LlmProvider {
     const model = this.resolveOcrModel(options.model);
     const resolved = await resolveOcrDocument(document);
     const pages = expandPageSelection(options.pages)?.map((page) => page - 1);
+    const answering = wantsOcrAnswer(options);
     const request: OcrRequest = {
       document: toMistralDocument(resolved),
       model,
       ...(pages ? { pages } : {}),
+      bbox_annotation_format: DEFAULT_BBOX_ANNOTATION_FORMAT,
+      ...(answering ? toDocumentAnnotation(options) : {}),
       ...(options.tables ? { table_format: options.tables } : {}),
       ...(options.images ? { include_image_base64: true } : {}),
       ...(options.providerOptions ?? {}),
     };
+    const annotated = Boolean(request.bbox_annotation_format);
 
     const client = await this.getClient();
     const raw = await runOcrAttempts({
@@ -319,10 +322,53 @@ export class MistralProvider implements LlmProvider {
 
     this.log.trace(`OCR extracted ${ocrPages.length} page(s)`);
 
+    const annotations = parseDocumentAnnotation(raw.document_annotation);
+    const responses: JsonReturn[] = [raw as JsonReturn];
+    let content: string | JsonObject | undefined;
+    let tokens: LlmUsage | undefined;
+    if (answering && pagesProcessed > DOCUMENT_ANNOTATION_PAGE_LIMIT) {
+      // The native annotation saw only the first pages; the chat model reads
+      // the whole transcription instead
+      this.log.debug(
+        `OCR answer exceeds the ${DOCUMENT_ANNOTATION_PAGE_LIMIT}-page annotation limit; answering over markdown`,
+        { pages: pagesProcessed },
+      );
+      const operateLoop = await this.getOperateLoop();
+      const answer = await answerOcr({
+        format: options.format,
+        instructions: options.instructions,
+        markdown,
+        model: PROVIDER.MISTRAL.DEFAULT,
+        operate: (input, operateOptions) =>
+          operateLoop.execute(input, operateOptions),
+        retry: options.retry,
+        signal: options.signal,
+      });
+      content = answer.content;
+      responses.push(...answer.response.responses);
+      tokens = answer.response.usage;
+    } else if (answering && annotations) {
+      content = options.format
+        ? annotations
+        : (annotations[INSTRUCTIONS_ONLY_KEY] as string | undefined);
+    }
+    const ocrCost = pageCost({
+      annotated,
+      model: servedModel,
+      pages: pagesProcessed,
+    });
+    // An unpriced part makes the whole unknown rather than understated
+    const answerCost = tokens
+      ? tokenCost(tokens, { model: PROVIDER.MISTRAL.DEFAULT })
+      : 0;
+    const cost =
+      ocrCost === undefined || answerCost === undefined
+        ? undefined
+        : ocrCost + answerCost;
+
     return {
-      ...(raw.document_annotation
-        ? { annotations: raw.document_annotation as JsonObject }
-        : {}),
+      ...(annotations ? { annotations } : {}),
+      ...(content !== undefined ? { content } : {}),
       emulated: false,
       fallbackAttempts: 1,
       fallbackUsed: false,
@@ -331,12 +377,13 @@ export class MistralProvider implements LlmProvider {
       model: servedModel,
       pages: ocrPages,
       provider: PROVIDER.MISTRAL.NAME,
-      responses: [raw as JsonReturn],
+      responses,
       usage: {
-        cost: pageCost({ model: servedModel, pages: pagesProcessed }),
+        ...(cost !== undefined ? { cost } : {}),
         model: servedModel,
         pages: pagesProcessed,
         provider: PROVIDER.MISTRAL.NAME,
+        ...(tokens ? { tokens } : {}),
       },
     };
   }

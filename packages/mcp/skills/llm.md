@@ -528,7 +528,7 @@ const { emulated, markdown, pages, usage } = await Llm.ocr(
       LLM.MODEL.HAIKU, // emulated: any provider that accepts files
     ],
     pages: "1,3-5", // 1-indexed; [1, 3, 4, 5] also works
-    tables: "markdown", // or "html"
+    tables: "markdown", // table syntax; tables are always inline
   },
 );
 
@@ -540,6 +540,37 @@ usage.pages; // pages billed
 usage.cost; // USD from LLM.PAGE_COST (LlamaParse: from recorded credits; emulated: from COST tokens)
 usage.tokens; // emulated only: every operate() call's usage
 ```
+
+`instructions` and `format` ask for more than transcription; the answer
+lands on `content` (an object shaped by `format`, or a string with only
+`instructions`):
+
+```typescript
+const { content, markdown } = await Llm.ocr("./scans/intake.pdf", {
+  format: {
+    category: ["deed", "invoice", "medical intake", "other"],
+    description: String,
+  },
+  instructions: "Classify the document and describe it in one sentence.",
+});
+content.category; // "medical intake"
+```
+
+Mistral answers in the same call (`document_annotation_prompt` and a strict
+`document_annotation_format`). Past its 8-page annotation limit, and on every
+emulated engine, the answer comes from one more text-only `operate()` over the
+markdown, priced into `usage`. LlamaParse does not support either option and
+fails over to the next engine in the chain. Mistral's own
+`document_annotation` surfaces parsed as `annotations`.
+
+Mistral markdown is self-contained. Tables are inlined in place of
+`[tbl-0.md](tbl-0.md)` placeholders. Every image is annotated, and its
+description becomes the alt text (`![Notary signature of Jane Doe](img-1.jpeg)`)
+and lands on `images[].description`, `.type` (`signature`, `seal`, `stamp`,
+`photo`, ...), and `.annotation`. Typed blocks are rendered, so a signature
+reads `[Signature: Jane Q Doe]` rather than a bare name. Annotation bills at
+`LLM.PAGE_COST_ANNOTATED`; replace the schema with
+`providerOptions.bbox_annotation_format` or pass `null` to disable it.
 
 Emulation sends each page alone (a PDF is trimmed to one page per call, so
 the model never numbers pages), asks for verbatim Markdown with
@@ -751,7 +782,7 @@ for await (const chunk of Llm.stream(input, {
 
 ## Fallback Providers
 
-Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails:
+Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over:
 
 ```typescript
 // Instance-level configuration
@@ -783,7 +814,7 @@ const response = await Llm.operate(input, {
 ```typescript
 response.provider; // Which provider handled the request
 response.fallbackUsed; // true if a fallback was used
-response.fallbackAttempts; // Number of providers tried (1 = primary only)
+response.fallbackAttempts; // Attempts made (1 = primary only; chain length + 2 when the linger pass served it)
 ```
 
 ## Instance Usage
@@ -928,9 +959,12 @@ await Llm.operate(input, {
 });
 ```
 
-A configured fallback chain wins over waiting: moving to the next provider is
-faster than sleeping, so only the final entry in the chain keeps its rate-limit
-budget. Waits are interruptible by the caller's `signal`.
+A configured fallback chain wins over waiting. Every entry, the last included,
+fails fast on any error (`retry: { rateLimit: false, transient: false }`) so the
+next model takes over at once. When the whole chain fails, the primary runs one
+more time with the full policy (the caller's `retry` applies here) and its error
+is final. `transient: false` also works on a single call. Waits are
+interruptible by the caller's `signal`.
 
 ### Loop Stops
 

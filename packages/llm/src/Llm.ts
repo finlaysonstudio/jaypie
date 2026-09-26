@@ -256,17 +256,21 @@ class Llm implements LlmProvider {
       fallback: false as const,
     };
 
-    // Reaching for another provider beats waiting out a rate limit, so every
-    // attempt with somewhere left to go fails fast instead of sleeping. The
-    // final attempt keeps the wait: there is no cheaper remedy left. An
-    // explicit `retry` option from the caller wins over both.
-    const eagerOptions =
-      fallbackChain.length > 0 && resolvedOptions.retry === undefined
-        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
-        : optionsWithoutFallback;
+    // Working down a chain, every attempt fails fast on any error so the
+    // next model takes over at once. Only the linger pass (the primary again,
+    // once the chain is spent) keeps the retry policy, the caller's `retry`
+    // included.
+    const failFastOptions = {
+      ...optionsWithoutFallback,
+      retry: {
+        ...resolvedOptions.retry,
+        rateLimit: false as const,
+        transient: false as const,
+      },
+    };
 
     return runWithFallback<Llm, LlmOperateResponse>({
-      attempt: async ({ attempts, instance, isLast, provider }) => {
+      attempt: async ({ attempts, failFast, instance, provider }) => {
         if (!instance._llm.operate) {
           throw new NotImplementedError(
             `Provider ${provider} does not support operate method`,
@@ -275,7 +279,9 @@ class Llm implements LlmProvider {
         // A fallback runs its own model: the per-call model named the
         // primary, and forwarding it would ask the next provider for a
         // model it does not serve.
-        const attemptOptions = isLast ? optionsWithoutFallback : eagerOptions;
+        const attemptOptions = failFast
+          ? failFastOptions
+          : optionsWithoutFallback;
         const response = await instance._llm.operate(
           input,
           instance === this
@@ -348,17 +354,21 @@ class Llm implements LlmProvider {
       ...resolvedOptions,
       fallback: false as const,
     };
-    // Same bargain as operate: an attempt with somewhere left to go fails
-    // fast instead of waiting out a rate limit.
-    const eagerOptions =
-      fallbackChain.length > 0 && resolvedOptions.retry === undefined
-        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
-        : optionsWithoutFallback;
+    // Same bargain as operate: fail fast down the chain, linger on the
+    // primary once it is spent.
+    const failFastOptions = {
+      ...optionsWithoutFallback,
+      retry: {
+        ...resolvedOptions.retry,
+        rateLimit: false as const,
+        transient: false as const,
+      },
+    };
     const resolvedDocument = await resolveOcrDocument(document);
 
     return runWithFallback<Llm, LlmOcrResponse>({
-      attempt: async ({ attempts, instance, isLast, provider }) => {
-        const base = isLast ? optionsWithoutFallback : eagerOptions;
+      attempt: async ({ attempts, failFast, instance, provider }) => {
+        const base = failFast ? failFastOptions : optionsWithoutFallback;
         // A fallback runs its own model: the per-call model named the
         // primary, and forwarding it would ask the next provider for a
         // tier it does not serve.
@@ -415,16 +425,20 @@ class Llm implements LlmProvider {
       ...resolvedOptions,
       fallback: false as const,
     };
-    // Same bargain as operate: an attempt with somewhere left to go fails
-    // fast instead of waiting out a rate limit.
-    const eagerOptions =
-      fallbackChain.length > 0 && resolvedOptions.retry === undefined
-        ? { ...optionsWithoutFallback, retry: { rateLimit: false as const } }
-        : optionsWithoutFallback;
+    // Same bargain as operate: fail fast down the chain, linger on the
+    // primary once it is spent.
+    const failFastOptions = {
+      ...optionsWithoutFallback,
+      retry: {
+        ...resolvedOptions.retry,
+        rateLimit: false as const,
+        transient: false as const,
+      },
+    };
 
     return runWithFallback<Llm, LlmQuestionResponse>({
-      attempt: async ({ attempts, instance, isLast, provider }) => {
-        const base = isLast ? optionsWithoutFallback : eagerOptions;
+      attempt: async ({ attempts, failFast, instance, provider }) => {
+        const base = failFast ? failFastOptions : optionsWithoutFallback;
         const attemptOptions =
           instance === this ? base : { ...base, model: undefined };
         const response = instance._llm.question

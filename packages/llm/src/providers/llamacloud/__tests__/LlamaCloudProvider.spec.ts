@@ -282,6 +282,21 @@ describe("LlamaCloudProvider", () => {
       expect(createParse).not.toHaveBeenCalled();
     });
 
+    it.each([
+      ["instructions", { instructions: "Classify it" }],
+      ["format", { format: { taco: String } }],
+    ])(
+      "Rejects %s before any request so a chain moves on",
+      async (_name, options) => {
+        const { createParse, uploadParse } = mockClient();
+        await expect(
+          new LlamaCloudProvider().ocr(DOCUMENT_URL, options),
+        ).rejects.toThrow(/does not support OCR instructions or format/);
+        expect(createParse).not.toHaveBeenCalled();
+        expect(uploadParse).not.toHaveBeenCalled();
+      },
+    );
+
     it("Throws unrecoverable with the error message on FAILED", async () => {
       mockClient({
         getParse: vi.fn().mockResolvedValue({

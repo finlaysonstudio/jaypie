@@ -23,8 +23,9 @@ export interface ChatCompletionOptions {
  * name in the error rather than a silent drop.
  */
 export interface OcrRequest {
-  bbox_annotation_format?: JsonObject;
-  confidence_scores_granularity?: "page" | "word";
+  /** Per-image annotation schema; `null` disables the default Jaypie sends */
+  bbox_annotation_format?: JsonObject | null;
+  confidence_scores_granularity?: "block" | "page" | "word";
   /** Document reference, e.g. `{ type: "document_url", document_url: "data:application/pdf;base64,..." }` */
   document: JsonObject;
   document_annotation_format?: JsonObject;

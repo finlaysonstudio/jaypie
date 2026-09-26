@@ -1,4 +1,5 @@
-import { JsonObject, JsonReturn } from "@jaypie/types";
+import { JsonObject, JsonReturn, NaturalSchema } from "@jaypie/types";
+import { z } from "zod/v4";
 
 import { type LlmProviderName } from "../constants.js";
 import { type LlmRetryOptions } from "../operate/retry/RetryPolicy.js";
@@ -43,8 +44,22 @@ export interface LlmOcrOptions {
   concurrency?: number;
   /** Chain of fallback providers; `false` disables instance-level fallback */
   fallback?: LlmFallbackConfig[] | false;
+  /**
+   * Shape of `content`, as on `operate()`: Natural Schema (`{ category:
+   * ["deed", "invoice"], summary: String }`), JSON Schema, or Zod. Mistral
+   * answers natively; emulated engines answer in one more `operate()` call
+   * over the markdown; LlamaParse does not support it and fails over.
+   */
+  format?: JsonObject | NaturalSchema | z.ZodType;
   /** Fetch extracted images as base64 data URIs. Default false. */
   images?: boolean;
+  /**
+   * What to do with the document beyond transcription, e.g. "Classify the
+   * document and describe it in one sentence." The answer lands in
+   * `content`: an object when `format` is set, else a string. Supported
+   * where `format` is.
+   */
+  instructions?: string;
   /** Static form only: provider name */
   llm?: LlmProviderName;
   model?: LlmModelOption;
@@ -59,7 +74,10 @@ export interface LlmOcrOptions {
   retry?: LlmRetryOptions;
   /** Caller-owned cancellation */
   signal?: AbortSignal;
-  /** Table rendering inside markdown. Default "markdown". */
+  /**
+   * Table syntax inside markdown. Tables are always inline; this picks
+   * markdown pipes or HTML. Omit for the engine default (markdown).
+   */
   tables?: LlmOcrTableFormat;
   /** Upper bound on an asynchronous job, in milliseconds. Default 10 minutes. */
   timeout?: number;
@@ -68,13 +86,22 @@ export interface LlmOcrOptions {
 }
 
 export interface LlmOcrImage {
+  /** The engine's structured annotation of the image, when it made one */
+  annotation?: JsonObject;
   /** `data:` URI when fetched (`images: true`), else undefined */
   data?: string;
+  /**
+   * Short label for the image, e.g. "Notary signature of Jane Doe". It is also
+   * the alt text of the image's link in `markdown`.
+   */
+  description?: string;
   /** Vendor filename, e.g. "img-0.jpeg" or "image_0.png" */
   id: string;
   mimeType?: string;
   /** 1-indexed page the image was extracted from, when the vendor reports it */
   page?: number;
+  /** Kind of element, e.g. "signature", "seal", "photo", when annotated */
+  type?: string;
 }
 
 export interface LlmOcrPage {
@@ -109,8 +136,13 @@ export interface LlmOcrUsage {
 }
 
 export interface LlmOcrResponse {
-  /** Mistral `document_annotation`, when requested through providerOptions */
+  /** Mistral `document_annotation`, parsed, whenever the engine made one */
   annotations?: JsonObject;
+  /**
+   * Answer to `instructions` and `format`: an object shaped by `format`, or
+   * a string when only `instructions` was given. Absent when neither was.
+   */
+  content?: string | JsonObject;
   /**
    * True when a chat model transcribed the pages through `operate()`
    * rather than a native OCR engine answering.

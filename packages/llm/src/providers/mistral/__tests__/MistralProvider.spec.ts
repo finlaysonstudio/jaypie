@@ -2,7 +2,13 @@ import { getEnvSecret } from "@jaypie/aws";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MistralProvider } from "../MistralProvider.class";
 import { MistralClient } from "../client.js";
-import { MODEL, PROVIDER } from "../../../constants.js";
+import { DEFAULT_BBOX_ANNOTATION_FORMAT } from "../ocrPage.js";
+import {
+  MODEL,
+  PAGE_COST,
+  PAGE_COST_ANNOTATED,
+  PROVIDER,
+} from "../../../constants.js";
 import { LlmUnrecoverableError } from "../../../errors/LlmError.js";
 
 // Mock the Mistral client
@@ -274,7 +280,7 @@ describe("MistralProvider", () => {
         expect(result.fallbackAttempts).toBe(1);
         expect(result.fallbackUsed).toBe(false);
         expect(result.usage).toEqual({
-          cost: 0.008,
+          cost: 0.01,
           model: MODEL.MISTRAL.OCR,
           pages: 2,
           provider: PROVIDER.MISTRAL.NAME,
@@ -327,6 +333,163 @@ describe("MistralProvider", () => {
         expect(request.include_blocks).toBe(true);
       });
 
+      it("Requests image annotations by default", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr(DOCUMENT_URL);
+        const [request] = mockOcr.mock.calls[0];
+        expect(request.bbox_annotation_format).toEqual(
+          DEFAULT_BBOX_ANNOTATION_FORMAT,
+        );
+      });
+
+      it("Lets providerOptions replace or disable image annotations", async () => {
+        const mockOcr = mockOcrClient({ pages: [] });
+        const provider = new MistralProvider();
+        await provider.ocr(DOCUMENT_URL, {
+          providerOptions: { bbox_annotation_format: null },
+        });
+        expect(mockOcr.mock.calls[0][0].bbox_annotation_format).toBeNull();
+      });
+
+      it("Prices annotated pages at the annotated rate", async () => {
+        mockOcrClient({
+          model: MODEL.MISTRAL.OCR,
+          pages: [],
+          usage_info: { pages_processed: 1000 },
+        });
+        const provider = new MistralProvider();
+        const annotated = await provider.ocr(DOCUMENT_URL);
+        expect(annotated.usage.cost).toBe(
+          PAGE_COST_ANNOTATED[MODEL.MISTRAL.OCR],
+        );
+        const plain = await provider.ocr(DOCUMENT_URL, {
+          providerOptions: { bbox_annotation_format: null },
+        });
+        expect(plain.usage.cost).toBe(PAGE_COST[MODEL.MISTRAL.OCR]);
+      });
+
+      describe("Markdown", () => {
+        const TABLE = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+
+        it("Inlines extracted tables in place of placeholders", async () => {
+          mockOcrClient({
+            pages: [
+              {
+                images: [],
+                index: 0,
+                markdown: "Intro\n\n[tbl-0.md](tbl-0.md)\n\nOutro",
+                tables: [
+                  { content: TABLE, format: "markdown", id: "tbl-0.md" },
+                ],
+              },
+            ],
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL);
+          expect(result.markdown).toBe(`Intro\n\n${TABLE}\n\nOutro`);
+        });
+
+        it("Describes images in alt text and on the image", async () => {
+          mockOcrClient({
+            pages: [
+              {
+                images: [
+                  {
+                    id: "img-0.jpeg",
+                    image_annotation: JSON.stringify({
+                      description: "Notary signature [Jane Doe]",
+                      image_type: "signature",
+                    }),
+                  },
+                  { id: "img-1.jpeg", image_annotation: null },
+                ],
+                index: 0,
+                markdown:
+                  "![img-0.jpeg](img-0.jpeg)\n\n![img-1.jpeg](img-1.jpeg)",
+              },
+            ],
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL);
+          expect(result.markdown).toBe(
+            "![Notary signature \\[Jane Doe\\]](img-0.jpeg)\n\n![img-1.jpeg](img-1.jpeg)",
+          );
+          expect(result.images[0]).toMatchObject({
+            annotation: {
+              description: "Notary signature [Jane Doe]",
+              image_type: "signature",
+            },
+            description: "Notary signature [Jane Doe]",
+            type: "signature",
+          });
+          expect(result.images[1].description).toBeUndefined();
+        });
+
+        it("Uses a non-JSON annotation as the description", async () => {
+          mockOcrClient({
+            pages: [
+              {
+                images: [
+                  { id: "img-0.jpeg", image_annotation: "Company logo" },
+                ],
+                index: 0,
+                markdown: "![img-0.jpeg](img-0.jpeg)",
+              },
+            ],
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL);
+          expect(result.markdown).toBe("![Company logo](img-0.jpeg)");
+        });
+
+        it("Renders blocks, labeling signatures", async () => {
+          mockOcrClient({
+            pages: [
+              {
+                blocks: [
+                  { content: "Running header", type: "header" },
+                  { content: "# Deed", type: "title" },
+                  { content: TABLE, table_id: null, type: "table" },
+                  {
+                    content: "![img-0.jpeg](img-0.jpeg)",
+                    image_id: "img-0.jpeg",
+                    type: "image",
+                  },
+                  { content: "Jane Q\nDoe", type: "signature" },
+                  { content: "", type: "signature" },
+                  { content: "Page 1", type: "footer" },
+                ],
+                header: "Running header",
+                images: [
+                  {
+                    id: "img-0.jpeg",
+                    image_annotation: JSON.stringify({
+                      description: "Notary seal",
+                      image_type: "seal",
+                    }),
+                  },
+                ],
+                index: 0,
+                markdown: "unused",
+              },
+            ],
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL);
+          expect(result.markdown).toBe(
+            [
+              "# Deed",
+              TABLE,
+              "![Notary seal](img-0.jpeg)",
+              "[Signature: Jane Q Doe]",
+              "[Signature]",
+              "Page 1",
+            ].join("\n\n"),
+          );
+        });
+      });
+
       it("Uses the instance model when it is an OCR model", async () => {
         const mockOcr = mockOcrClient({ pages: [] });
         const provider = new MistralProvider("mistral-ocr-latest");
@@ -346,6 +509,152 @@ describe("MistralProvider", () => {
         const provider = new MistralProvider();
         const result = await provider.ocr(DOCUMENT_URL);
         expect(result.annotations).toEqual({ title: "T" });
+      });
+
+      it("Parses document annotations sent as a JSON string", async () => {
+        mockOcrClient({ document_annotation: '{"title": "T"}', pages: [] });
+        const provider = new MistralProvider();
+        const result = await provider.ocr(DOCUMENT_URL);
+        expect(result.annotations).toEqual({ title: "T" });
+        expect(result.content).toBeUndefined();
+      });
+
+      describe("Instructions and Format", () => {
+        const ONE_PAGE = {
+          pages: [{ index: 0, markdown: "Deed text" }],
+          usage_info: { pages_processed: 1 },
+        };
+
+        it("Sends neither annotation field without them", async () => {
+          const mockOcr = mockOcrClient({ pages: [] });
+          const provider = new MistralProvider();
+          await provider.ocr(DOCUMENT_URL);
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_format).toBeUndefined();
+          expect(request.document_annotation_prompt).toBeUndefined();
+        });
+
+        it("Sends a natural format as a strict JSON schema with the prompt", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"category": "deed", "summary": "A deed"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { category: ["deed", "invoice"], summary: String },
+            instructions: "Classify and summarize",
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_prompt).toBe(
+            "Classify and summarize",
+          );
+          expect(request.document_annotation_format).toMatchObject({
+            json_schema: {
+              name: "document",
+              schema: {
+                additionalProperties: false,
+                properties: {
+                  category: { enum: ["deed", "invoice"] },
+                  summary: { type: "string" },
+                },
+                type: "object",
+              },
+              strict: true,
+            },
+            type: "json_schema",
+          });
+          expect(result.content).toEqual({
+            category: "deed",
+            summary: "A deed",
+          });
+        });
+
+        it("Sends a format alone without a prompt", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"taco": "al pastor"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(request.document_annotation_prompt).toBeUndefined();
+          expect(request.document_annotation_format).toBeDefined();
+          expect(result.content).toEqual({ taco: "al pastor" });
+        });
+
+        it("Answers bare instructions as a string", async () => {
+          const mockOcr = mockOcrClient({
+            ...ONE_PAGE,
+            document_annotation: '{"content": "A deed"}',
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            instructions: "Describe it",
+          });
+          const request = mockOcr.mock.calls[0][0];
+          expect(
+            request.document_annotation_format.json_schema.schema.properties,
+          ).toEqual({ content: { type: "string" } });
+          expect(result.content).toBe("A deed");
+        });
+
+        it("Lets providerOptions replace the format", async () => {
+          const custom = { json_schema: { name: "x" }, type: "json_schema" };
+          const mockOcr = mockOcrClient(ONE_PAGE);
+          const provider = new MistralProvider();
+          await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+            providerOptions: { document_annotation_format: custom },
+          });
+          expect(mockOcr.mock.calls[0][0].document_annotation_format).toBe(
+            custom,
+          );
+        });
+
+        it("Answers over markdown past the annotation page limit", async () => {
+          const { createOperateLoop } =
+            await import("../../../operate/index.js");
+          const execute = vi.fn().mockResolvedValue({
+            content: { taco: "carnitas" },
+            responses: [{ id: "chat" }],
+            usage: [
+              {
+                input: 1000,
+                model: PROVIDER.MISTRAL.DEFAULT,
+                output: 10,
+                reasoning: 0,
+              },
+            ],
+          });
+          vi.mocked(createOperateLoop).mockReturnValue({ execute } as any);
+          mockOcrClient({
+            document_annotation: '{"taco": "partial"}',
+            pages: Array.from({ length: 9 }, (_page, index) => ({
+              index,
+              markdown: `Page ${index + 1}`,
+            })),
+            usage_info: { pages_processed: 9 },
+          });
+          const provider = new MistralProvider();
+          const result = await provider.ocr(DOCUMENT_URL, {
+            format: { taco: String },
+            instructions: "Name the taco",
+          });
+          expect(execute).toHaveBeenCalledTimes(1);
+          const [input, options] = execute.mock.calls[0];
+          expect(input).toContain("Page 9");
+          expect(options.model).toBe(PROVIDER.MISTRAL.DEFAULT);
+          expect(input).toMatch(/Name the taco$/);
+          expect(result.content).toEqual({ taco: "carnitas" });
+          expect(result.annotations).toEqual({ taco: "partial" });
+          expect(result.responses).toHaveLength(2);
+          expect(result.usage.tokens).toHaveLength(1);
+          expect(result.usage.cost).toBeGreaterThan(
+            (PAGE_COST_ANNOTATED[MODEL.MISTRAL.OCR] * 9) / 1000,
+          );
+        });
       });
 
       it("Returns empty markdown when no pages come back", async () => {

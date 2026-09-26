@@ -247,5 +247,22 @@ describe("RetryPolicy", () => {
       expect(resolved.maxRetries).toBe(5);
       expect(resolved.backoffFactor).toBe(3);
     });
+
+    it("disables transient retries with transient false", () => {
+      const resolved = resolveRetryPolicy({ retry: { transient: false } });
+
+      expect(resolved.maxRetries).toBe(0);
+      expect(resolved.shouldRetry(0)).toBe(false);
+      expect(resolved.rateLimitRetries).toBe(DEFAULT_RATE_LIMIT_RETRIES);
+    });
+
+    it("disables both budgets together", () => {
+      const resolved = resolveRetryPolicy({
+        retry: { rateLimit: false, transient: false },
+      });
+
+      expect(resolved.maxRetries).toBe(0);
+      expect(resolved.rateLimitRetries).toBe(0);
+    });
   });
 });

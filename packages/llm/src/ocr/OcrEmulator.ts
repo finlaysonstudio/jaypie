@@ -22,6 +22,7 @@ import {
 import { getLogger } from "../util/logger.js";
 import { tokenCost } from "../util/tokenCost.js";
 import { extractPdfPages, getPdfPageCount } from "../upload/index.js";
+import { answerOcr, wantsOcrAnswer } from "./answerOcr.js";
 import { expandPageSelection } from "./expandPageSelection.js";
 
 //
@@ -420,12 +421,34 @@ export async function emulateOcr({
 
   const finalModel = servedModel ?? model ?? "";
   const finalProvider = servedProvider ?? providerName;
+  const markdown = pages.map((item) => item.markdown).join("\n\n");
+
+  // Each page rode alone, so the document-level answer takes one more call
+  // over the whole transcription
+  let content: string | JsonObject | undefined;
+  if (wantsOcrAnswer(options)) {
+    const answer = await answerOcr({
+      format: options.format,
+      instructions: options.instructions,
+      markdown,
+      model: servedModel ?? model,
+      operate,
+      retry: options.retry,
+      signal: options.signal,
+      user: options.user,
+    });
+    content = answer.content;
+    responses.push(...answer.response.responses);
+    tokens.push(...answer.response.usage);
+  }
+
   return {
+    ...(content !== undefined ? { content } : {}),
     emulated: true,
     fallbackAttempts: 1,
     fallbackUsed: false,
     images: [],
-    markdown: pages.map((item) => item.markdown).join("\n\n"),
+    markdown,
     model: finalModel,
     pages,
     provider: finalProvider,

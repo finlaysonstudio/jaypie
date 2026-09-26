@@ -21,7 +21,7 @@ npm install @jaypie/llm
 
 | Export | Purpose |
 |--------|---------|
-| `Llm` | Main LLM class (default export) |
+| `Llm` | Main LLM class (default export): `operate`, `stream`, `ocr`, `question` |
 | `Toolkit` | Tool collection for function calling |
 | `LlmTool` | Tool type definition |
 
@@ -79,9 +79,31 @@ for await (const chunk of Llm.stream("Tell me a story")) {
 }
 ```
 
+## Llm.ocr
+
+Turns a document into per-page markdown. Mistral OCR (`MODEL.MISTRAL.OCR`, the default) and LlamaParse (`MODEL.LLAMAPARSE.*`, `LLAMA_CLOUD_API_KEY`) answer natively; any other model answers through emulation. A `model` array is a fallback chain.
+
+```typescript
+import Llm, { LLM } from "@jaypie/llm";
+
+const { content, markdown, pages, usage } = await Llm.ocr("./scans/intake.pdf", {
+  format: {
+    category: ["deed", "invoice", "medical intake", "other"],
+    description: String,
+  },
+  instructions: "Classify the document and describe it in one sentence.",
+  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.HAIKU],
+});
+content.category; // "medical intake"
+```
+
+`instructions` and `format` put the answer on `content`. Mistral answers in the same call; past its 8-page annotation limit, and on emulated engines, one text-only `operate()` over the markdown answers instead. LlamaParse does not support either option and fails over.
+
+Mistral markdown is self-contained: tables are inlined, every image is described in its alt text (and on `images[].description` and `.type`), and typed blocks render, so a signature reads `[Signature: Jane Q Doe]`. Annotation bills at `LLM.PAGE_COST_ANNOTATED`; pass `providerOptions.bbox_annotation_format: null` to disable it.
+
 ## Fallback Providers
 
-Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails.
+Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over. `operate`, `ocr`, and `question` share this behavior.
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";

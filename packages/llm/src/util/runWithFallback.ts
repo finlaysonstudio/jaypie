@@ -1,26 +1,34 @@
 import log from "@jaypie/logger";
 
+import { LlmAbortError } from "../errors/LlmError.js";
 import { LlmFallbackConfig } from "../types/LlmProvider.interface.js";
 
 export interface FallbackAttemptContext<TInstance> {
-  /** 1 for the primary, incrementing through the chain */
+  /** 1 for the primary, incrementing through the chain and the linger pass */
   attempts: number;
+  /**
+   * True while working down a chain: the attempt should throw on its first
+   * failure (rate limit, transient, anything) so the next model takes over.
+   * False on a lone model and on the final linger pass, which keep the full
+   * retry policy.
+   */
+  failFast: boolean;
   instance: TInstance;
-  /** True on the final candidate: nowhere left to fall to */
-  isLast: boolean;
   provider: string;
 }
 
 /**
  * Try the primary, then each fallback in turn, returning the first success.
- * Every candidate's failure is logged and the last error is rethrown when the
- * chain is exhausted.
+ *
+ * With a chain, every candidate (the last included) fails fast so the next
+ * model takes over at once. When the whole chain fails, the primary runs one
+ * more time with `failFast: false`, lingering on its full retry policy. If
+ * that fails too, the last error is rethrown. A lone model (empty chain)
+ * runs once with the full policy.
  *
  * The attempt callback owns what "success" means, so the same loop serves
- * `operate` (which settles an exchange on success) and `question` (which does
- * not). `isLast` is how a caller tells the final attempt to stop failing fast:
- * reaching for another provider beats waiting out a rate limit right up until
- * there is no other provider.
+ * `operate` (which settles an exchange on success), `ocr`, and `question`.
+ * A caller abort ({@link LlmAbortError}) is terminal and never falls over.
  */
 export async function runWithFallback<TInstance, TResult>({
   attempt,
@@ -40,40 +48,48 @@ export async function runWithFallback<TInstance, TResult>({
   primary: TInstance;
   primaryProvider: string;
 }): Promise<TResult> {
+  const failFast = chain.length > 0;
+  const candidates: Array<() => { instance: TInstance; provider: string }> = [
+    () => ({ instance: primary, provider: primaryProvider }),
+    ...chain.map((config) => () => ({
+      instance: createInstance(config),
+      provider: config.provider,
+    })),
+  ];
+  // The linger pass: the chain is spent, so the primary waits out its full
+  // retry policy before giving up
+  if (failFast) {
+    candidates.push(() => ({ instance: primary, provider: primaryProvider }));
+  }
+
   let attempts = 0;
   let lastError: Error | undefined;
 
-  attempts++;
-  try {
-    return await attempt({
-      attempts,
-      instance: primary,
-      isLast: chain.length === 0,
-      provider: primaryProvider,
-    });
-  } catch (error) {
-    lastError = error as Error;
-    log.warn(`Provider ${primaryProvider} failed`, {
-      error: lastError.message,
-      fallbacksRemaining: chain.length,
-    });
-  }
-
-  for (const [index, config] of chain.entries()) {
+  for (const [index, candidate] of candidates.entries()) {
     attempts++;
+    const { instance, provider } = candidate();
+    const lingering = failFast && index === candidates.length - 1;
     try {
       return await attempt({
         attempts,
-        instance: createInstance(config),
-        isLast: index === chain.length - 1,
-        provider: config.provider,
+        failFast: failFast && !lingering,
+        instance,
+        provider,
       });
     } catch (error) {
+      if (error instanceof LlmAbortError) {
+        throw error;
+      }
       lastError = error as Error;
-      log.warn(`Fallback provider ${config.provider} failed`, {
-        error: lastError.message,
-        fallbacksRemaining: chain.length - attempts + 1,
-      });
+      log.warn(
+        lingering
+          ? `Provider ${provider} failed after lingering`
+          : `Provider ${provider} failed`,
+        {
+          attemptsRemaining: candidates.length - attempts,
+          error: lastError.message,
+        },
+      );
     }
   }
 

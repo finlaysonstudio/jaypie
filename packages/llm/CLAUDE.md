@@ -22,9 +22,10 @@ src/
 ├── constants.ts              # Provider/model constants
 ├── index.ts                  # Package exports
 ├── ocr/                      # Llm.ocr support
+│   ├── answerOcr.ts          # instructions/format answered over finished markdown
 │   ├── expandPageSelection.ts # "1,3-5" or [1, 3] → sorted 1-indexed pages
 │   ├── OcrEmulator.ts        # Per-page operate() transcription for chat models
-│   ├── pageCost.ts           # USD from PAGE_COST
+│   ├── pageCost.ts           # USD from PAGE_COST (PAGE_COST_ANNOTATED when annotated)
 │   ├── resolveOcrDocument.ts # URL, data: URI, S3, or disk → url | buffer
 │   └── runOcrAttempts.ts     # Shared rate-limit / transient retry loop
 ├── operate/                  # Core operation loop
@@ -76,6 +77,7 @@ src/
 │   ├── mistral/
 │   │   ├── client.ts         # Chat Completions plus POST /v1/ocr
 │   │   ├── MistralProvider.class.ts
+│   │   ├── ocrPage.ts        # OCR page → markdown: blocks, tables, image descriptions
 │   │   └── utils.ts
 │   ├── typesafe/
 │   │   ├── client.ts
@@ -310,7 +312,13 @@ route and per region, so no single rate is correct. Unlisted ids return
 
 ### Fallback Providers
 
-Configure a chain of fallback providers that automatically retry failed calls when the primary provider fails with an unrecoverable error.
+Configure a chain of fallback providers. While working down the chain, any
+error (rate limit, 5xx, network flake, bad request) moves to the next entry at
+once: every entry, the last included, runs with `retry: { rateLimit: false,
+transient: false }`. When the whole chain fails, the primary runs once more
+with its full retry policy (the **linger pass**), and its error is final. A
+caller abort (`LlmAbortError`) is terminal and never falls over. The loop lives
+in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
@@ -343,7 +351,7 @@ const response = await Llm.operate(input, {
 
 - `provider`: Which provider actually handled the request
 - `fallbackUsed`: `true` if a fallback provider was used
-- `fallbackAttempts`: Number of providers tried (1 = primary only)
+- `fallbackAttempts`: Attempts made (1 = primary only; chain length + 2 when the linger pass served it)
 
 ### Error Handling
 
@@ -438,10 +446,12 @@ await Llm.operate(input, {
 ```
 
 **A configured fallback chain wins over waiting.** Reaching for another
-provider is strictly faster than sleeping a minute, so the facade tells every
-attempt that has somewhere left to go not to wait; only the final entry in the
-chain keeps its budget. An explicit `retry` option from the caller overrides
-that and applies to every attempt.
+provider is strictly faster than sleeping or backing off, so every chain
+attempt fails fast on rate limits and transient errors alike. Only the linger
+pass on the primary keeps a budget, and an explicit `retry` option from the
+caller applies there. `retry: { transient: false }` disables transient
+retries on a single call. The Bedrock SDK client is built with
+`maxAttempts: 1` so `RetryExecutor` is the only retry authority.
 
 **Model array sugar:**
 
@@ -557,8 +567,8 @@ data?, pages? }` / `{ image, ... }` objects `operate()` accepts. It is
 resolved once (`src/ocr/resolveOcrDocument.ts`) before the fallback chain runs,
 so S3 and disk are read a single time per call.
 
-Options: `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
-(`"markdown"` default or `"html"`), `images` (fetch extracted images as
+Options: `instructions` and `format` (see below), `pages` (1-indexed array or `"1,3,5-10"` range string), `tables`
+(table syntax, `"markdown"` or `"html"`; tables are always inline), `images` (fetch extracted images as
 `data:` URIs; off by default), `timeout` (asynchronous job ceiling, default
 ten minutes), `retry`, `signal`, `providerOptions` — vendor fields spread
 last onto the request (Mistral `OCRRequest` fields such as
@@ -575,7 +585,61 @@ from `COST` tokens when emulated, and `tokens` when emulated), `responses[]`
 (the raw vendor payloads), `emulated`, and the `provider`/`model`/
 `fallbackAttempts`/`fallbackUsed` fields `operate` carries. Mistral pages are
 0-indexed on the wire and converted on both sides; Mistral
-`document_annotation` surfaces as `annotations`.
+`document_annotation` arrives as a JSON string and surfaces parsed as
+`annotations`.
+
+**Instructions and format.** `instructions` (a task such as "Classify the
+document and describe it in one sentence") and `format` (Natural Schema,
+JSON Schema, or Zod, as on `operate()`) ask for more than transcription. The
+answer lands on `content`: an object shaped by `format`, or a string when
+only `instructions` is given. Each engine answers its own way:
+
+- **Mistral** answers in the same call: `format` becomes a strict
+  `document_annotation_format` (through `mistralAdapter.formatOutputSchema`)
+  and `instructions` becomes `document_annotation_prompt`. Mistral rejects a
+  prompt without a format, so bare instructions ride in a `{ content: String
+  }` schema that is unwrapped to a string. Document annotation reads only the
+  first 8 pages and says nothing past them (a 10-page PDF returns 200), so
+  when `pages_processed` exceeds 8 the answer comes from one text-only
+  `operate()` over the markdown on `PROVIDER.MISTRAL.DEFAULT`; its tokens join
+  `usage.tokens` and `usage.cost`, and the truncated native answer stays on
+  `annotations`. `providerOptions.document_annotation_format` still wins.
+- **Emulated** engines see one page per call, so no call sees the document.
+  After transcription, `src/ocr/answerOcr.ts` makes one more text-only
+  `operate()` on the same model: the markdown in `<document>` tags, then the
+  task last so a long document does not pull the model back into
+  transcribing.
+- **LlamaParse** generates no text and throws `NotImplementedError` before
+  submitting a job, so a chain moves to the next engine at no cost.
+
+**Mistral markdown is self-contained** (`src/providers/mistral/ocrPage.ts`).
+Mistral replaces extracted elements with links to entries elsewhere on the
+page: `[tbl-0.md](tbl-0.md)` whenever `table_format` is sent, and
+`![img-0.jpeg](img-0.jpeg)` for every image. The provider resolves both, with
+no option to turn it on:
+
+- **Tables are inlined.** Each placeholder becomes the table's `content`, in
+  the syntax `tables` selects.
+- **Images are described.** Every request carries
+  `DEFAULT_BBOX_ANNOTATION_FORMAT`, a `{ image_type, description }` schema
+  whose enum names signatures, seals, and stamps (a generic schema labeled a
+  signature a "line graph"). The parsed annotation lands on the image as
+  `annotation`, `description`, and `type`, and the description replaces the
+  alt text: `![Notary seal](img-2.jpeg)`. A caller replaces the schema with
+  `providerOptions.bbox_annotation_format` or disables it with `null`; a
+  non-JSON annotation is used as the description verbatim.
+- **Blocks are rendered.** OCR 4 returns `blocks` in reading order, typed
+  (`title`, `text`, `table`, `image`, `caption`, `signature`, `header`,
+  `footer`, ...). When present, page markdown is rebuilt from them so the
+  type survives: a `signature` block, which the vendor markdown flattens to a
+  bare name, renders as `[Signature: Jane Q Doe]`. Header and footer blocks
+  are skipped once `extract_header`/`extract_footer` moves them to their own
+  fields. A page without blocks keeps the vendor markdown with placeholders
+  resolved.
+
+Annotation bills at `PAGE_COST_ANNOTATED` ($5 per 1,000 pages on
+`mistral-ocr-4-1`, against $4 unannotated), so `usage.cost` uses that rate
+unless the caller disables annotation.
 
 **Emulation.** A provider with `operate` but no `ocr` transcribes through
 `src/ocr/OcrEmulator.ts`, which mirrors `question`'s emulator: one
@@ -616,7 +680,8 @@ A provider with neither (`typesafe`) fails the attempt with
 
 **Pricing.** OCR bills per page, which `LlmModelCost` cannot express, so the
 engines are absent from `COST` and priced in `PAGE_COST` (USD per 1,000
-pages, keyed by literal id). LlamaParse bills credits at
+pages, keyed by literal id). An engine that bills annotated pages at their own
+rate carries it in `PAGE_COST_ANNOTATED`. LlamaParse bills credits at
 `PROVIDER.LLAMACLOUD.CREDIT_COST` per 1,000; a job's recorded `credits` win
 over the per-page estimate when the API has them.
 

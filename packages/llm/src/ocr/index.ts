@@ -1,3 +1,4 @@
+export { answerOcr, buildAnswerInput, wantsOcrAnswer } from "./answerOcr.js";
 export { expandPageSelection } from "./expandPageSelection.js";
 export {
   buildOcrFormat,
