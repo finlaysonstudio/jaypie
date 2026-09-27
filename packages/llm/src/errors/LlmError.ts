@@ -25,6 +25,7 @@ export interface LlmErrorOptions {
 const ABORT_MESSAGE = "Request aborted by caller";
 const ABORT_STATUS = 499;
 const ABORT_TITLE = "Client Closed Request";
+const TIMEOUT_MESSAGE = "Request attempt timed out";
 
 //
 //
@@ -155,5 +156,23 @@ export class LlmTransientError extends LlmError {
       ...options,
     });
     this.name = "LlmTransientError";
+  }
+}
+
+/**
+ * A provider attempt outlived its `timeout` deadline and was aborted. Unlike
+ * {@link LlmAbortError}, the caller did not ask for it: the attempt retries on
+ * the transient budget, and a fallback chain moves to its next model.
+ */
+export class LlmTimeoutError extends LlmTransientError {
+  readonly timeoutMs?: number;
+
+  constructor(
+    message: string = TIMEOUT_MESSAGE,
+    { timeoutMs, ...options }: LlmErrorOptions & { timeoutMs?: number } = {},
+  ) {
+    super(message, options);
+    this.name = "LlmTimeoutError";
+    this.timeoutMs = timeoutMs;
   }
 }

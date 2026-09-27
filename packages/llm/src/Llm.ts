@@ -284,7 +284,13 @@ class Llm implements LlmProvider {
           input,
           instance === this
             ? attemptOptions
-            : scopeFallbackOptions(attemptOptions, { config }),
+            : {
+                ...scopeFallbackOptions(attemptOptions, { config }),
+                // A chain entry's own deadline replaces the call's
+                ...(config?.timeout !== undefined
+                  ? { timeout: config.timeout }
+                  : {}),
+              },
         );
         const settled = {
           ...response,

@@ -1,6 +1,8 @@
 import { abortableSleep } from "../../util/abortableSleep.js";
 import { combineAbortSignals } from "../../util/abortSignal.js";
+import { armAttemptTimeout } from "../../util/attemptTimeout.js";
 import { getLogger } from "../../util/index.js";
+import { LlmTimeoutError } from "../../errors/LlmError.js";
 import { toAbortError } from "../../errors/toAbortError.js";
 import { createStaleRejectionGuard } from "./createStaleRejectionGuard.js";
 import {
@@ -45,6 +47,11 @@ export interface ExecuteOptions {
   hooks?: LlmHooks;
   /** Caller-owned cancellation; linked into every attempt's signal */
   signal?: AbortSignal;
+  /**
+   * Per-attempt deadline in milliseconds. A stalled attempt is aborted and
+   * throws {@link LlmTimeoutError}, retried on the transient budget.
+   */
+  timeout?: number;
 }
 
 //
@@ -98,7 +105,8 @@ export class RetryExecutor {
    * when one was passed. On failure, the attempt's controller is aborted before
    * sleeping — this kills lingering socket callbacks from the previous request
    * and prevents stale async errors from escaping the retry loop. A caller
-   * abort is terminal: it throws {@link LlmAbortError} without retrying.
+   * abort is terminal: it throws {@link LlmAbortError} without retrying. An
+   * attempt outliving `timeout` is aborted and treated as transient.
    *
    * @param operation - The async operation to execute (receives AbortSignal)
    * @param options - Execution options including context, hooks, and signal
@@ -128,11 +136,20 @@ export class RetryExecutor {
         }
 
         const controller = new AbortController();
+        const deadline = armAttemptTimeout({
+          controller,
+          model: options.context.model,
+          provider: options.context.provider,
+          timeout: options.timeout,
+        });
 
         try {
-          const result = await operation(
-            combineAbortSignals({ controller, signal: options.signal }),
-          );
+          const result = await Promise.race([
+            operation(
+              combineAbortSignals({ controller, signal: options.signal }),
+            ),
+            deadline.expired,
+          ]);
 
           if (attempt > 0) {
             log.debug(`API call succeeded after ${attempt} retries`);
@@ -140,7 +157,9 @@ export class RetryExecutor {
 
           return result;
         } catch (error: unknown) {
+          deadline.clear();
           controller.abort("retry");
+          const timedOut = error instanceof LlmTimeoutError;
 
           guard.recordCaught(error);
           guard.install();
@@ -157,7 +176,9 @@ export class RetryExecutor {
           // waits the provider's suggested delay rather than a backoff ramp.
           // Quota is a sibling category and stays terminal: waiting does not
           // refill an exhausted plan.
-          const classified = this.errorClassifier.classify(error);
+          const classified: ClassifiedError = timedOut
+            ? { category: ErrorCategory.Retryable, error, shouldRetry: true }
+            : this.errorClassifier.classify(error);
           if (classified.category === ErrorCategory.RateLimit) {
             if (!this.policy.shouldRetryRateLimit(rateLimitAttempt)) {
               log.error(
@@ -212,11 +233,13 @@ export class RetryExecutor {
               error,
             });
 
-            throw this.toTerminalError(error, options.context);
+            throw timedOut
+              ? error
+              : this.toTerminalError(error, options.context);
           }
 
           // Check if error is not retryable
-          if (!this.errorClassifier.isRetryable(error)) {
+          if (!timedOut && !this.errorClassifier.isRetryable(error)) {
             log.error("API call failed with non-retryable error");
             log.var({ error });
 
@@ -231,7 +254,7 @@ export class RetryExecutor {
           }
 
           // Warn if this is an unknown error type
-          if (!this.errorClassifier.isKnownError(error)) {
+          if (!timedOut && !this.errorClassifier.isKnownError(error)) {
             log.warn("API returned unknown error type, will retry");
             log.var({ error });
           }
@@ -248,6 +271,8 @@ export class RetryExecutor {
 
           await abortableSleep({ ms: delay, signal: options.signal });
           attempt++;
+        } finally {
+          deadline.clear();
         }
       }
     } finally {

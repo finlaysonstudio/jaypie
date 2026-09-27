@@ -58,6 +58,7 @@ import {
   RetryExecutor,
   RetryPolicy,
 } from "./retry/index.js";
+import { resolveAttemptTimeout } from "../util/attemptTimeout.js";
 import {
   OperateContext,
   OperateLoopState,
@@ -667,6 +668,7 @@ export class OperateLoop {
             },
             hooks: hooksWithProgress,
             signal: options.signal,
+            timeout: resolveAttemptTimeout(options.timeout),
           },
         );
 

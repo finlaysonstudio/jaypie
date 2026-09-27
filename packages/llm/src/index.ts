@@ -101,6 +101,7 @@ export {
   LlmError,
   LlmQuotaError,
   LlmRateLimitError,
+  LlmTimeoutError,
   LlmTransientError,
   LlmUnrecoverableError,
 } from "./errors/LlmError.js";

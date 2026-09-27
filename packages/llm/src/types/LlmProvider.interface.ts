@@ -234,6 +234,11 @@ export interface LlmFallbackConfig {
    * (or model) and would break the request.
    */
   providerOptions?: JsonObject;
+  /**
+   * Per-attempt deadline in milliseconds for this entry only, replacing the
+   * call's `timeout` when it serves the request. `false` disables it.
+   */
+  timeout?: number | false;
 }
 
 export interface LlmMessageOptions {
@@ -606,6 +611,16 @@ export interface LlmOperateOptions {
   signal?: AbortSignal;
   system?: string;
   temperature?: number;
+  /**
+   * Per-attempt deadline in milliseconds. An `operate()` attempt still
+   * unanswered at the deadline is aborted and throws `LlmTimeoutError`: it
+   * retries on the transient budget, and a fallback chain moves straight to
+   * its next model (the linger pass keeps the deadline). For `stream()` it is
+   * an idle timeout, reset by every chunk. Unset or `false` applies none,
+   * leaving the runtime's own socket timeouts (undici waits 300 s for
+   * headers). A fallback entry's `timeout` replaces it for that entry.
+   */
+  timeout?: number | false;
   tools?: LlmTool[] | Toolkit;
   turns?: boolean | number;
   user?: string;

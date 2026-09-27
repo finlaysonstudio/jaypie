@@ -35,6 +35,11 @@ import {
 } from "../observability/llmobs.js";
 import { abortableSleep } from "../util/abortableSleep.js";
 import { combineAbortSignals } from "../util/abortSignal.js";
+import {
+  armAttemptTimeout,
+  resolveAttemptTimeout,
+} from "../util/attemptTimeout.js";
+import { LlmTimeoutError } from "../errors/LlmError.js";
 import { toAbortError } from "../errors/toAbortError.js";
 import { getLogger, maxTurnsFromOptions, tallyOperate } from "../util/index.js";
 import { persistExchange } from "../observability/exchangeStore.js";
@@ -53,6 +58,7 @@ import {
   RetryPolicy,
 } from "./retry/index.js";
 import {
+  ClassifiedError,
   ErrorCategory,
   OperateContext,
   OperateRequest,
@@ -622,6 +628,8 @@ export class StreamLoop {
     let attempt = 0;
     let rateLimitAttempt = 0;
     let chunksYielded = false;
+    // Idle deadline: the longest the provider may go without sending a chunk
+    const timeout = resolveAttemptTimeout(options.timeout);
 
     // Guard against stale rejections firing after the stream loop has already
     // caught the originating error: undici socket teardown and twin
@@ -655,6 +663,14 @@ export class StreamLoop {
 
         const controller = new AbortController();
         activeController = controller;
+        const deadline = armAttemptTimeout({
+          controller,
+          model: options.model ?? this.adapter.defaultModel,
+          provider: this.adapter.name,
+          timeout,
+        });
+        let iterator: AsyncIterator<LlmStreamChunk> | undefined;
+        let iteratorDone = false;
 
         try {
           // Execute streaming request
@@ -663,8 +679,23 @@ export class StreamLoop {
             providerRequest,
             combineAbortSignals({ controller, signal: options.signal }),
           );
+          iterator = streamGenerator[Symbol.asyncIterator]();
 
-          for await (const chunk of streamGenerator) {
+          while (true) {
+            // The clock runs only while waiting on the provider, never while
+            // the consumer holds a yielded chunk
+            deadline.reset();
+            const next = await Promise.race([
+              iterator.next(),
+              deadline.expired,
+            ]);
+            deadline.clear();
+            if (next.done) {
+              iteratorDone = true;
+              break;
+            }
+            const chunk = next.value;
+
             // Pass through text chunks
             if (chunk.type === LlmStreamChunkType.Text) {
               chunksYielded = true;
@@ -705,7 +736,9 @@ export class StreamLoop {
           }
           break;
         } catch (error: unknown) {
+          deadline.clear();
           controller.abort("retry");
+          const timedOut = error instanceof LlmTimeoutError;
 
           guard.recordCaught(error);
           guard.install();
@@ -757,7 +790,9 @@ export class StreamLoop {
           // A rate limit draws on its own budget and waits the provider's
           // suggested delay. Nothing has been yielded at this point, so the
           // wait is invisible to the consumer.
-          const classified = this.adapter.classifyError(error);
+          const classified: ClassifiedError = timedOut
+            ? { category: ErrorCategory.Retryable, error, shouldRetry: true }
+            : this.adapter.classifyError(error);
           if (classified.category === ErrorCategory.RateLimit) {
             if (!policy.shouldRetryRateLimit(rateLimitAttempt)) {
               log.error(
@@ -792,17 +827,19 @@ export class StreamLoop {
           // Check if we've exhausted retries or error is not retryable
           if (
             !policy.shouldRetry(attempt) ||
-            !this.adapter.isRetryableError(error)
+            (!timedOut && !this.adapter.isRetryableError(error))
           ) {
             log.error(
               `Stream request failed after ${policy.maxRetries} retries`,
             );
             log.var({ error });
             llmSpan?.finish();
-            throw toLlmError(classified, {
-              model: options.model ?? this.adapter.defaultModel,
-              provider: this.adapter.name,
-            });
+            throw timedOut
+              ? error
+              : toLlmError(classified, {
+                  model: options.model ?? this.adapter.defaultModel,
+                  provider: this.adapter.name,
+                });
           }
 
           const delay = policy.getDelayForAttempt(attempt);
@@ -812,6 +849,13 @@ export class StreamLoop {
           await abortableSleep({ ms: delay, signal: options.signal });
           attempt++;
           state.retries++;
+        } finally {
+          deadline.clear();
+          // Close an unfinished provider stream without awaiting it: after a
+          // timeout its pending next() settles only once the abort lands
+          if (iterator && !iteratorDone) {
+            iterator.return?.()?.catch(() => {});
+          }
         }
       }
     } finally {

@@ -747,4 +747,82 @@ describe("RetryExecutor", () => {
       expect(operation).toHaveBeenCalledTimes(1);
     });
   });
+
+  // Attempt Timeout
+  describe("Attempt Timeout", () => {
+    const mockContext = {
+      input: "test",
+      options: {},
+      providerRequest: {},
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+      vi.useRealTimers();
+    });
+
+    it("aborts a stalled attempt at the deadline and throws a timeout error", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 0 }),
+      });
+      let attemptSignal: AbortSignal | undefined;
+      const operation = vi.fn((signal: AbortSignal) => {
+        attemptSignal = signal;
+        return new Promise<string>(() => {});
+      });
+
+      const pending = executor.execute(operation, {
+        context: mockContext,
+        timeout: 1000,
+      });
+      const settled = pending.catch((thrown) => thrown);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await settled).toMatchObject({ name: "LlmTimeoutError" });
+
+      expect(attemptSignal?.aborted).toBe(true);
+    });
+
+    it("retries a timed-out attempt on the transient budget", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 1 }),
+      });
+      const operation = vi
+        .fn<() => Promise<string>>()
+        .mockImplementationOnce(() => new Promise(() => {}))
+        .mockResolvedValueOnce("success");
+
+      const pending = executor.execute(operation, {
+        context: mockContext,
+        timeout: 1000,
+      });
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(await pending).toBe("success");
+      expect(operation).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not report a timeout as a caller abort", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 0 }),
+      });
+      const caller = new AbortController();
+      const operation = vi.fn(() => new Promise<string>(() => {}));
+
+      const pending = executor.execute(operation, {
+        context: mockContext,
+        signal: caller.signal,
+        timeout: 1000,
+      });
+      const settled = pending.catch((thrown) => thrown);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await settled).toMatchObject({ name: "LlmTimeoutError" });
+    });
+  });
 });

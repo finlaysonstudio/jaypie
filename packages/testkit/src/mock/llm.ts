@@ -248,6 +248,7 @@ export const LlmAbortError = original.LlmAbortError;
 export const LlmError = original.LlmError;
 export const LlmQuotaError = original.LlmQuotaError;
 export const LlmRateLimitError = original.LlmRateLimitError;
+export const LlmTimeoutError = original.LlmTimeoutError;
 export const LlmTransientError = original.LlmTransientError;
 export const LlmUnrecoverableError = original.LlmUnrecoverableError;
 export const extractReasoning = original.extractReasoning;
