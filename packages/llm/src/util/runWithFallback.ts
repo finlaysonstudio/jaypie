@@ -7,6 +7,11 @@ export interface FallbackAttemptContext<TInstance> {
   /** 1 for the primary, incrementing through the chain and the linger pass */
   attempts: number;
   /**
+   * The fallback entry this attempt serves; undefined for the primary
+   * (including its linger pass)
+   */
+  config?: LlmFallbackConfig;
+  /**
    * True while working down a chain: the attempt should throw on its first
    * failure (rate limit, transient, anything) so the next model takes over.
    * False on a lone model and on the final linger pass, which keep the full
@@ -49,9 +54,12 @@ export async function runWithFallback<TInstance, TResult>({
   primaryProvider: string;
 }): Promise<TResult> {
   const failFast = chain.length > 0;
-  const candidates: Array<() => { instance: TInstance; provider: string }> = [
+  const candidates: Array<
+    () => { config?: LlmFallbackConfig; instance: TInstance; provider: string }
+  > = [
     () => ({ instance: primary, provider: primaryProvider }),
     ...chain.map((config) => () => ({
+      config,
       instance: createInstance(config),
       provider: config.provider,
     })),
@@ -67,11 +75,12 @@ export async function runWithFallback<TInstance, TResult>({
 
   for (const [index, candidate] of candidates.entries()) {
     attempts++;
-    const { instance, provider } = candidate();
+    const { config, instance, provider } = candidate();
     const lingering = failFast && index === candidates.length - 1;
     try {
       return await attempt({
         attempts,
+        config,
         failFast: failFast && !lingering,
         instance,
         provider,

@@ -809,6 +809,23 @@ const response = await Llm.operate(input, {
 });
 ```
 
+### Provider Options in a Chain
+
+`providerOptions` belongs to the model it was written for. Per-call `providerOptions` reach the primary only (including its linger pass); a fallback receives only the `providerOptions` on its own entry, or none. Options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) would otherwise break every other provider in the chain. Prefer first-class `effort` and `temperature`, which translate per provider.
+
+```typescript
+const response = await llm.operate(input, {
+  fallback: [
+    {
+      provider: "google",
+      model: LLM.MODEL.GEMINI_FLASH,
+      providerOptions: { thinkingConfig: { thinkingBudget: 1024 } },
+    },
+  ],
+  providerOptions: { reasoning: { summary: "detailed" } }, // primary only
+});
+```
+
 ### Fallback Response Metadata
 
 ```typescript

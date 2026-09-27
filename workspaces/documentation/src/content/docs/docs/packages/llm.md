@@ -34,7 +34,7 @@ across releases; the id behind it moves whenever the provider ships a successor.
 |----------|--------|--------------|
 | `anthropic` | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE` | `ANTHROPIC_API_KEY` |
 | `bedrock` | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE` | (AWS credentials) |
-| `fireworks` | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
+| `fireworks` | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
 | `google` | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO` | `GOOGLE_API_KEY` |
 | `meta` | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR` | `META_API_KEY` (or `MODEL_API_KEY`) |
 | `mistral` | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`) | `MISTRAL_API_KEY` |
@@ -129,6 +129,23 @@ const response = await llm.operate(input, { fallback: false });
 const response = await Llm.operate(input, {
   model: LLM.MODEL.SONNET,
   fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
+});
+```
+
+### Provider Options in a Chain
+
+`providerOptions` belongs to the model it was written for. Per-call `providerOptions` reach the primary only (including its linger pass); a fallback receives only the `providerOptions` on its own entry, or none. Options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) would otherwise break every other provider in the chain. Prefer first-class `effort` and `temperature`, which translate per provider.
+
+```typescript
+const response = await llm.operate(input, {
+  fallback: [
+    {
+      provider: "google",
+      model: LLM.MODEL.GEMINI_FLASH,
+      providerOptions: { thinkingConfig: { thinkingBudget: 1024 } },
+    },
+  ],
+  providerOptions: { reasoning: { summary: "detailed" } }, // primary only
 });
 ```
 

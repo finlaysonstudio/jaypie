@@ -243,6 +243,40 @@ describe("Llm.ocr", () => {
       expect(result.fallbackUsed).toBe(true);
     });
 
+    it("Scopes providerOptions to the engine they were written for", async () => {
+      llamaCloudOcrMock.mockRejectedValueOnce(
+        new LlmUnrecoverableError("llama down"),
+      );
+      const tier = { tier: "cost_effective" };
+      const bbox = { bbox_annotation_format: { type: "text" } };
+      await Llm.ocr(DOCUMENT_URL, {
+        fallback: [
+          { provider: PROVIDER.MISTRAL.NAME },
+          { provider: PROVIDER.MISTRAL.NAME, providerOptions: bbox },
+        ],
+        llm: PROVIDER.LLAMACLOUD.NAME,
+        providerOptions: tier,
+      });
+      expect(llamaCloudOcrMock.mock.calls[0][1].providerOptions).toEqual(tier);
+      expect(mistralOcrMock.mock.calls[0][1].providerOptions).toBeUndefined();
+
+      mistralOcrMock.mockRejectedValueOnce(
+        new LlmUnrecoverableError("mistral down"),
+      );
+      llamaCloudOcrMock.mockRejectedValueOnce(
+        new LlmUnrecoverableError("llama down"),
+      );
+      await Llm.ocr(DOCUMENT_URL, {
+        fallback: [
+          { provider: PROVIDER.MISTRAL.NAME },
+          { provider: PROVIDER.MISTRAL.NAME, providerOptions: bbox },
+        ],
+        llm: PROVIDER.LLAMACLOUD.NAME,
+        providerOptions: tier,
+      });
+      expect(mistralOcrMock.mock.calls[2][1].providerOptions).toEqual(bbox);
+    });
+
     it("Runs on an instance built for a provider", async () => {
       const llm = new Llm(PROVIDER.LLAMACLOUD.NAME);
       const result = await llm.ocr(DOCUMENT_URL);
