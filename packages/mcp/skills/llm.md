@@ -779,6 +779,7 @@ for await (const chunk of Llm.stream(input, {
 
 - A caller abort is terminal and is never retried. `operate()` rejects with `LlmAbortError` (`category: "aborted"`, status 499); `stream()` yields an error chunk with the same status, then its final `done` chunk.
 - An already-aborted signal fails before the first request goes out.
+- Every provider forwards the signal to its request, Google included.
 - Abandoning a `stream()` generator (`break`, `return`, or a thrown error in the consumer) aborts the upstream request on teardown, with or without a `signal`.
 - The exchange envelope still settles on an abort, carrying the partial usage and history with `status: "incomplete"`.
 
@@ -827,6 +828,27 @@ const response = await llm.operate(input, {
   providerOptions: { reasoning: { summary: "detailed" } }, // primary only
 });
 ```
+
+### Attempt Timeout
+
+`timeout` sets a per-attempt deadline in milliseconds. Without it, a provider that accepts the connection but never answers holds the chain until the runtime gives up (undici waits 300 s for response headers). A stalled attempt is aborted and throws `LlmTimeoutError` (a `LlmTransientError`, status 504, with `timeoutMs`):
+
+```typescript
+const response = await llm.operate(input, {
+  fallback: [
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "anthropic", model: LLM.MODEL.OPUS, timeout: 180_000 },
+  ],
+  timeout: 60_000,
+});
+```
+
+- Down a chain, a timeout moves to the next entry at once. On a single model or the linger pass it retries on the transient budget, each retry with the same deadline.
+- A timeout is never an `LlmAbortError`: the caller's `signal` still owns cancellation.
+- An entry's own `timeout` replaces the call's for that entry; `false` disables it.
+- `stream()` treats `timeout` as an idle timeout: it restarts with every chunk and pauses while the consumer holds one. A stall after partial output yields an error chunk.
+- No default applies; unset means no deadline. Size it above the slowest legitimate non-streaming response (long reasoning runs take minutes).
+- `Llm.ocr` keeps `timeout` as the LlamaParse job deadline.
 
 ### Fallback Response Metadata
 

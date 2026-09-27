@@ -1068,6 +1068,50 @@ describe("GoogleAdapter", () => {
           googleAdapter.executeRequest(mockClient, request, controller.signal),
         ).rejects.toThrow("real error");
       });
+
+      it("forwards the signal to the client", async () => {
+        const controller = new AbortController();
+        const mockGenerateContent = vi.fn().mockResolvedValue({});
+        const mockClient = {
+          models: { generateContent: mockGenerateContent },
+        };
+
+        await googleAdapter.executeRequest(
+          mockClient,
+          { contents: [], model: "gemini-2.0-flash" },
+          controller.signal,
+        );
+
+        expect(mockGenerateContent).toHaveBeenCalledWith(expect.anything(), {
+          signal: controller.signal,
+        });
+      });
+    });
+
+    describe("executeStreamRequest", () => {
+      it("forwards the signal to the client", async () => {
+        const controller = new AbortController();
+        const mockGenerateContentStream = vi
+          .fn()
+          .mockResolvedValue((async function* () {})());
+        const mockClient = {
+          models: { generateContentStream: mockGenerateContentStream },
+        };
+
+        const stream = googleAdapter.executeStreamRequest(
+          mockClient,
+          { contents: [], model: "gemini-2.0-flash" },
+          controller.signal,
+        );
+        for await (const chunk of stream) {
+          void chunk;
+        }
+
+        expect(mockGenerateContentStream).toHaveBeenCalledWith(
+          expect.anything(),
+          { signal: controller.signal },
+        );
+      });
     });
   });
 

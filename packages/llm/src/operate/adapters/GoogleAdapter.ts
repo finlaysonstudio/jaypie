@@ -422,11 +422,14 @@ export class GoogleAdapter extends BaseProviderAdapter {
     try {
       // Cast config to any to bypass strict type checking between our internal types
       // and the SDK's types. The SDK will validate at runtime.
-      const response = await genAI.models.generateContent({
-        model: geminiRequest.model,
-        contents: geminiRequest.contents as any,
-        config: geminiRequest.config as any,
-      });
+      const response = await genAI.models.generateContent(
+        {
+          model: geminiRequest.model,
+          contents: geminiRequest.contents as any,
+          config: geminiRequest.config as any,
+        },
+        signal ? { signal } : undefined,
+      );
 
       return response as unknown as GeminiRawResponse;
     } catch (error) {
@@ -442,11 +445,14 @@ export class GoogleAdapter extends BaseProviderAdapter {
         );
         const fallbackRequest =
           this.toFallbackStructuredOutputRequest(geminiRequest);
-        const response = await genAI.models.generateContent({
-          model: fallbackRequest.model,
-          contents: fallbackRequest.contents as any,
-          config: fallbackRequest.config as any,
-        });
+        const response = await genAI.models.generateContent(
+          {
+            model: fallbackRequest.model,
+            contents: fallbackRequest.contents as any,
+            config: fallbackRequest.config as any,
+          },
+          signal ? { signal } : undefined,
+        );
         return response as unknown as GeminiRawResponse;
       }
 
@@ -500,17 +506,18 @@ export class GoogleAdapter extends BaseProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk> {
-    // signal is accepted for interface conformance; Gemini SDK does not natively support it
-    void signal;
     const genAI = client as GoogleClient;
     const geminiRequest = request as GeminiRequest;
 
     // Use generateContentStream for streaming
-    const stream = await genAI.models.generateContentStream({
-      model: geminiRequest.model,
-      contents: geminiRequest.contents as any,
-      config: geminiRequest.config as any,
-    });
+    const stream = await genAI.models.generateContentStream(
+      {
+        model: geminiRequest.model,
+        contents: geminiRequest.contents as any,
+        config: geminiRequest.config as any,
+      },
+      signal ? { signal } : undefined,
+    );
 
     // Track usage for final chunk
     let inputTokens = 0;

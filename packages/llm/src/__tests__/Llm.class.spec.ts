@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Subject
 import Llm from "../Llm.js";
 import { DEFAULT, PROVIDER } from "../constants.js";
-import { LlmAbortError } from "../errors/LlmError.js";
+import { LlmAbortError, LlmTimeoutError } from "../errors/LlmError.js";
 
 // Track mock calls for testing
 let openAiOperateMock = vi.fn();
@@ -368,6 +368,49 @@ describe("Llm Class", () => {
         await expect(llm.operate("test")).rejects.toBeInstanceOf(LlmAbortError);
         expect(openAiOperateMock).toHaveBeenCalledTimes(1);
         expect(anthropicOperateMock).not.toHaveBeenCalled();
+      });
+
+      it("falls over on an attempt timeout", async () => {
+        openAiOperateMock.mockRejectedValueOnce(new LlmTimeoutError());
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        const result = await llm.operate("test");
+
+        expect(result.fallbackUsed).toBe(true);
+        expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("attempt timeout", () => {
+      it("carries the call timeout to every chain attempt and the linger pass", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+
+        await expect(llm.operate("test", { timeout: 60_000 })).rejects.toThrow(
+          "OpenAI failed",
+        );
+
+        expect(openAiOperateMock.mock.calls[0][1].timeout).toBe(60_000);
+        expect(anthropicOperateMock.mock.calls[0][1].timeout).toBe(60_000);
+        expect(openAiOperateMock.mock.calls[1][1].timeout).toBe(60_000);
+      });
+
+      it("lets a chain entry replace the call timeout", async () => {
+        openAiOperateMock.mockRejectedValueOnce(new Error("OpenAI failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME, timeout: 120_000 }],
+        });
+        await llm.operate("test", { timeout: 60_000 });
+
+        expect(openAiOperateMock.mock.calls[0][1].timeout).toBe(60_000);
+        expect(anthropicOperateMock.mock.calls[0][1].timeout).toBe(120_000);
       });
     });
 

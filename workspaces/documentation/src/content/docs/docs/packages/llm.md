@@ -65,6 +65,7 @@ const response = await Llm.operate("What is 2+2?", {
 | `model` | `string` | Model identifier |
 | `system` | `string` | System prompt |
 | `temperature` | `number` | Response randomness (0-1) |
+| `timeout` | `number \| false` | Per-attempt deadline in ms; idle timeout for `stream` |
 | `tools` | `Toolkit` | Available tools |
 
 ## Llm.stream
@@ -146,6 +147,20 @@ const response = await llm.operate(input, {
     },
   ],
   providerOptions: { reasoning: { summary: "detailed" } }, // primary only
+});
+```
+
+### Attempt Timeout
+
+`timeout` sets a per-attempt deadline in milliseconds. Without it, a provider that accepts the connection but never answers holds the chain until the runtime gives up (undici waits 300 s for response headers). A stalled attempt is aborted and throws `LlmTimeoutError` (a `LlmTransientError`, status 504). Down a chain it moves to the next entry at once; on a single model or the linger pass it retries with the same deadline. An entry's own `timeout` replaces the call's. No default applies. `stream()` treats it as an idle timeout, restarted by every chunk.
+
+```typescript
+const response = await llm.operate(input, {
+  fallback: [
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "anthropic", model: LLM.MODEL.OPUS, timeout: 180_000 },
+  ],
+  timeout: 60_000,
 });
 ```
 

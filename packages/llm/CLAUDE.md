@@ -320,6 +320,16 @@ with its full retry policy (the **linger pass**), and its error is final. A
 caller abort (`LlmAbortError`) is terminal and never falls over. The loop lives
 in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
+`timeout` (on the call or a fallback entry, which replaces the call's) is a
+per-attempt deadline, with no default. `src/util/attemptTimeout.ts` races each
+attempt against it: on expiry it rejects with `LlmTimeoutError` *before*
+aborting the attempt's controller, because adapters swallow errors and resolve
+empty once their signal aborts. `RetryExecutor` treats the timeout as transient
+without consulting the adapter's classifier, so a chain falls over and a lone
+model or linger pass retries. `StreamLoop` makes it an idle timeout, armed only
+while awaiting the provider's next chunk. `ocr` keeps `timeout` as its
+LlamaParse job ceiling.
+
 `providerOptions` never travel down the chain. Per-call `providerOptions` reach
 the primary only (its linger pass included); a fallback gets its own entry's
 `providerOptions` or none. `src/util/scopeFallbackOptions.ts` also clears the
@@ -374,6 +384,7 @@ later); `LlmError` passes the option through and declares no field of its own.
 | `LlmQuotaError`         | `quota`         | 402      | Quota exhausted or insufficient funds; `reason: "quota" \| "billing"`              |
 | `LlmUnrecoverableError` | `unrecoverable` | 502      | Bad request / auth / not found                                                     |
 | `LlmTransientError`     | `retryable`     | 504      | A transient/unknown error survived the retry budget                                |
+| `LlmTimeoutError`       | `retryable`     | 504      | Extends `LlmTransientError`; an attempt outlived `timeout`; carries `timeoutMs`    |
 
 ```typescript
 import { Llm, LLM, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
