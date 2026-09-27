@@ -246,6 +246,8 @@ const toolkit = new Toolkit([
 ]);
 ```
 
+Google converts tool parameters to Gemini's OpenAPI 3.0 subset, stripping `$schema`, `$defs`, `$ref`, `additionalProperties`, and `const` at every depth. Literal and `$ref` constraints do not reach Gemini; spell them out in `description` or `enum` when they matter.
+
 ### Read-Only Tools
 
 Tools may declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to state they carry no side effects. `filter` derives a new Toolkit from the annotation, so a verification or critique pass can check facts without repeating side effects.

@@ -1429,7 +1429,7 @@ describe("GoogleAdapter", () => {
         const declarations = built.config?.tools?.[0].functionDeclarations;
         expect(declarations).toHaveLength(1);
         expect(declarations?.[0].name).toBe("structured_output");
-        expect(declarations?.[0].parameters).toBe(schema);
+        expect(declarations?.[0].parameters).toEqual(schema);
       });
 
       it("does not also send the schema natively on a retry turn", () => {
@@ -1513,6 +1513,163 @@ describe("GoogleAdapter", () => {
         "invalid api key",
       );
       expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Tool schema sanitization", () => {
+    // Shape Zod's z.toJSONSchema emits: $schema, additionalProperties at every
+    // object level, const for literals, and anyOf branches for nullables
+    const ZOD_PARAMETERS = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      additionalProperties: false,
+      properties: {
+        kind: { const: "search", type: "string" },
+        filters: {
+          additionalProperties: false,
+          properties: { tag: { type: "string" } },
+          type: "object",
+        },
+        notes: {
+          anyOf: [
+            {
+              additionalProperties: false,
+              properties: { text: { type: "string" } },
+              type: "object",
+            },
+            { type: "null" },
+          ],
+        },
+        results: {
+          items: {
+            additionalProperties: false,
+            properties: { id: { type: "string" } },
+            type: "object",
+          },
+          type: "array",
+        },
+      },
+      required: ["kind"],
+      type: "object",
+    };
+    const UNSUPPORTED_KEYWORDS = [
+      "$defs",
+      "$ref",
+      "$schema",
+      "additionalProperties",
+      "const",
+    ];
+
+    function findUnsupportedKeywords(value: unknown): string[] {
+      if (Array.isArray(value)) return value.flatMap(findUnsupportedKeywords);
+      if (typeof value !== "object" || value === null) return [];
+      return Object.entries(value).flatMap(([key, child]) => [
+        ...(UNSUPPORTED_KEYWORDS.includes(key) ? [key] : []),
+        ...findUnsupportedKeywords(child),
+      ]);
+    }
+
+    it("sanitizes user tool parameters", () => {
+      const adapter = new GoogleAdapter();
+      const built = adapter.buildRequest({
+        messages: [],
+        model: "gemini-2.5-flash",
+        tools: [
+          {
+            description: "Search",
+            name: "search",
+            parameters: ZOD_PARAMETERS,
+          },
+        ],
+      });
+
+      const declaration = built.config?.tools?.[0].functionDeclarations?.[0];
+      expect(declaration?.name).toBe("search");
+      expect(findUnsupportedKeywords(declaration?.parameters)).toEqual([]);
+      expect(declaration?.parameters).toMatchObject({
+        properties: {
+          filters: { properties: { tag: { type: "string" } } },
+          results: { items: { properties: { id: { type: "string" } } } },
+        },
+        required: ["kind"],
+        type: "object",
+      });
+    });
+
+    it("does not mutate the caller's tool parameters", () => {
+      const adapter = new GoogleAdapter();
+      const parameters = structuredClone(ZOD_PARAMETERS);
+      adapter.buildRequest({
+        messages: [],
+        model: "gemini-2.5-flash",
+        tools: [{ description: "Search", name: "search", parameters }],
+      });
+
+      expect(parameters).toEqual(ZOD_PARAMETERS);
+    });
+
+    it("sanitizes the structured_output fake tool", () => {
+      const adapter = new GoogleAdapter();
+      const built = adapter.buildRequest({
+        format: ZOD_PARAMETERS,
+        messages: [],
+        model: "gemini-2.5-flash",
+        tools: [
+          {
+            description: "Search",
+            name: "search",
+            parameters: ZOD_PARAMETERS,
+          },
+        ],
+      });
+
+      const declarations = built.config?.tools?.[0].functionDeclarations;
+      expect(declarations?.map((d) => d.name)).toEqual([
+        "search",
+        "structured_output",
+      ]);
+      expect(findUnsupportedKeywords(declarations)).toEqual([]);
+    });
+
+    it("sanitizes tools on the native-combo runtime fallback", async () => {
+      const adapter = new GoogleAdapter();
+      const mockGenerateContent = vi
+        .fn()
+        .mockRejectedValueOnce(
+          Object.assign(
+            new Error(
+              "Function calling with a response mime type: 'application/json' is unsupported",
+            ),
+            { status: 400 },
+          ),
+        )
+        .mockResolvedValueOnce({ candidates: [] });
+      const built = adapter.buildRequest({
+        format: ZOD_PARAMETERS,
+        messages: [],
+        model: "gemini-3.1-pro-preview",
+        tools: [
+          {
+            description: "Search",
+            name: "search",
+            parameters: ZOD_PARAMETERS,
+          },
+        ],
+      });
+
+      await adapter.executeRequest(
+        { models: { generateContent: mockGenerateContent } },
+        built,
+      );
+
+      expect(mockGenerateContent).toHaveBeenCalledTimes(2);
+      const declarations =
+        mockGenerateContent.mock.calls[1][0].config.tools?.[0]
+          .functionDeclarations;
+      expect(declarations?.map((d: { name: string }) => d.name)).toEqual([
+        "search",
+        "structured_output",
+      ]);
+      expect(findUnsupportedKeywords(declarations)).toEqual([]);
     });
   });
 });

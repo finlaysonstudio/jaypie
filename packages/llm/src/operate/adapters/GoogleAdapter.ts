@@ -228,12 +228,15 @@ export class GoogleAdapter extends BaseProviderAdapter {
       }
     }
 
+    // Gemini rejects JSON Schema keywords outside its OpenAPI 3.0 subset
+    // (e.g., the `additionalProperties` Zod always emits), failing the whole
+    // request, so tool parameters are converted like `responseSchema`
     if (allTools.length > 0) {
       const functionDeclarations: GeminiFunctionDeclaration[] = allTools.map(
         (tool) => ({
           name: tool.name,
           description: tool.description,
-          parameters: tool.parameters,
+          parameters: jsonSchemaToOpenApi3(tool.parameters),
         }),
       );
 
@@ -470,7 +473,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
       description:
         "Output a structured JSON object, " +
         "use this before your final response to give structured outputs to the user",
-      parameters: schema,
+      parameters: jsonSchemaToOpenApi3(schema),
     };
     const existingDeclarations =
       newConfig.tools?.[0]?.functionDeclarations ?? [];
