@@ -182,6 +182,8 @@ const response = await Llm.operate("What's the weather in NYC?", {
 });
 ```
 
+`parameters` is JSON Schema; `z.toJSONSchema(...)` output works directly. Each provider receives a schema it accepts: Google converts tool parameters (and the `structured_output` tool) to Gemini's OpenAPI 3.0 subset, stripping `$schema`, `$defs`, `$ref`, `additionalProperties`, and `const` at every depth. Literal (`const`) and `$ref` constraints do not reach Gemini; spell them out in `description` or `enum` when they matter.
+
 ### Built-in Tools
 
 ```typescript
