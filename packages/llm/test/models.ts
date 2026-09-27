@@ -95,7 +95,6 @@ const MATRIX_EXPECT: Record<
   string,
   Partial<Record<Capability, ExpectedOutcome>>
 > = {
-  [MODEL.FIREWORKS.DEEPSEEK]: { pdf: "skip", image: "skip" },
   // DEEPSEEK_FLASH and GLM_FLASH advertise supports_image_input; GLM
   // (glm-5p3) does not (Fireworks models API, 2026-09-23).
   [MODEL.FIREWORKS.DEEPSEEK_FLASH]: { pdf: "skip" },

@@ -31,7 +31,9 @@ export const MODEL = {
   MYTHOS: "claude-mythos-5",
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
-    DEEPSEEK: "accounts/fireworks/models/deepseek-v4-pro-0813",
+    // deepseek-v4-pro-0813 left serverless on 2026-09-26 (supportsServerless:
+    // false, no deprecation date); DEEPSEEK now shares the flash id
+    DEEPSEEK: "accounts/fireworks/models/deepseek-v4p1-flash",
     DEEPSEEK_FLASH: "accounts/fireworks/models/deepseek-v4p1-flash",
     GLM: "accounts/fireworks/models/glm-5p3",
     GLM_FLASH: "accounts/fireworks/models/glm-5p3-flash",

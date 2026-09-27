@@ -16,8 +16,9 @@ import { MODEL } from "../constants.js";
  */
 export const HOT_EXCLUDE = new Set<string>([MODEL.MYTHOS]);
 
+// Deduped: catalog aliases may share an id (DEEPSEEK and DEEPSEEK_FLASH)
 const exclude = (models: string[]): string[] =>
-  models.filter((model) => !HOT_EXCLUDE.has(model));
+  [...new Set(models)].filter((model) => !HOT_EXCLUDE.has(model));
 
 export const HOT_MODELS = {
   anthropic: exclude([
