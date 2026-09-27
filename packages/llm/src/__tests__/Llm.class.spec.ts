@@ -454,6 +454,64 @@ describe("Llm Class", () => {
       });
     });
 
+    describe("providerOptions scoping", () => {
+      const reasoning = {
+        reasoning: { effort: "medium", summary: "detailed" },
+      };
+
+      it("does not forward the primary's providerOptions to a fallback", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("terminated"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.GOOGLE.NAME }],
+        });
+        const result = await llm.operate("test", {
+          providerOptions: reasoning,
+        });
+
+        expect(result.provider).toBe("google");
+        expect(openAiOperateMock.mock.calls[0][1].providerOptions).toEqual(
+          reasoning,
+        );
+        expect(
+          geminiOperateMock.mock.calls[0][1].providerOptions,
+        ).toBeUndefined();
+      });
+
+      it("sends a fallback entry its own providerOptions", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("terminated"));
+        const thinking = { thinkingConfig: { thinkingBudget: 1024 } };
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [
+            { provider: PROVIDER.GOOGLE.NAME, providerOptions: thinking },
+          ],
+        });
+        await llm.operate("test", { providerOptions: reasoning });
+
+        expect(geminiOperateMock.mock.calls[0][1].providerOptions).toEqual(
+          thinking,
+        );
+      });
+
+      it("restores the primary's providerOptions on the linger pass", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("terminated"));
+        geminiOperateMock.mockRejectedValue(new Error("Gemini failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.GOOGLE.NAME }],
+        });
+        await expect(
+          llm.operate("test", { providerOptions: reasoning }),
+        ).rejects.toThrow();
+
+        expect(openAiOperateMock).toHaveBeenCalledTimes(2);
+        expect(openAiOperateMock.mock.calls[1][1].providerOptions).toEqual(
+          reasoning,
+        );
+      });
+    });
+
     describe("static method fallback", () => {
       it("works with Llm.operate()", async () => {
         openAiOperateMock.mockRejectedValue(new Error("Primary failed"));

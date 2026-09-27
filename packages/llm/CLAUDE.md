@@ -320,6 +320,11 @@ with its full retry policy (the **linger pass**), and its error is final. A
 caller abort (`LlmAbortError`) is terminal and never falls over. The loop lives
 in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
+`providerOptions` never travel down the chain. Per-call `providerOptions` reach
+the primary only (its linger pass included); a fallback gets its own entry's
+`providerOptions` or none. `src/util/scopeFallbackOptions.ts` also clears the
+per-call `model` for fallbacks. `question` takes no `providerOptions`.
+
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
@@ -1405,8 +1410,15 @@ excluding the model indefinitely.
 responded, burning five cells at the 180-second deadline). The cause was a
 rename: the operator confirmed the id as
 `accounts/fireworks/models/deepseek-v4-pro-0813` on 2026-09-07, so
-`MODEL.FIREWORKS.DEEPSEEK` carries the dated id and runs the matrix again. The
+`MODEL.FIREWORKS.DEEPSEEK` carried the dated id and ran the matrix again. The
 retired id keeps its `COST` entry per policy.
+
+`deepseek-v4-pro-0813` left serverless on 2026-09-26 (`supportsServerless:
+false`, no deprecation date). The operator named
+`accounts/fireworks/models/deepseek-v4p1-flash` as the replacement, so
+`MODEL.FIREWORKS.DEEPSEEK` and `MODEL.FIREWORKS.DEEPSEEK_FLASH` share one id.
+The matrix and hot specs dedupe by id, so it runs once. The dated id keeps its
+`COST` entry per policy.
 
 **Mistral Large was excluded from the live matrix** from 2026-08-30 to
 2026-09-19: the Mistral key answered every capability with "This model is not

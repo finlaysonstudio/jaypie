@@ -424,6 +424,9 @@ async function askLlm(prompt) {
 
 ## Provider-Specific Options
 
+`providerOptions` reach the primary model only. Each `fallback` entry carries
+its own `providerOptions`; the primary's never leak down the chain.
+
 ### Anthropic
 
 `max_tokens` defaults to the model's maximum output (capped at 16,384 for

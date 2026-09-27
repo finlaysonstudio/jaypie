@@ -5,6 +5,7 @@ import { DEFAULT, LlmProviderName, PROVIDER } from "./constants.js";
 import { determineModelProvider } from "./util/determineModelProvider.js";
 import { resolveModelChain } from "./util/resolveModelChain.js";
 import { runWithFallback } from "./util/runWithFallback.js";
+import { scopeFallbackOptions } from "./util/scopeFallbackOptions.js";
 import { emulateQuestion, validateQuestions } from "./question/index.js";
 import { emulateOcr, resolveOcrDocument } from "./ocr/index.js";
 import { emitExchange } from "./operate/exchange/index.js";
@@ -270,15 +271,12 @@ class Llm implements LlmProvider {
     };
 
     return runWithFallback<Llm, LlmOperateResponse>({
-      attempt: async ({ attempts, failFast, instance, provider }) => {
+      attempt: async ({ attempts, config, failFast, instance, provider }) => {
         if (!instance._llm.operate) {
           throw new NotImplementedError(
             `Provider ${provider} does not support operate method`,
           );
         }
-        // A fallback runs its own model: the per-call model named the
-        // primary, and forwarding it would ask the next provider for a
-        // model it does not serve.
         const attemptOptions = failFast
           ? failFastOptions
           : optionsWithoutFallback;
@@ -286,7 +284,7 @@ class Llm implements LlmProvider {
           input,
           instance === this
             ? attemptOptions
-            : { ...attemptOptions, model: undefined },
+            : scopeFallbackOptions(attemptOptions, { config }),
         );
         const settled = {
           ...response,
@@ -367,13 +365,10 @@ class Llm implements LlmProvider {
     const resolvedDocument = await resolveOcrDocument(document);
 
     return runWithFallback<Llm, LlmOcrResponse>({
-      attempt: async ({ attempts, failFast, instance, provider }) => {
+      attempt: async ({ attempts, config, failFast, instance, provider }) => {
         const base = failFast ? failFastOptions : optionsWithoutFallback;
-        // A fallback runs its own model: the per-call model named the
-        // primary, and forwarding it would ask the next provider for a
-        // tier it does not serve.
         const attemptOptions =
-          instance === this ? base : { ...base, model: undefined };
+          instance === this ? base : scopeFallbackOptions(base, { config });
         const response = instance._llm.ocr
           ? await instance._llm.ocr(resolvedDocument, attemptOptions)
           : await emulateOcr({

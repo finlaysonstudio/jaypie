@@ -228,6 +228,12 @@ export interface LlmFallbackConfig {
   model?: string;
   /** API key for this provider (optional, uses environment variable if not specified) */
   apiKey?: string;
+  /**
+   * Provider-specific options for this entry only. A fallback never receives
+   * the primary's `providerOptions`: they are shaped for another provider
+   * (or model) and would break the request.
+   */
+  providerOptions?: JsonObject;
 }
 
 export interface LlmMessageOptions {
