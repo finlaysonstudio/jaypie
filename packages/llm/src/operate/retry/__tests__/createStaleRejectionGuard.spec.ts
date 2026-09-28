@@ -64,6 +64,37 @@ describe("createStaleRejectionGuard", () => {
       expect(calls.length).toBe(1);
       removeSpy.mockRestore();
     });
+
+    it("holds one process listener regardless of concurrent guards (issue #597)", () => {
+      const baseline = process.listenerCount("unhandledRejection");
+      const guards = Array.from({ length: 12 }, () =>
+        createStaleRejectionGuard(),
+      );
+      guards.forEach((guard) => guard.install());
+
+      expect(process.listenerCount("unhandledRejection")).toBe(baseline + 1);
+
+      guards.slice(1).forEach((guard) => guard.remove());
+      expect(process.listenerCount("unhandledRejection")).toBe(baseline + 1);
+
+      guards[0].remove();
+      expect(process.listenerCount("unhandledRejection")).toBe(baseline);
+    });
+
+    it("keeps the shared listener after a redundant remove()", () => {
+      const baseline = process.listenerCount("unhandledRejection");
+      const first = createStaleRejectionGuard();
+      const second = createStaleRejectionGuard();
+      first.install();
+      second.install();
+
+      first.remove();
+      first.remove();
+      expect(process.listenerCount("unhandledRejection")).toBe(baseline + 1);
+
+      second.remove();
+      expect(process.listenerCount("unhandledRejection")).toBe(baseline);
+    });
   });
 
   describe("Suppression", () => {
@@ -132,6 +163,26 @@ describe("createStaleRejectionGuard", () => {
 
       expect(traceMock).not.toHaveBeenCalled();
       guard.remove();
+    });
+
+    it("suppresses a sibling recorded by any active guard", () => {
+      const first = createStaleRejectionGuard();
+      const second = createStaleRejectionGuard();
+      first.install();
+      second.install();
+
+      const upstream = new SyntaxError("Unexpected end of JSON input");
+      second.recordCaught(upstream);
+
+      const rejected = Promise.reject(upstream);
+      rejected.catch(() => {});
+      process.emit("unhandledRejection", upstream, rejected);
+
+      expect(traceMock).toHaveBeenCalledWith(
+        "Suppressed sibling rejection of already-handled error",
+      );
+      first.remove();
+      second.remove();
     });
 
     it("forgets recorded errors after remove()", () => {
