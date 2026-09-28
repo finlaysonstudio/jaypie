@@ -7,9 +7,9 @@ import { isTransientNetworkError } from "./isTransientNetworkError.js";
 //
 
 export interface StaleRejectionGuard {
-  /** Install the unhandledRejection listener (idempotent) */
+  /** Activate the guard on the shared unhandledRejection listener (idempotent) */
   install(): void;
-  /** Remove the listener and forget recorded errors */
+  /** Deactivate the guard and forget recorded errors */
   remove(): void;
   /** Record an error the retry loop has caught and is handling */
   recordCaught(error: unknown): void;
@@ -46,6 +46,56 @@ function matchesCaughtError(
 
 //
 //
+// Registry
+//
+
+interface ActiveGuard {
+  caughtErrors: ReadonlySet<unknown>;
+}
+
+// One process listener serves every active guard so the listener count stays
+// constant under concurrent retries (issue #597)
+const activeGuards = new Set<ActiveGuard>();
+let sharedListener:
+  ((reason: unknown, promise: Promise<unknown>) => void) | undefined;
+
+function handleUnhandledRejection(
+  reason: unknown,
+  promise: Promise<unknown>,
+): void {
+  const log = getLogger();
+  if (isTransientNetworkError(reason)) {
+    promise?.catch?.(() => {});
+    log.trace("Suppressed stale socket error during retry");
+    return;
+  }
+  for (const guard of activeGuards) {
+    if (matchesCaughtError(reason, guard.caughtErrors)) {
+      promise?.catch?.(() => {});
+      log.trace("Suppressed sibling rejection of already-handled error");
+      return;
+    }
+  }
+}
+
+function activate(guard: ActiveGuard): void {
+  activeGuards.add(guard);
+  if (!sharedListener) {
+    sharedListener = handleUnhandledRejection;
+    process.on("unhandledRejection", sharedListener);
+  }
+}
+
+function deactivate(guard: ActiveGuard): void {
+  activeGuards.delete(guard);
+  if (activeGuards.size === 0 && sharedListener) {
+    process.removeListener("unhandledRejection", sharedListener);
+    sharedListener = undefined;
+  }
+}
+
+//
+//
 // Main
 //
 
@@ -58,33 +108,25 @@ function matchesCaughtError(
  *
  * The guard also continues to suppress transient socket teardown errors
  * (e.g. undici `TypeError: terminated`) emitted between attempts.
+ *
+ * All active guards share a single process `unhandledRejection` listener,
+ * installed with the first guard and removed with the last.
  */
 export function createStaleRejectionGuard(): StaleRejectionGuard {
-  const log = getLogger();
   const caughtErrors = new Set<unknown>();
-  let listener:
-    ((reason: unknown, promise: Promise<unknown>) => void) | undefined;
+  const guard: ActiveGuard = { caughtErrors };
+  let installed = false;
 
   return {
     install() {
-      if (listener) return;
-      listener = (reason, promise) => {
-        if (isTransientNetworkError(reason)) {
-          promise?.catch?.(() => {});
-          log.trace("Suppressed stale socket error during retry");
-          return;
-        }
-        if (matchesCaughtError(reason, caughtErrors)) {
-          promise?.catch?.(() => {});
-          log.trace("Suppressed sibling rejection of already-handled error");
-        }
-      };
-      process.on("unhandledRejection", listener);
+      if (installed) return;
+      installed = true;
+      activate(guard);
     },
     remove() {
-      if (listener) {
-        process.removeListener("unhandledRejection", listener);
-        listener = undefined;
+      if (installed) {
+        deactivate(guard);
+        installed = false;
       }
       caughtErrors.clear();
     },
