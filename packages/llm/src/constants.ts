@@ -26,7 +26,7 @@ export const MODEL = {
   // Anthropic
   FABLE: "claude-fable-5-1",
   OPUS: "claude-opus-5-5",
-  SONNET: "claude-sonnet-5",
+  SONNET: "claude-sonnet-5-5",
   HAIKU: "claude-haiku-4-5",
   MYTHOS: "claude-mythos-5",
   // Fireworks (serverless open models; ids provided by operator)
@@ -128,7 +128,7 @@ export const MODEL = {
     GLM: "z-ai/glm-5.2",
     LUNA: "openai/gpt-6-luna",
     MIMO: "xiaomi/mimo-v2.6-flash",
-    SONNET: "anthropic/claude-sonnet-5",
+    SONNET: "anthropic/claude-sonnet-5.5",
   },
 };
 
@@ -314,6 +314,12 @@ export const COST: Record<string, LlmModelCost> = {
   // Anthropic has since made that the standard price and cancelled the
   // scheduled increase to $3/$15, so these are standard rates, not launch ones.
   "claude-sonnet-5": {
+    cachedInputRead: 0.2,
+    cachedInputWrite: { "1h": 4.0, "5m": 2.5 },
+    input: 2.0,
+    output: 10.0,
+  },
+  "claude-sonnet-5-5": {
     cachedInputRead: 0.2,
     cachedInputWrite: { "1h": 4.0, "5m": 2.5 },
     input: 2.0,

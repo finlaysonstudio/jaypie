@@ -424,10 +424,10 @@ export class OpenAiAdapter extends BaseProviderAdapter {
       arguments: string;
     } | null = null;
 
-    // Track usage for final chunk
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let reasoningTokens = 0;
+    // Track usage for final chunk. The Responses API ends on a settled event
+    // (`response.completed`/`response.incomplete`) with no `[DONE]`, so the
+    // done chunk follows the stream's end.
+    let usageResponse: OpenAIRawResponse | undefined;
     const model = (baseRequest.model as string) || this.defaultModel;
 
     // Cast to async iterable - when stream: true, this is always a Stream<ResponseStreamEvent>
@@ -494,10 +494,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         // (output token ceiling, content filter) also reports why it stopped
         const response = (event as { response?: OpenAIRawResponse }).response;
         if (response?.usage) {
-          inputTokens = response.usage.input_tokens || 0;
-          outputTokens = response.usage.output_tokens || 0;
-          reasoningTokens =
-            response.usage.output_tokens_details?.reasoning_tokens || 0;
+          usageResponse = response;
         }
         const incompleteReason = incompleteReasonOf(response);
         if (incompleteReason) {
@@ -506,23 +503,13 @@ export class OpenAiAdapter extends BaseProviderAdapter {
             error: incompleteStop(incompleteReason),
           };
         }
-      } else if (eventType === "response.done") {
-        // Stream done - emit final chunk with usage
-        yield {
-          type: LlmStreamChunkType.Done,
-          usage: [
-            {
-              input: inputTokens,
-              output: outputTokens,
-              reasoning: reasoningTokens,
-              total: inputTokens + outputTokens,
-              provider: this.name,
-              model,
-            },
-          ],
-        };
       }
     }
+
+    yield {
+      type: LlmStreamChunkType.Done,
+      usage: [this.extractUsage(usageResponse ?? {}, model)],
+    };
   }
 
   //

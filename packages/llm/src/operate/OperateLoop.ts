@@ -290,6 +290,7 @@ export class OperateLoop {
 
               // Rebuild request with updated history for next turn
               request = {
+                cache: options.cache,
                 effort: options.effort,
                 format: state.formattedFormat,
                 instructions: options.instructions,

@@ -24,6 +24,8 @@ npm install @jaypie/llm
 | `Llm` | Main LLM class (default export): `operate`, `stream`, `ocr`, `question` |
 | `Toolkit` | Tool collection for function calling |
 | `LlmTool` | Tool type definition |
+| `LLM` | Constants: `MODEL`, `PROVIDER`, `COST`, `PAGE_COST` |
+| `tokenCost` | USD for `response.usage` from `LLM.COST` |
 
 ### Providers
 
@@ -59,6 +61,7 @@ const response = await Llm.operate("What is 2+2?", {
 
 | Option | Type | Description |
 |--------|------|-------------|
+| `cache` | `boolean \| 0 \| "5m" \| "1h"` | Prompt caching; on by default at `"1h"` |
 | `fallback` | `LlmFallbackConfig[] \| false` | Fallback provider chain |
 | `format` | `NaturalSchema \| JSONSchema \| ZodSchema` | Structured output schema |
 | `maxTokens` | `number` | Maximum response tokens |
@@ -508,6 +511,45 @@ export const handler = awslambda.streamifyResponse(
   })
 );
 ```
+
+## Usage and Cost
+
+`response.usage` lists token usage per model call. Every provider reports it the same way, on `operate()` and `stream()` alike:
+
+| Field | Meaning |
+|-------|---------|
+| `input` | All prompt tokens, including cache reads and writes |
+| `output` | All billed output tokens, including reasoning (thinking) |
+| `reasoning` | Reasoning tokens; part of `output` |
+| `total` | `input + output` |
+| `cacheRead` | Tokens served from the prompt cache; part of `input` |
+| `cacheWrite` | Tokens written to the prompt cache; part of `input` |
+| `cacheWriteTtl` | `cacheWrite` split by TTL (`{ "1h", "5m" }`), when the provider reports it (Anthropic, Bedrock) |
+
+`tokenCost` prices usage in USD from `LLM.COST` (list price per million tokens) and bills each token once:
+
+```typescript
+import { Llm, LLM, tokenCost } from "@jaypie/llm";
+
+const response = await Llm.operate("Summarize this", {
+  model: LLM.MODEL.SONNET,
+});
+const dollars = tokenCost(response.usage, { model: LLM.MODEL.SONNET });
+```
+
+| Tokens | Rate |
+|--------|------|
+| `input` less `cacheRead` and `cacheWrite` | `input` |
+| `cacheRead` | `cachedInputRead` |
+| `cacheWrite` | `cachedInputWrite` at the TTL written (from `cacheWriteTtl`, else the `ttl` option, default `"1h"`) |
+| `output` less `reasoning` | `output` |
+| `reasoning` | `reasoning`, else `output` |
+
+`model` prices any item whose own model id has no `COST` entry. The result is `undefined` when usage is empty or any item is unpriced, so an unknown price never reads as free. `MODEL.OPENROUTER.*` routes are deliberately unpriced.
+
+### Prompt Caching
+
+The system prompt and tool list are cached by default with a one-hour TTL wherever the provider accepts one (Anthropic, OpenRouter, Claude 4.5+ on Bedrock). A one-hour write costs more than a five-minute write, but reads cost the same, so it pays for itself after about three reads. Pass `cache: "5m"` for the shorter TTL (and `ttl: "5m"` to `tokenCost` when the provider does not split writes by TTL) or `cache: false` to opt out.
 
 ## Report Totals
 

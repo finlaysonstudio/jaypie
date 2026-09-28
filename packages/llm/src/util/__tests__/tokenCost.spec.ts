@@ -4,6 +4,7 @@ import { COST, MODEL } from "../../constants.js";
 import { tokenCost } from "../tokenCost.js";
 
 const HAIKU = COST[MODEL.HAIKU];
+const WRITE = HAIKU.cachedInputWrite as { "1h": number; "5m": number };
 
 describe("tokenCost", () => {
   it("Works", () => {
@@ -40,7 +41,7 @@ describe("tokenCost", () => {
         {
           input: 0,
           model: MODEL.HAIKU,
-          output: 0,
+          output: 1_000_000,
           reasoning: 1_000_000,
           total: 1_000_000,
         },
@@ -48,21 +49,50 @@ describe("tokenCost", () => {
       expect(cost).toBeCloseTo(HAIKU.output, 6);
     });
 
-    it("Prices cache reads and five-minute cache writes", () => {
+    it("Bills reasoning once because output includes it", () => {
+      const cost = tokenCost([
+        {
+          input: 0,
+          model: MODEL.HAIKU,
+          output: 1_000_000,
+          reasoning: 250_000,
+          total: 1_000_000,
+        },
+      ]);
+      expect(cost).toBeCloseTo(HAIKU.output, 6);
+    });
+
+    it("Prices cache reads and unsplit cache writes at the one-hour default", () => {
       const cost = tokenCost([
         {
           cacheRead: 1_000_000,
           cacheWrite: 1_000_000,
-          input: 0,
+          input: 2_000_000,
           model: MODEL.HAIKU,
           output: 0,
           reasoning: 0,
-          total: 0,
+          total: 2_000_000,
         },
       ]);
-      const write = HAIKU.cachedInputWrite as { "5m": number };
       expect(cost).toBeCloseTo(
-        (HAIKU.cachedInputRead as number) + write["5m"],
+        (HAIKU.cachedInputRead as number) + WRITE["1h"],
+        6,
+      );
+    });
+
+    it("Bills cached input once because input includes it", () => {
+      const cost = tokenCost([
+        {
+          cacheRead: 250_000,
+          input: 1_000_000,
+          model: MODEL.HAIKU,
+          output: 0,
+          reasoning: 0,
+          total: 1_000_000,
+        },
+      ]);
+      expect(cost).toBeCloseTo(
+        0.75 * HAIKU.input + 0.25 * (HAIKU.cachedInputRead as number),
         6,
       );
     });
@@ -99,6 +129,56 @@ describe("tokenCost", () => {
         { model: MODEL.LUNA },
       );
       expect(cost).toBeCloseTo(HAIKU.input, 6);
+    });
+
+    it("Prices writes split by TTL at each TTL's rate", () => {
+      const cost = tokenCost([
+        {
+          cacheWrite: 1_000_000,
+          cacheWriteTtl: { "1h": 250_000, "5m": 750_000 },
+          input: 1_000_000,
+          model: MODEL.HAIKU,
+          output: 0,
+          reasoning: 0,
+          total: 1_000_000,
+        },
+      ]);
+      expect(cost).toBeCloseTo(0.25 * WRITE["1h"] + 0.75 * WRITE["5m"], 6);
+    });
+
+    it("Prices the unsplit remainder at the requested TTL", () => {
+      const cost = tokenCost(
+        [
+          {
+            cacheWrite: 1_000_000,
+            cacheWriteTtl: { "1h": 500_000 },
+            input: 1_000_000,
+            model: MODEL.HAIKU,
+            output: 0,
+            reasoning: 0,
+            total: 1_000_000,
+          },
+        ],
+        { ttl: "5m" },
+      );
+      expect(cost).toBeCloseTo(0.5 * WRITE["1h"] + 0.5 * WRITE["5m"], 6);
+    });
+
+    it("Ignores TTL for scalar write rates", () => {
+      const nova = COST[MODEL.NOVA_PRO];
+      const item = {
+        cacheWrite: 1_000_000,
+        input: 1_000_000,
+        model: MODEL.NOVA_PRO,
+        output: 0,
+        reasoning: 0,
+        total: 1_000_000,
+      };
+      expect(tokenCost([item], { ttl: "5m" })).toBeCloseTo(
+        tokenCost([item], { ttl: "1h" }) as number,
+        9,
+      );
+      expect(typeof nova.cachedInputWrite).toBe("number");
     });
 
     it("Is undefined for an empty list", () => {

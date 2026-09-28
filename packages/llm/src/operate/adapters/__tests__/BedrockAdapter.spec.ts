@@ -16,8 +16,12 @@ import {
 
 vi.mock("@aws-sdk/client-bedrock-runtime", () => ({
   BedrockRuntimeClient: vi.fn(),
-  ConverseCommand: vi.fn((input) => input),
-  ConverseStreamCommand: vi.fn((input) => input),
+  ConverseCommand: vi.fn(function (input) {
+    return input;
+  }),
+  ConverseStreamCommand: vi.fn(function (input) {
+    return input;
+  }),
 }));
 
 //
@@ -298,6 +302,19 @@ describe("BedrockAdapter", () => {
     it("Returns empty array when no tool calls", () => {
       const toolCalls = adapter.extractToolCalls(mockConverseResponse);
       expect(toolCalls).toHaveLength(0);
+    });
+  });
+
+  describe("usage model", () => {
+    it("Attributes operate usage to the requested model", async () => {
+      const modelId = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+      const client = { send: vi.fn().mockResolvedValue(mockConverseResponse) };
+      const response = await adapter.executeRequest(client, {
+        messages: [{ role: "user", content: [{ text: "Hello" }] }],
+        modelId,
+      });
+      const result = adapter.parseResponse(response);
+      expect(result.usage?.model).toBe(modelId);
     });
   });
 

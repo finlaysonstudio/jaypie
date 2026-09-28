@@ -8,6 +8,7 @@ import {
   LlmMessageRole,
   LlmMessageType,
 } from "../../../types/LlmProvider.interface.js";
+import { LlmStreamChunkType } from "../../../types/LlmStreamChunk.interface.js";
 
 //
 //
@@ -545,7 +546,7 @@ describe("GoogleAdapter", () => {
           usageMetadata: {
             promptTokenCount: 100,
             candidatesTokenCount: 200,
-            totalTokenCount: 300,
+            totalTokenCount: 350,
             thoughtsTokenCount: 50,
           },
         };
@@ -556,8 +557,8 @@ describe("GoogleAdapter", () => {
         );
 
         expect(result.input).toBe(100);
-        expect(result.output).toBe(200);
-        expect(result.total).toBe(300);
+        expect(result.output).toBe(250);
+        expect(result.total).toBe(350);
         expect(result.reasoning).toBe(50);
         expect(result.provider).toBe(PROVIDER.GOOGLE.NAME);
         expect(result.model).toBe(PROVIDER.GOOGLE.MODEL.SMALL);
@@ -1111,6 +1112,46 @@ describe("GoogleAdapter", () => {
           expect.anything(),
           { signal: controller.signal },
         );
+      });
+
+      it("counts thinking tokens in output on the done chunk", async () => {
+        const mockClient = {
+          models: {
+            generateContentStream: vi.fn().mockResolvedValue(
+              (async function* () {
+                yield {
+                  candidates: [
+                    { content: { role: "model", parts: [{ text: "Hi" }] } },
+                  ],
+                  usageMetadata: {
+                    candidatesTokenCount: 321,
+                    promptTokenCount: 4377,
+                    thoughtsTokenCount: 1067,
+                    totalTokenCount: 5765,
+                  },
+                };
+              })(),
+            ),
+          },
+        };
+
+        const chunks = [];
+        for await (const chunk of googleAdapter.executeStreamRequest(
+          mockClient,
+          { contents: [], model: "gemini-2.0-flash" },
+        )) {
+          chunks.push(chunk);
+        }
+        const done = chunks.find(
+          (chunk) => chunk.type === LlmStreamChunkType.Done,
+        );
+
+        expect(done?.usage?.[0]).toMatchObject({
+          input: 4377,
+          output: 1388,
+          reasoning: 1067,
+          total: 5765,
+        });
       });
     });
   });

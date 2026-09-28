@@ -54,6 +54,7 @@ import {
   GeminiPart,
   GeminiRawResponse,
   GeminiRequest,
+  GeminiUsageMetadata,
 } from "../../providers/google/types.js";
 
 //
@@ -167,6 +168,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
     // Convert messages to Gemini format (Content[])
     const contents: GeminiContent[] = this.convertMessagesToContents(
       request.messages,
+      { system: request.system },
     );
 
     const geminiRequest: GeminiRequest = {
@@ -520,9 +522,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
     );
 
     // Track usage for final chunk
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let reasoningTokens = 0;
+    let usageMetadata: GeminiUsageMetadata | undefined;
     const model = geminiRequest.model || this.defaultModel;
 
     for await (const chunk of stream) {
@@ -581,25 +581,14 @@ export class GoogleAdapter extends BaseProviderAdapter {
 
       // Extract usage metadata if present
       if (chunk.usageMetadata) {
-        inputTokens = chunk.usageMetadata.promptTokenCount || 0;
-        outputTokens = chunk.usageMetadata.candidatesTokenCount || 0;
-        reasoningTokens = chunk.usageMetadata.thoughtsTokenCount || 0;
+        usageMetadata = chunk.usageMetadata;
       }
     }
 
     // Emit done chunk with final usage
     yield {
       type: LlmStreamChunkType.Done,
-      usage: [
-        {
-          input: inputTokens,
-          output: outputTokens,
-          reasoning: reasoningTokens,
-          total: inputTokens + outputTokens,
-          provider: this.name,
-          model,
-        },
-      ],
+      usage: [this.usageFromMetadata(usageMetadata, model)],
     };
   }
 
@@ -660,25 +649,29 @@ export class GoogleAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const geminiResponse = response as GeminiRawResponse;
+    return this.usageFromMetadata(geminiResponse.usageMetadata, model);
+  }
 
-    if (!geminiResponse.usageMetadata) {
-      return {
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        total: 0,
-        provider: this.name,
-        model,
-      };
-    }
-
-    const usage = geminiResponse.usageMetadata;
-
+  /**
+   * Gemini counts thinking (`thoughtsTokenCount`) apart from candidates and
+   * tool-use prompts apart from the prompt; both bill, so `output` and `input`
+   * fold them in. Cached content is already inside `promptTokenCount`.
+   */
+  private usageFromMetadata(
+    usage: GeminiUsageMetadata | undefined,
+    model: string,
+  ): LlmUsageItem {
+    const input =
+      (usage?.promptTokenCount || 0) + (usage?.toolUsePromptTokenCount || 0);
+    const reasoning = usage?.thoughtsTokenCount || 0;
+    const output = (usage?.candidatesTokenCount || 0) + reasoning;
+    const cacheRead = usage?.cachedContentTokenCount;
     return {
-      input: usage.promptTokenCount || 0,
-      output: usage.candidatesTokenCount || 0,
-      reasoning: usage.thoughtsTokenCount || 0,
-      total: usage.totalTokenCount || 0,
+      input,
+      output,
+      reasoning,
+      total: usage?.totalTokenCount || input + output,
+      ...(cacheRead ? { cacheRead } : {}),
       provider: this.name,
       model,
     };
@@ -951,12 +944,24 @@ export class GoogleAdapter extends BaseProviderAdapter {
   // Private Helpers
   //
 
-  private convertMessagesToContents(messages: LlmHistory): GeminiContent[] {
+  private convertMessagesToContents(
+    messages: LlmHistory,
+    { system }: { system?: string } = {},
+  ): GeminiContent[] {
     const contents: GeminiContent[] = [];
 
     for (const message of messages) {
       // Handle input/output messages
       if ("role" in message && "content" in message) {
+        // The loop prepends the system prompt to history and also passes it
+        // as `system` (sent as systemInstruction); send it once.
+        if (
+          system &&
+          message.role === LlmMessageRole.System &&
+          message.content === system
+        ) {
+          continue;
+        }
         const role = this.mapRole(message.role as LlmMessageRole);
         const parts = this.convertContentToParts(message.content);
 

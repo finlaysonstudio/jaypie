@@ -111,7 +111,7 @@ export interface OperateRequest {
   providerOptions?: JsonObject;
   /**
    * Prompt-caching control for the stable prefix (system + tools). `true`/
-   * omitted = enabled@5m, `false`/`0` = disabled, `"5m"`/`"1h"` = enabled@ttl.
+   * omitted = enabled@1h, `false`/`0` = disabled, `"5m"`/`"1h"` = enabled@ttl.
    */
   cache?: LlmCache;
   /** Whether the request will execute over a streaming transport */
