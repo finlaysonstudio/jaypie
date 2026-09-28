@@ -101,7 +101,7 @@ describe("Constants", () => {
       expect(MODEL.OPENROUTER).toBeObject();
       expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
       expect(MODEL.OPENROUTER.LUNA).toBe("openai/gpt-6-luna");
-      expect(MODEL.OPENROUTER.SONNET).toBe("anthropic/claude-sonnet-5");
+      expect(MODEL.OPENROUTER.SONNET).toBe("anthropic/claude-sonnet-5.5");
     });
 
     it("Exposes Amazon's Nova models as first-class ids", () => {

@@ -1407,5 +1407,27 @@ describe("OperateLoop", () => {
       expect(response.content).toBe("Still prose.");
       expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
     });
+
+    it("keeps the cache option on every turn", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValue({
+        content: "Still prose.",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Roll dice", { cache: false, format, turns: 2 });
+
+      expect(mockAdapter.buildRequest).toHaveBeenCalledTimes(2);
+      expect(mockAdapter.buildRequest.mock.calls[0][0].cache).toBe(false);
+      expect(mockAdapter.buildRequest.mock.calls[1][0].cache).toBe(false);
+    });
   });
 });

@@ -94,6 +94,69 @@ describe("Prompt caching — Anthropic", () => {
     );
     expect(usage.cacheRead).toBe(100);
     expect(usage.cacheWrite).toBe(200);
+    // input includes cache tokens so cacheRead/cacheWrite are subsets of it
+    expect(usage.input).toBe(310);
+    expect(usage.total).toBe(315);
+    expect(usage.cacheWriteTtl).toBeUndefined();
+  });
+
+  it("extractUsage splits cache writes by TTL", () => {
+    const usage = anthropicAdapter.extractUsage(
+      {
+        usage: {
+          cache_creation: {
+            ephemeral_1h_input_tokens: 150,
+            ephemeral_5m_input_tokens: 50,
+          },
+          cache_creation_input_tokens: 200,
+          input_tokens: 10,
+          output_tokens: 5,
+        },
+      },
+      "claude",
+    );
+    expect(usage.cacheWrite).toBe(200);
+    expect(usage.cacheWriteTtl).toEqual({ "1h": 150, "5m": 50 });
+  });
+
+  it("streams cache tokens in the done chunk", async () => {
+    const client = {
+      messages: {
+        create: async () =>
+          (async function* () {
+            yield {
+              type: "message_start",
+              message: {
+                model: "claude",
+                usage: {
+                  cache_creation_input_tokens: 200,
+                  cache_read_input_tokens: 100,
+                  input_tokens: 10,
+                  output_tokens: 1,
+                },
+              },
+            };
+            yield {
+              type: "message_delta",
+              delta: {},
+              usage: { output_tokens: 5 },
+            };
+            yield { type: "message_stop" };
+          })(),
+      },
+    };
+    const chunks = [];
+    for await (const chunk of anthropicAdapter.executeStreamRequest!(client, {
+      model: "claude",
+    })) {
+      chunks.push(chunk);
+    }
+    expect(chunks.at(-1)).toMatchObject({
+      type: "done",
+      usage: [
+        { cacheRead: 100, cacheWrite: 200, input: 310, output: 5, total: 315 },
+      ],
+    });
   });
 });
 
@@ -114,6 +177,29 @@ describe("Prompt caching — Bedrock", () => {
     };
     expect(result.system.at(-1)).toHaveProperty("cachePoint");
     expect(result.toolConfig.tools.at(-1)).toHaveProperty("cachePoint");
+    // Nova takes no TTL
+    expect(result.system.at(-1)).toEqual({ cachePoint: { type: "default" } });
+  });
+
+  it("Sends a 1h cachePoint TTL on Claude 4.5+ routes by default", () => {
+    const build = (model: string, cache?: OperateRequest["cache"]) =>
+      (
+        bedrockAdapter.buildRequest({
+          cache,
+          model,
+          messages: [],
+          system: "You are helpful",
+        }) as unknown as { system: Array<Record<string, unknown>> }
+      ).system.at(-1);
+    expect(build("us.anthropic.claude-sonnet-4-5-20250929-v1:0")).toEqual({
+      cachePoint: { type: "default", ttl: "1h" },
+    });
+    expect(build("us.anthropic.claude-sonnet-4-5-20250929-v1:0", "5m")).toEqual(
+      { cachePoint: { type: "default" } },
+    );
+    expect(build("anthropic.claude-sonnet-4-20250514-v1:0")).toEqual({
+      cachePoint: { type: "default" },
+    });
   });
 
   describe("isCachePointUnsupportedError", () => {
@@ -174,6 +260,58 @@ describe("Prompt caching — Bedrock", () => {
     );
     expect(usage.cacheRead).toBe(42);
     expect(usage.cacheWrite).toBe(7);
+    // input includes cache tokens so cacheRead/cacheWrite are subsets of it
+    expect(usage.input).toBe(59);
+    expect(usage.total).toBe(64);
+  });
+
+  it("extractUsage splits cache writes by TTL", () => {
+    const usage = bedrockAdapter.extractUsage(
+      {
+        usage: {
+          cacheDetails: [
+            { inputTokens: 5, ttl: "1h" },
+            { inputTokens: 2, ttl: "5m" },
+          ],
+          cacheWriteInputTokens: 7,
+          inputTokens: 10,
+          outputTokens: 5,
+        },
+      },
+      "bedrock-model",
+    );
+    expect(usage.cacheWriteTtl).toEqual({ "1h": 5, "5m": 2 });
+  });
+
+  it("streams usage that arrives after messageStop", async () => {
+    const client = {
+      send: async () => ({
+        stream: (async function* () {
+          yield { contentBlockDelta: { delta: { text: "Hi" } } };
+          yield { messageStop: { stopReason: "end_turn" } };
+          yield {
+            metadata: {
+              usage: {
+                cacheReadInputTokens: 42,
+                inputTokens: 10,
+                outputTokens: 5,
+                totalTokens: 57,
+              },
+            },
+          };
+        })(),
+      }),
+    };
+    const chunks = [];
+    for await (const chunk of bedrockAdapter.executeStreamRequest!(client, {
+      modelId: "bedrock-model",
+    })) {
+      chunks.push(chunk);
+    }
+    expect(chunks.at(-1)).toMatchObject({
+      type: "done",
+      usage: [{ cacheRead: 42, input: 52, output: 5, total: 57 }],
+    });
   });
 });
 
@@ -240,6 +378,19 @@ describe("Prompt caching — OpenRouter", () => {
       cache_control?: unknown;
     }>;
     expect(Array.isArray(content)).toBe(true);
+    expect(content[0].cache_control).toEqual({ type: "ephemeral", ttl: "1h" });
+  });
+
+  it("Applies the 5m TTL when requested", () => {
+    const result = openRouterAdapter.buildRequest({
+      cache: "5m",
+      model: PROVIDER.OPENROUTER.DEFAULT,
+      messages: [],
+      system: "You are helpful",
+    });
+    const content = result.messages[0].content as Array<{
+      cache_control?: unknown;
+    }>;
     expect(content[0].cache_control).toEqual({ type: "ephemeral" });
   });
 

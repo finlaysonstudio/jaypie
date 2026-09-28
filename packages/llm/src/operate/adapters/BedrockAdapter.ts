@@ -27,6 +27,7 @@ import {
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
 import {
+  cacheWriteTtlFrom,
   isJsonSchema,
   naturalZodSchema,
   resolveCache,
@@ -70,6 +71,21 @@ type BedrockMessage = {
 type BedrockRequest = Omit<ConverseCommandInput, "messages"> & {
   messages: BedrockMessage[];
 };
+
+type BedrockUsage = {
+  cacheDetails?: Array<{ inputTokens?: number; ttl?: string }>;
+  cacheReadInputTokens?: number;
+  cacheWriteInputTokens?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+};
+
+/**
+ * Bedrock Claude routes that accept a one-hour cachePoint `ttl` (Claude 4.5
+ * and later). Older Claude and Nova take no TTL and cache for five minutes.
+ */
+const BEDROCK_CLAUDE_PATTERN = /anthropic\.claude-[a-z]+-(?:4-[5-9]|[5-9])/;
 
 //
 //
@@ -154,6 +170,8 @@ function convertContentToBedrock(
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
 type AnnotatedBedrockResponse = ConverseCommandOutput & {
+  /** The request's model id; Converse responses do not echo it */
+  __jaypieModelId?: string;
   __jaypieStructuredOutput?: boolean;
 };
 
@@ -383,11 +401,20 @@ export class BedrockAdapter extends BaseProviderAdapter {
       }
     }
 
-    // Prompt caching via Converse cachePoint blocks (5-min default TTL; the
-    // `ttl` option does not apply). Gated per model — cachePoint 400s on
-    // unsupported models, which executeRequest catches and denylists.
-    if (resolveCache(request.cache).enabled && this.supportsCachePoint(model)) {
-      const cachePoint = { cachePoint: { type: "default" as const } };
+    // Prompt caching via Converse cachePoint blocks. Claude routes take the
+    // resolved TTL; other models (Nova) cache on Bedrock's five-minute default.
+    // Gated per model — cachePoint 400s on unsupported models, which
+    // executeRequest catches and denylists.
+    const cache = resolveCache(request.cache);
+    if (cache.enabled && this.supportsCachePoint(model)) {
+      const cachePoint = {
+        cachePoint: {
+          type: "default" as const,
+          ...(cache.ttl === "1h" && BEDROCK_CLAUDE_PATTERN.test(model)
+            ? { ttl: cache.ttl }
+            : {}),
+        },
+      };
       if (bedrockRequest.system && bedrockRequest.system.length > 0) {
         bedrockRequest.system = [
           ...bedrockRequest.system,
@@ -472,6 +499,17 @@ export class BedrockAdapter extends BaseProviderAdapter {
   //
 
   async executeRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+  ): Promise<AnnotatedBedrockResponse> {
+    const response = await this.converse(client, request, signal);
+    const modelId = (request as BedrockRequest).modelId;
+    if (response && modelId) response.__jaypieModelId = modelId;
+    return response;
+  }
+
+  private async converse(
     client: unknown,
     request: unknown,
     signal?: AbortSignal,
@@ -601,8 +639,9 @@ export class BedrockAdapter extends BaseProviderAdapter {
       arguments: string;
     } | null = null;
 
-    let inputTokens = 0;
-    let outputTokens = 0;
+    // ConverseStream sends `metadata` (usage) after `messageStop`, so the done
+    // chunk waits for the stream to end
+    let usage: BedrockUsage | undefined;
     const model = bedrockRequest.modelId || this.defaultModel;
 
     for await (const event of response.stream) {
@@ -631,8 +670,7 @@ export class BedrockAdapter extends BaseProviderAdapter {
         };
         currentToolCall = null;
       } else if (event.metadata?.usage) {
-        inputTokens = event.metadata.usage.inputTokens ?? 0;
-        outputTokens = event.metadata.usage.outputTokens ?? 0;
+        usage = event.metadata.usage;
       } else if (event.messageStop) {
         // The provider cut the response short (max_tokens, a guardrail)
         const incompleteReason = incompleteReasonFrom(
@@ -645,21 +683,13 @@ export class BedrockAdapter extends BaseProviderAdapter {
             error: incompleteStop(incompleteReason),
           };
         }
-        yield {
-          type: LlmStreamChunkType.Done,
-          usage: [
-            {
-              input: inputTokens,
-              output: outputTokens,
-              reasoning: 0,
-              total: inputTokens + outputTokens,
-              provider: this.name,
-              model,
-            },
-          ],
-        };
       }
     }
+
+    yield {
+      type: LlmStreamChunkType.Done,
+      usage: [this.usageFrom(usage, model)],
+    };
   }
 
   //
@@ -701,7 +731,7 @@ export class BedrockAdapter extends BaseProviderAdapter {
       stopReason: bedrockResponse.stopReason ?? undefined,
       usage: this.extractUsage(
         bedrockResponse,
-        (bedrockResponse as unknown as BedrockRequest).modelId ||
+        (bedrockResponse as AnnotatedBedrockResponse).__jaypieModelId ||
           this.defaultModel,
       ),
       raw: bedrockResponse,
@@ -731,29 +761,36 @@ export class BedrockAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const bedrockResponse = response as ConverseCommandOutput;
-    const usage = bedrockResponse.usage as
-      | {
-          inputTokens?: number;
-          outputTokens?: number;
-          totalTokens?: number;
-          cacheReadInputTokens?: number;
-          cacheWriteInputTokens?: number;
-        }
-      | undefined;
+    return this.usageFrom(bedrockResponse.usage, model);
+  }
 
+  /**
+   * Converse's `inputTokens` excludes cache reads and writes; `input` folds
+   * them in so `cacheRead`/`cacheWrite` are subsets of it.
+   */
+  private usageFrom(
+    usage: BedrockUsage | undefined,
+    model: string,
+  ): LlmUsageItem {
+    const cacheRead = usage?.cacheReadInputTokens;
+    const cacheWrite = usage?.cacheWriteInputTokens;
+    const input =
+      (usage?.inputTokens ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0);
+    const output = usage?.outputTokens ?? 0;
+    const cacheWriteTtl = cacheWriteTtlFrom(
+      (usage?.cacheDetails ?? []).map(({ inputTokens, ttl }) => ({
+        tokens: inputTokens,
+        ttl,
+      })),
+    );
     return {
-      input: usage?.inputTokens ?? 0,
-      output: usage?.outputTokens ?? 0,
+      input,
+      output,
       reasoning: 0,
-      total:
-        usage?.totalTokens ??
-        (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0),
-      ...(usage?.cacheReadInputTokens !== undefined
-        ? { cacheRead: usage.cacheReadInputTokens }
-        : {}),
-      ...(usage?.cacheWriteInputTokens !== undefined
-        ? { cacheWrite: usage.cacheWriteInputTokens }
-        : {}),
+      total: usage?.totalTokens ?? input + output,
+      ...(cacheRead !== undefined ? { cacheRead } : {}),
+      ...(cacheWrite !== undefined ? { cacheWrite } : {}),
+      ...(cacheWriteTtl ? { cacheWriteTtl } : {}),
       provider: this.name,
       model,
     };

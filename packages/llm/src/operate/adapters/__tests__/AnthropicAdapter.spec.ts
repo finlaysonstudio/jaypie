@@ -1221,6 +1221,107 @@ describe("AnthropicAdapter", () => {
       expect(fallbackBody.tool_choice).toEqual({ type: "any" });
     });
 
+    it("uses tool_choice auto on models that reject forced tool use", async () => {
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "output_config is not supported";
+
+      const mockCreate = vi.fn();
+      mockCreate.mockRejectedValueOnce(error as unknown as Error);
+      mockCreate.mockResolvedValueOnce({
+        content: [{ type: "text", text: "{}" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+      const mockClient = {
+        messages: { create: mockCreate },
+      };
+
+      for (const model of [
+        "claude-fable-5-1",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-sonnet-6",
+      ]) {
+        mockCreate.mockClear();
+        mockCreate.mockRejectedValueOnce(error as unknown as Error);
+        mockCreate.mockResolvedValueOnce({
+          content: [{ type: "text", text: "{}" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        await anthropicAdapter.executeRequest(mockClient, {
+          model,
+          messages: [],
+          max_tokens: 1024,
+          stream: false,
+          output_config: {
+            format: {
+              type: "json_schema",
+              schema: { type: "object", properties: {} },
+            },
+          },
+        });
+        const fallbackBody = mockCreate.mock.calls[1][0] as {
+          tool_choice?: { type: string };
+        };
+        expect(fallbackBody.tool_choice).toEqual({ type: "auto" });
+
+        const built = anthropicAdapter.buildRequest({
+          model,
+          messages: [],
+          format: { type: "object", properties: {} },
+        }) as unknown as { tool_choice?: { type: string } };
+        expect(built.tool_choice).toEqual({ type: "auto" });
+      }
+    });
+
+    it("keeps tool_choice any on models that accept forced tool use", async () => {
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message = "output_config is not supported";
+
+      for (const model of [
+        "claude-fable-5",
+        "claude-opus-5",
+        "claude-sonnet-4-20250514",
+        "claude-sonnet-5",
+      ]) {
+        const mockCreate = vi.fn();
+        mockCreate.mockRejectedValueOnce(error as unknown as Error);
+        mockCreate.mockResolvedValueOnce({
+          content: [{ type: "text", text: "{}" }],
+          stop_reason: "end_turn",
+          usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        await anthropicAdapter.executeRequest(
+          { messages: { create: mockCreate } },
+          {
+            model,
+            messages: [],
+            max_tokens: 1024,
+            stream: false,
+            output_config: {
+              format: {
+                type: "json_schema",
+                schema: { type: "object", properties: {} },
+              },
+            },
+          },
+        );
+        const fallbackBody = mockCreate.mock.calls[1][0] as {
+          tool_choice?: { type: string };
+        };
+        expect(fallbackBody.tool_choice).toEqual({ type: "any" });
+      }
+    });
+
     it("caches the model so subsequent buildRequest uses fake-tool path", async () => {
       const { BadRequestError } =
         await import("../../../providers/anthropic/client.js");
@@ -1487,7 +1588,7 @@ describe("AnthropicAdapter", () => {
 
     it("sets temperature on request when provided", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.DEFAULT,
+        model: "claude-haiku-4-5", // accepts temperature
         messages: [
           {
             content: "Hello",
@@ -1505,7 +1606,7 @@ describe("AnthropicAdapter", () => {
 
     it("temperature takes precedence over providerOptions", () => {
       const request: OperateRequest = {
-        model: PROVIDER.ANTHROPIC.DEFAULT,
+        model: "claude-haiku-4-5", // accepts temperature
         messages: [],
         providerOptions: { temperature: 0.3 },
         temperature: 0.9,
@@ -1559,6 +1660,18 @@ describe("AnthropicAdapter", () => {
       it("strips temperature for future claude-opus-5 models", () => {
         const request: OperateRequest = {
           model: "claude-opus-5-0",
+          messages: [],
+          temperature: 0.3,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
+      it("strips temperature for claude-sonnet-5 models", () => {
+        const request: OperateRequest = {
+          model: "claude-sonnet-5-5",
           messages: [],
           temperature: 0.3,
         };

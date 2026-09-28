@@ -216,34 +216,36 @@ provider's cache-read rate (~0.1x input) after the first write.
 Control it with the scalar `cache` option (`LlmCache = boolean | 0 | "5m" | "1h"`):
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM }); // cached (1h on Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM }); // cached @ 1h
 await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```
 
-- `true` / omitted → enabled at the adapter's default TTL: `"1h"` on Anthropic,
-  `"5m"` everywhere else
+- `true` / omitted → enabled at `CACHE_TTL_DEFAULT` (`"1h"`)
 - `false` / `0` → disabled
 - `"5m"` / `"1h"` → enabled at that TTL
 
 Threaded via `OperateRequest.cache`; each adapter's `buildRequest` resolves it
 with `resolveCache` (`src/util/cacheControl.ts`) and applies the provider-native
-mechanism. Anthropic passes `defaultTtl: CACHE_TTL_ANTHROPIC_DEFAULT` (`"1h"`):
-its 1h write costs 2x input against 1.25x for 5m, but reads stay at ~0.1x, so
-the hour pays for itself after ~three reads and survives the gaps between turns.
+mechanism. One hour is the default wherever a provider takes a TTL: Anthropic's
+1h write costs 2x input against 1.25x for 5m, but reads stay at ~0.1x, so the
+hour pays for itself after ~three reads and survives the gaps between turns.
 
-| Provider     | Mechanism                                                                                                                                                                        | TTL                 |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| Anthropic    | `cache_control: {type:"ephemeral"}` on the system block + last tool                                                                                                              | 5m / **1h default** |
-| Bedrock      | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m only             |
-| OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix                                                                                              | provider default    |
-| Meta         | automatic prefix caching + the same `prompt_cache_key`; reads surface as `cached_tokens`                                                                                         | provider default    |
-| OpenRouter   | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others)                                                                     | 5m / 1h             |
-| Google       | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself                 | provider default    |
+| Provider     | Mechanism                                                                                                                                                                        | TTL                               |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Anthropic    | `cache_control: {type:"ephemeral"}` on the system block + last tool                                                                                                              | 5m / **1h default**               |
+| Bedrock      | `cachePoint` blocks after `system` and `toolConfig.tools`; model-gated (unsupported models are denylisted after a 400 and the request transparently retried without cachePoints) | 5m; **1h default** on Claude 4.5+ |
+| OpenAI / xAI | automatic server-side caching + a stable `prompt_cache_key` derived from the prefix                                                                                              | provider default                  |
+| Meta         | automatic prefix caching + the same `prompt_cache_key`; reads surface as `cached_tokens`                                                                                         | provider default                  |
+| OpenRouter   | `cache_control` breakpoint on the system message (forwarded to Anthropic/Gemini backends, ignored by others)                                                                     | 5m / **1h default**               |
+| Google       | **implicit** context caching only (automatic on Gemini 2.5+); explicit `cachedContent` is not wired — pass `providerOptions.cachedContent` to manage it yourself                 | provider default                  |
 
 Below a provider's minimum cacheable prefix, annotations silently no-op. Cache
 tokens are surfaced on `LlmUsageItem` as `cacheRead` / `cacheWrite`, flow into
 the exchange envelope `usageTotals`, and appear in the handler report tally.
+Anthropic (`usage.cache_creation`) and Bedrock (`usage.cacheDetails`) also split
+writes by TTL; adapters record that as `cacheWriteTtl` via `cacheWriteTtlFrom`
+so pricing bills each TTL at its own rate.
 
 The cached prefix must stay byte-identical to hit — keep the system prompt
 static (no interpolated timestamps/IDs), which callers already do.
@@ -293,13 +295,36 @@ import { LLM, type LlmModelCost } from "@jaypie/llm";
 const rate: LlmModelCost | undefined = LLM.COST[response.model];
 ```
 
-Fields line up with `LlmUsageItem`: `input`, `output`, `cachedInputRead`
-(`usage.cacheRead`), and `cachedInputWrite` (`usage.cacheWrite`). Writes are a
-scalar when TTL-invariant, or keyed `{ "5m", "1h" }` using the same literals as
-`LlmCache` so a calculation reads the TTL straight off `OperateRequest.cache`;
-omitting the field means writes bill at `input`. Only Anthropic publishes a
-write premium today. `reasoning` exists for providers that bill reasoning apart
-from output and is unset everywhere.
+Writes are a scalar when TTL-invariant, or keyed `{ "5m", "1h" }` using the
+same literals as `LlmCache`; omitting the field means writes bill at `input`.
+Only Anthropic publishes a write premium today. `reasoning` exists for
+providers that bill reasoning apart from output and is unset everywhere.
+
+**Usage contract.** Every adapter reports `LlmUsageItem` the same way, on
+`operate()` and `stream()` alike: `input` counts all prompt tokens with
+`cacheRead` / `cacheWrite` (and `cacheWriteTtl`) as subsets of it, `output`
+counts all billed output with `reasoning` as a subset of it, and `total` is
+`input + output`. Providers that report cache or thinking tokens outside their
+input/output counts (Anthropic, Bedrock, Gemini) are folded in by the adapter;
+OpenAI-compatible APIs already include them.
+
+**Cost.** `tokenCost(usage, { model?, ttl? })` (`src/util/tokenCost.ts`,
+exported) is the one pricing path — `Llm.ocr` and `MistralProvider` use it.
+Per item it bills:
+
+| Tokens                                 | Rate                                         |
+| -------------------------------------- | -------------------------------------------- |
+| `input − cacheRead − cacheWrite`       | `input`                                      |
+| `cacheRead`                            | `cachedInputRead`, else `input`              |
+| `cacheWriteTtl["1h"]` / `["5m"]`       | `cachedInputWrite` at that TTL               |
+| `cacheWrite` not split by the provider | `cachedInputWrite` at `ttl` (default `"1h"`) |
+| `output − reasoning`                   | `output`                                     |
+| `reasoning`                            | `reasoning`, else `output`                   |
+
+An item is priced by its own `model`, else by the `model` option (a vendor may
+echo a dated id the table does not carry). Any unpriced item makes the result
+`undefined` so callers can tell "unknown" from "free". Never subtract or add
+subsets by hand at a call site; extend `tokenCost` instead.
 
 Rates are the standard short-context text tier — introductory, batch, flex,
 priority, fast-mode, and data-residency pricing are excluded, as are long-prompt
@@ -322,7 +347,7 @@ in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
 `timeout` (on the call or a fallback entry, which replaces the call's) is a
 per-attempt deadline, with no default. `src/util/attemptTimeout.ts` races each
-attempt against it: on expiry it rejects with `LlmTimeoutError` *before*
+attempt against it: on expiry it rejects with `LlmTimeoutError` _before_
 aborting the attempt's controller, because adapters swallow errors and resolve
 empty once their signal aborts. `RetryExecutor` treats the timeout as transient
 without consulting the adapter's classifier, so a chain falls over and a lone

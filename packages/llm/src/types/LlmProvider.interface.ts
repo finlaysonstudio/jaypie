@@ -452,11 +452,11 @@ export type LlmExchangeCallback = (
 
 /**
  * Prompt-caching control for operate()/stream().
- * - `true` / omitted → caching enabled at the adapter's default TTL: `"1h"` on
- *   Anthropic, `"5m"` everywhere else
+ * - `true` / omitted → caching enabled at the default TTL, `"1h"`
  * - `false` / `0` → caching disabled
- * - `"5m"` / `"1h"` → enabled at that TTL (TTL honored by Anthropic/OpenRouter;
- *   other providers ignore it and cache with their own defaults)
+ * - `"5m"` / `"1h"` → enabled at that TTL (TTL honored by Anthropic,
+ *   OpenRouter, and Claude on Bedrock; other providers ignore it and cache
+ *   with their own defaults)
  */
 export type LlmCache = boolean | 0 | "5m" | "1h";
 
@@ -645,15 +645,36 @@ export interface LlmOptions {
 
 // Responses
 
+/** Cache-write tokens keyed by TTL, using the same literals as `LlmCache` */
+export interface LlmCacheWriteTtl {
+  "1h"?: number;
+  "5m"?: number;
+}
+
+/**
+ * Token usage for one provider call, normalized so every provider reports the
+ * same shape: `cacheRead` and `cacheWrite` are subsets of `input`, `reasoning`
+ * is a subset of `output`, and `total` is `input + output`.
+ */
 export interface LlmUsageItem {
+  /** All prompt tokens, including any served from or written to cache */
   input: number;
+  /** All billed output tokens, including reasoning (thinking) */
   output: number;
+  /** Reasoning (thinking) tokens; included in `output` */
   reasoning: number;
+  /** `input + output` (the provider's own total when it reports one) */
   total: number;
-  /** Prompt-cache tokens served from cache this call (billed at ~0.1x input) */
+  /** Prompt-cache tokens served from cache this call; included in `input` */
   cacheRead?: number;
-  /** Prompt-cache tokens written to cache this call (billed at ~1.25x input) */
+  /** Prompt-cache tokens written to cache this call; included in `input` */
   cacheWrite?: number;
+  /**
+   * `cacheWrite` split by cache TTL, when the provider reports it (Anthropic,
+   * Bedrock). Pricing reads each TTL's rate from it; unsplit writes bill at
+   * the default TTL.
+   */
+  cacheWriteTtl?: LlmCacheWriteTtl;
   provider?: string;
   model?: string;
 }

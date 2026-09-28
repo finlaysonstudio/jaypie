@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CACHE_TTL_DEFAULT,
+  cacheWriteTtlFrom,
   promptCacheKey,
   resolveCache,
 } from "../cacheControl.js";
@@ -46,6 +47,33 @@ describe("resolveCache", () => {
       ttl: "5m",
     });
     expect(resolveCache(false, { defaultTtl: "1h" }).enabled).toBe(false);
+  });
+});
+
+describe("cacheWriteTtlFrom", () => {
+  it("Defaults to one hour", () => {
+    expect(CACHE_TTL_DEFAULT).toBe("1h");
+  });
+
+  it("Collects counts by TTL and sums repeats", () => {
+    expect(
+      cacheWriteTtlFrom([
+        { tokens: 3, ttl: "1h" },
+        { tokens: 2, ttl: "5m" },
+        { tokens: 4, ttl: "1h" },
+      ]),
+    ).toEqual({ "1h": 7, "5m": 2 });
+  });
+
+  it("Drops empty counts and unknown TTLs", () => {
+    expect(
+      cacheWriteTtlFrom([
+        { tokens: 0, ttl: "1h" },
+        { tokens: null, ttl: "5m" },
+        { tokens: 9, ttl: "24h" },
+      ]),
+    ).toBeUndefined();
+    expect(cacheWriteTtlFrom([])).toBeUndefined();
   });
 });
 

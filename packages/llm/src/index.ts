@@ -3,6 +3,7 @@ export * as LLM from "./constants.js";
 export type { LlmEffort, LlmModelCost } from "./constants.js";
 export type {
   LlmCache,
+  LlmCacheWriteTtl,
   LlmExchangeCallback,
   LlmExchangeEnvelope,
   LlmExchangePending,
@@ -33,6 +34,8 @@ export type {
   LlmProvider,
   LlmResumeOption,
   LlmToolResultInput,
+  LlmUsage,
+  LlmUsageItem,
 } from "./types/LlmProvider.interface.js";
 export {
   LlmMessageRole,
@@ -124,6 +127,7 @@ export type {
 
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
+export { tokenCost } from "./util/tokenCost.js";
 export {
   jsonSchemaToNaturalSchema,
   naturalSchemaToJsonSchema,

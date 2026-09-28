@@ -722,11 +722,13 @@ describe("StreamLoop", () => {
         });
 
         await collectChunks(
-          loop.execute("Call tool", { tools: toolkit, turns: 3 }),
+          loop.execute("Call tool", { cache: "5m", tools: toolkit, turns: 3 }),
         );
 
         // Verify the second call received history with correct IDs
         const secondCallRequest = mockAdapter.buildRequest.mock.calls[1][0];
+        // The cache option survives into later turns
+        expect(secondCallRequest.cache).toBe("5m");
         const functionCallItem = secondCallRequest.messages.find(
           (m: Record<string, unknown>) =>
             m.type === LlmMessageType.FunctionCall,

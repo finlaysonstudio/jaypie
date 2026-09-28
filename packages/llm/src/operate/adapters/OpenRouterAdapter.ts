@@ -41,6 +41,10 @@ import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { OpenRouterClient } from "../../providers/openrouter/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import {
+  ChatCompletionsUsage,
+  chatCompletionsUsage,
+} from "../../util/chatCompletionsUsage.js";
 
 //
 //
@@ -744,8 +748,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     } | null = null;
 
     // Track usage for final chunk
-    let inputTokens = 0;
-    let outputTokens = 0;
+    let usage: ChatCompletionsUsage | undefined;
     const model = openRouterRequest.model || this.defaultModel;
 
     for await (const chunk of stream) {
@@ -761,12 +764,7 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
           };
           finish_reason?: string;
         }>;
-        usage?: {
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          promptTokens?: number;
-          completionTokens?: number;
-        };
+        usage?: ChatCompletionsUsage;
       }
       const typedChunk = chunk as StreamChunk;
       const choices = typedChunk.choices;
@@ -845,28 +843,14 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
       // Extract usage if present (usually in the final chunk)
       if (typedChunk.usage) {
-        inputTokens =
-          typedChunk.usage.prompt_tokens || typedChunk.usage.promptTokens || 0;
-        outputTokens =
-          typedChunk.usage.completion_tokens ||
-          typedChunk.usage.completionTokens ||
-          0;
+        usage = typedChunk.usage;
       }
     }
 
     // Emit done chunk with final usage
     yield {
       type: LlmStreamChunkType.Done,
-      usage: [
-        {
-          input: inputTokens,
-          output: outputTokens,
-          reasoning: 0,
-          total: inputTokens + outputTokens,
-          provider: this.name,
-          model,
-        },
-      ],
+      usage: [chatCompletionsUsage(usage, { model, provider: this.name })],
     };
   }
 
@@ -925,33 +909,10 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const openRouterResponse = response as OpenRouterResponse;
-
-    if (!openRouterResponse.usage) {
-      return {
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        total: 0,
-        provider: this.name,
-        model,
-      };
-    }
-
-    // SDK returns camelCase, but support snake_case as fallback
-    const usage = openRouterResponse.usage;
-    const cachedTokens =
-      usage.promptTokensDetails?.cachedTokens ??
-      usage.promptTokensDetails?.cached_tokens ??
-      usage.prompt_tokens_details?.cached_tokens;
-    return {
-      input: usage.promptTokens || usage.prompt_tokens || 0,
-      output: usage.completionTokens || usage.completion_tokens || 0,
-      reasoning: usage.completionTokensDetails?.reasoningTokens || 0,
-      total: usage.totalTokens || usage.total_tokens || 0,
-      ...(cachedTokens !== undefined ? { cacheRead: cachedTokens } : {}),
-      provider: this.name,
-      model,
-    };
+    return chatCompletionsUsage(
+      openRouterResponse.usage as ChatCompletionsUsage | undefined,
+      { model, provider: this.name },
+    );
   }
 
   //
@@ -1227,6 +1188,9 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
       // Handle different message types
       if (message.role === "system") {
+        // The loop prepends the system prompt to history and also passes it
+        // as `system`; send it once.
+        if (system && message.content === system) continue;
         openRouterMessages.push({
           role: "system",
           content: message.content as string,

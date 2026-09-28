@@ -127,6 +127,7 @@ export interface GeminiUsageMetadata {
   totalTokenCount?: number;
   thoughtsTokenCount?: number;
   cachedContentTokenCount?: number;
+  toolUsePromptTokenCount?: number;
 }
 
 /**

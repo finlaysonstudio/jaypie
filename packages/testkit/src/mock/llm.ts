@@ -263,6 +263,7 @@ export const LlmQuestionType = original.LlmQuestionType;
 export const normalizeDistribution = original.normalizeDistribution;
 export const peakConfidence = original.peakConfidence;
 export const RetryPolicy = original.RetryPolicy;
+export const tokenCost = original.tokenCost;
 export const TypeSafeClient = original.TypeSafeClient;
 
 // Tool collections (undefined when @jaypie/llm is not installed)

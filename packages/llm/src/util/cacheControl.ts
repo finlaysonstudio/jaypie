@@ -1,13 +1,16 @@
-import { type LlmCache } from "../types/LlmProvider.interface.js";
-
-export const CACHE_TTL_DEFAULT = "5m" as const;
+import {
+  type LlmCache,
+  type LlmCacheWriteTtl,
+} from "../types/LlmProvider.interface.js";
 
 /**
- * Anthropic bills a 1h cache write at 2x input (vs 1.25x for 5m) but reads at
- * the same ~0.1x, so an hour of reuse pays for itself after ~three reads and
- * survives the gaps between turns in a long agentic session.
+ * Cache writes default to a one-hour TTL wherever the provider accepts one.
+ * Anthropic bills a 1h write at 2x input (vs 1.25x for 5m) but reads at the
+ * same ~0.1x, so an hour of reuse pays for itself after ~three reads and
+ * survives the gaps between turns in a long agentic session. Providers that
+ * take no TTL cache on their own schedule.
  */
-export const CACHE_TTL_ANTHROPIC_DEFAULT = "1h" as const;
+export const CACHE_TTL_DEFAULT = "1h" as const;
 
 export type CacheTtl = "5m" | "1h";
 
@@ -34,6 +37,22 @@ export function resolveCache(
   }
   // undefined or true
   return { enabled: true, ttl: defaultTtl };
+}
+
+/**
+ * Collect per-TTL cache-write counts into an `LlmCacheWriteTtl`. Unknown TTLs
+ * and empty counts are dropped; undefined when nothing remains, so a usage
+ * item carries the field only when the provider reported a split.
+ */
+export function cacheWriteTtlFrom(
+  entries: Array<{ tokens?: number | null; ttl?: string | null }>,
+): LlmCacheWriteTtl | undefined {
+  const split: LlmCacheWriteTtl = {};
+  for (const { tokens, ttl } of entries) {
+    if (!tokens || (ttl !== "1h" && ttl !== "5m")) continue;
+    split[ttl] = (split[ttl] ?? 0) + tokens;
+  }
+  return Object.keys(split).length > 0 ? split : undefined;
 }
 
 /**

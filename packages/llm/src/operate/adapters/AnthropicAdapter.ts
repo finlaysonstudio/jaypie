@@ -23,7 +23,7 @@ import {
   LlmStreamChunkType,
 } from "../../types/LlmStreamChunk.interface.js";
 import {
-  CACHE_TTL_ANTHROPIC_DEFAULT,
+  cacheWriteTtlFrom,
   isJsonSchema as isBareJsonSchema,
   naturalZodSchema,
   resolveCache,
@@ -92,6 +92,36 @@ function supportsAnthropicEffort(model: string): boolean {
 type AnnotatedAnthropicMessage = Anthropic.Message & {
   __jaypieStructuredOutput?: boolean;
 };
+
+/**
+ * Usage as Anthropic reports it, on a message or a streaming message_delta.
+ * `thinking_tokens` is not in the SDK types; read it when present.
+ */
+type AnthropicUsage = {
+  cache_creation?: {
+    ephemeral_1h_input_tokens?: number | null;
+    ephemeral_5m_input_tokens?: number | null;
+  } | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  input_tokens?: number | null;
+  output_tokens: number;
+  thinking_tokens?: number | null;
+};
+
+/** Overlay the fields a later usage report sets, keeping earlier ones. */
+function mergeDefinedUsage(
+  base: AnthropicUsage,
+  next: AnthropicUsage,
+): AnthropicUsage {
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(next)) {
+    if (value !== null && value !== undefined) {
+      (merged as Record<string, unknown>)[key] = value;
+    }
+  }
+  return merged;
+}
 
 const STRUCTURED_OUTPUT_NON_PARSE_STOP_REASONS = new Set([
   "refusal",
@@ -356,7 +386,33 @@ const NOT_RETRYABLE_ERROR_NAMES = [
 const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
   /^claude-opus-4-[789]/,
   /^claude-opus-[5-9]/,
+  /^claude-sonnet-[5-9]/,
 ];
+
+/**
+ * Models that reject a forced `tool_choice` (`any` / `tool`) with a 400:
+ * Fable and Mythos 5.1, Opus 5.5, Sonnet 5.5, and later generations.
+ */
+const MODELS_WITHOUT_FORCED_TOOL_CHOICE: RegExp[] = [
+  /^claude-(fable|mythos)-5-[1-9]/,
+  /^claude-(opus|sonnet)-5-[5-9]/,
+  /^claude-(fable|mythos|opus|sonnet)-([6-9]|\d{2,})/,
+];
+
+/**
+ * `tool_choice` for the legacy structured-output tool. `any` guarantees the
+ * call where the model allows forcing; elsewhere `auto` leaves the call to
+ * the tool description.
+ */
+function structuredOutputToolChoice(model: string): {
+  type: "any" | "auto";
+} {
+  return MODELS_WITHOUT_FORCED_TOOL_CHOICE.some((pattern) =>
+    pattern.test(model),
+  )
+    ? { type: "auto" }
+    : { type: "any" };
+}
 
 function isTemperatureDeprecationError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -533,9 +589,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       stream: false,
     };
 
-    const cache = resolveCache(request.cache, {
-      defaultTtl: CACHE_TTL_ANTHROPIC_DEFAULT,
-    });
+    const cache = resolveCache(request.cache);
     const cacheControl: Anthropic.CacheControlEphemeral | undefined =
       cache.enabled
         ? {
@@ -589,7 +643,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       }));
 
       anthropicRequest.tool_choice = useFallbackStructuredOutput
-        ? { type: "any" }
+        ? structuredOutputToolChoice(anthropicRequest.model as string)
         : { type: "auto" };
     }
 
@@ -785,7 +839,9 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       type: "custom" as const,
     };
     fallbackRequest.tools = [...(fallbackRequest.tools ?? []), fakeTool];
-    fallbackRequest.tool_choice = { type: "any" };
+    fallbackRequest.tool_choice = structuredOutputToolChoice(
+      fallbackRequest.model as string,
+    );
     return fallbackRequest;
   }
 
@@ -835,10 +891,8 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       arguments: string;
     } | null = null;
 
-    // Track usage for final chunk
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let thinkingTokens = 0;
+    // Track usage for final chunk; message_delta carries cumulative counts
+    let usage: AnthropicUsage = { input_tokens: 0, output_tokens: 0 };
     let model = streamRequest.model;
 
     for await (const event of stream) {
@@ -846,7 +900,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         // Extract initial usage and model info
         const message = event.message;
         if (message.usage) {
-          inputTokens = message.usage.input_tokens;
+          usage = { ...(message.usage as AnthropicUsage) };
         }
         model = message.model;
       } else if (event.type === "content_block_start") {
@@ -898,27 +952,13 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         }
         // Extract final usage
         if (event.usage) {
-          outputTokens = event.usage.output_tokens;
-          // Check for thinking tokens in extended thinking responses
-          const extendedUsage = event.usage as { thinking_tokens?: number };
-          if (extendedUsage.thinking_tokens) {
-            thinkingTokens = extendedUsage.thinking_tokens;
-          }
+          usage = mergeDefinedUsage(usage, event.usage as AnthropicUsage);
         }
       } else if (event.type === "message_stop") {
         // Emit done chunk with usage
         yield {
           type: LlmStreamChunkType.Done,
-          usage: [
-            {
-              input: inputTokens,
-              output: outputTokens,
-              reasoning: thinkingTokens,
-              total: inputTokens + outputTokens,
-              provider: this.name,
-              model,
-            },
-          ],
+          usage: [this.usageFrom(usage, model)],
         };
       }
     }
@@ -970,28 +1010,38 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const anthropicResponse = response as Anthropic.Message;
+    return this.usageFrom(anthropicResponse.usage as AnthropicUsage, model);
+  }
 
-    // Check for thinking tokens in the usage (extended thinking feature)
-    // Anthropic includes thinking tokens in a separate field when enabled
-    const usage = anthropicResponse.usage as {
-      input_tokens: number;
-      output_tokens: number;
-      thinking_tokens?: number;
-      cache_read_input_tokens?: number;
-      cache_creation_input_tokens?: number;
-    };
-
+  /**
+   * Anthropic's `input_tokens` excludes cache reads and writes; `input` folds
+   * them in so `cacheRead`/`cacheWrite` are subsets of it, as for every other
+   * provider. `output_tokens` already includes thinking.
+   */
+  private usageFrom(usage: AnthropicUsage, model: string): LlmUsageItem {
+    const cacheRead = usage.cache_read_input_tokens ?? undefined;
+    const cacheWrite = usage.cache_creation_input_tokens ?? undefined;
+    const input =
+      (usage.input_tokens || 0) + (cacheRead || 0) + (cacheWrite || 0);
+    const output = usage.output_tokens || 0;
+    const cacheWriteTtl = cacheWriteTtlFrom([
+      {
+        tokens: usage.cache_creation?.ephemeral_1h_input_tokens,
+        ttl: "1h",
+      },
+      {
+        tokens: usage.cache_creation?.ephemeral_5m_input_tokens,
+        ttl: "5m",
+      },
+    ]);
     return {
-      input: usage.input_tokens,
-      output: usage.output_tokens,
+      input,
+      output,
       reasoning: usage.thinking_tokens || 0,
-      total: usage.input_tokens + usage.output_tokens,
-      ...(usage.cache_read_input_tokens !== undefined
-        ? { cacheRead: usage.cache_read_input_tokens }
-        : {}),
-      ...(usage.cache_creation_input_tokens !== undefined
-        ? { cacheWrite: usage.cache_creation_input_tokens }
-        : {}),
+      total: input + output,
+      ...(cacheRead !== undefined ? { cacheRead } : {}),
+      ...(cacheWrite !== undefined ? { cacheWrite } : {}),
+      ...(cacheWriteTtl ? { cacheWriteTtl } : {}),
       provider: this.name,
       model,
     };

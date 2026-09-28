@@ -369,6 +369,40 @@ describe("OpenAiAdapter", () => {
 
         expect(chunks.map((chunk) => chunk.type)).toEqual(["text", "done"]);
       });
+
+      it("emits usage when the stream ends without response.done", async () => {
+        const client = {
+          responses: {
+            create: vi.fn(async () =>
+              events([
+                { type: "response.output_text.delta", delta: "All" },
+                {
+                  type: "response.completed",
+                  response: {
+                    status: "completed",
+                    usage: {
+                      input_tokens: 40,
+                      input_tokens_details: { cached_tokens: 30 },
+                      output_tokens: 12,
+                      output_tokens_details: { reasoning_tokens: 8 },
+                      total_tokens: 52,
+                    },
+                  },
+                },
+              ]),
+            ),
+          },
+        };
+
+        const chunks = await collect(client);
+
+        expect(chunks.at(-1)).toMatchObject({
+          type: "done",
+          usage: [
+            { cacheRead: 30, input: 40, output: 12, reasoning: 8, total: 52 },
+          ],
+        });
+      });
     });
 
     describe("extractToolCalls", () => {

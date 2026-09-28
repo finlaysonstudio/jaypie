@@ -69,17 +69,32 @@ LlamaCloud serves LlamaParse, which extracts documents and generates no text. Th
 `LLM.COST` maps a literal model id to its standard list price per **million** tokens (`LlmModelCost`). Keys are string literals, not `MODEL.*` references, so a model retired from the catalog keeps its price and historic usage stays replayable. **Provider aliases are never priced.** A `-latest` id has no stable rate — the provider can repoint it at any time, and an entry under the alias would keep returning the old price with nothing to signal the move. `MODEL.MISTRAL.*` names aliases, so `COST[MODEL.MISTRAL.LARGE]` returns `undefined` by design: resolve the alias to the id the API echoes on the response (`response.model`) and price that.
 
 ```typescript
-import { LLM, type LlmModelCost } from "@jaypie/llm";
+import { Llm, LLM, tokenCost } from "@jaypie/llm";
 
-const rate: LlmModelCost | undefined = LLM.COST[response.model];
-const dollars = rate
-  ? (usage.input * rate.input + usage.output * rate.output) / 1e6
-  : 0;
+const response = await Llm.operate(input, { model: LLM.MODEL.SONNET });
+const dollars: number | undefined = tokenCost(response.usage, {
+  model: LLM.MODEL.SONNET, // fallback price when an item's echoed id is unpriced
+});
 ```
+
+`tokenCost(usage, { model?, ttl? })` returns USD for a usage list, or `undefined` when the list is empty or any item is unpriced, so "free" and "unknown" stay distinct. It bills each token once. Usage is normalized across every provider and both `operate()` and `stream()`: `input` counts all prompt tokens with `cacheRead`/`cacheWrite` as subsets of it, `output` counts all billed output with `reasoning` (thinking) as a subset of it, and `total` is `input + output`. Per item:
+
+| Tokens                                  | Rate                                                     |
+| --------------------------------------- | -------------------------------------------------------- |
+| `input − cacheRead − cacheWrite`        | `input`                                                  |
+| `cacheRead`                             | `cachedInputRead` (else `input`)                         |
+| `cacheWriteTtl["1h"]`, `["5m"]`         | `cachedInputWrite` at that TTL (scalar rates ignore TTL) |
+| `cacheWrite` the provider did not split | `cachedInputWrite` at the `ttl` option (default `"1h"`)  |
+| `output − reasoning`                    | `output`                                                 |
+| `reasoning`                             | `reasoning` (else `output`)                              |
+
+Anthropic and Bedrock report writes per TTL (`cacheWriteTtl`); pass `ttl: "5m"` when the call used `cache: "5m"` on a provider that does not. `Llm.ocr` prices emulated calls with `tokenCost`.
+
+`LlmModelCost` fields (USD per million tokens):
 
 | Field              | Meaning                                                                                                                                                                                                                                              |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `input`            | Uncached input tokens                                                                                                                                                                                                                                |
+| `input`            | Uncached input tokens (`usage.input` less `cacheRead` and `cacheWrite`)                                                                                                                                                                              |
 | `output`           | Output tokens                                                                                                                                                                                                                                        |
 | `cachedInputRead`  | Cache-read (hit) tokens. Omitted when the provider does not price reads separately                                                                                                                                                                   |
 | `cachedInputWrite` | Cache-write tokens. Scalar when TTL-invariant (`0` where the provider publishes a free write, as Bedrock does for Nova), or keyed `{ "5m", "1h" }` matching `LlmCache`. Omitted means writes bill at `input` (a TTL-keyed premium is Anthropic-only) |
@@ -112,7 +127,7 @@ const response = await Llm.operate(input, {
 // Response structure
 response.content; // string | object (structured output)
 response.history; // LlmHistory - for follow-up calls
-response.usage; // Token usage per turn
+response.usage; // Token usage per turn: { input, output, reasoning, total, cacheRead?, cacheWrite?, cacheWriteTtl? }; reasoning ⊂ output, cache ⊂ input; price with tokenCost()
 response.reasoning; // Extended thinking (if available)
 response.status; // "completed" | "incomplete" | "in_progress"
 ```
@@ -1071,7 +1086,7 @@ describe("LLM Integration", () => {
 
 ```typescript
 interface LlmOperateOptions {
-  cache?: boolean | 0 | "5m" | "1h"; // Prompt caching (default on: 1h Anthropic, 5m elsewhere; false/0 disables)
+  cache?: boolean | 0 | "5m" | "1h"; // Prompt caching (default on at 1h; false/0 disables)
   data?: Record<string, any>; // Placeholder substitution data
   effort?: LlmEffort; // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
@@ -1180,21 +1195,24 @@ tool-calling loop is billed at the provider's cache-read rate (~0.1x input)
 after the first write. Control with the scalar `cache` option:
 
 ```typescript
-await Llm.operate(input, { system: SYSTEM }); // cached (1h Anthropic, else 5m)
+await Llm.operate(input, { system: SYSTEM }); // cached @ 1h
 await Llm.operate(input, { system: SYSTEM, cache: "5m" }); // cached @ 5m
 await Llm.operate(input, { system: SYSTEM, cache: false }); // opt out
 ```
 
-`true`/omitted = enabled at the adapter default (`"1h"` on Anthropic, `"5m"`
-elsewhere); `false`/`0` = disabled; `"5m"`/`"1h"` = that TTL.
+`true`/omitted = enabled at `"1h"`; `false`/`0` = disabled; `"5m"`/`"1h"` =
+that TTL. A one-hour write costs more than a five-minute one (2x input vs
+1.25x on Anthropic) but reads cost the same, so it pays for itself after about
+three reads and survives the gaps between turns.
 
 Per provider: Anthropic `cache_control` on system + last tool; Bedrock
 `cachePoint` blocks (model-gated, auto-denylisted and retried without on a 400;
-5m only); OpenAI/xAI/Meta automatic caching + a stable `prompt_cache_key`; OpenRouter
+`ttl` sent on Claude 4.5+ routes, Nova and older Claude cache for 5m); OpenAI/xAI/Meta automatic caching + a stable `prompt_cache_key`; OpenRouter
 `cache_control` on the system message (forwarded to Anthropic/Gemini backends);
-Google implicit caching only (Gemini 2.5+). TTL applies to Anthropic/OpenRouter;
+Google implicit caching only (Gemini 2.5+; `cachedContentTokenCount` surfaces as `cacheRead`). TTL applies to Anthropic, OpenRouter, and Bedrock Claude 4.5+;
 others use provider defaults. Sub-threshold prefixes silently no-op. Cache
-tokens surface as `cacheRead`/`cacheWrite` on usage, in the exchange envelope
+tokens surface as `cacheRead`/`cacheWrite` on usage (with `cacheWriteTtl`
+splitting writes by TTL on Anthropic and Bedrock), in the exchange envelope
 `usageTotals`, and in the report tally.
 
 ## Provider Options and Output Limits

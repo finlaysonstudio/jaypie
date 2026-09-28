@@ -2,7 +2,7 @@ import { InternalError, NotImplementedError } from "@jaypie/errors";
 import { PDFDocument } from "pdf-lib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MODEL } from "../../constants.js";
+import { COST, MODEL } from "../../constants.js";
 import {
   LlmAbortError,
   LlmTransientError,
@@ -13,6 +13,7 @@ import {
   LlmOperateResponse,
   LlmProvider,
 } from "../../types/LlmProvider.interface.js";
+import { googleAdapter } from "../../operate/adapters/GoogleAdapter.js";
 import { getPdfPageCount } from "../../upload/index.js";
 import {
   buildOcrFormat,
@@ -381,6 +382,38 @@ describe("OcrEmulator", () => {
       });
       expect(operate).toHaveBeenCalledTimes(5);
       expect(peak).toBe(2);
+    });
+
+    it("Bills Gemini thinking tokens once", async () => {
+      // Usage as the Gemini adapter reports it (the issue #599 fixture)
+      const usage = googleAdapter.extractUsage(
+        {
+          usageMetadata: {
+            candidatesTokenCount: 321,
+            promptTokenCount: 4377,
+            thoughtsTokenCount: 1067,
+            totalTokenCount: 5765,
+          },
+        },
+        MODEL.GEMINI_FLASH,
+      );
+      operate.mockResolvedValue(
+        operateResponse(
+          { confidence: 1, markdown: "p", notes: "" },
+          { model: MODEL.GEMINI_FLASH, usage: [usage] },
+        ),
+      );
+      const result = await emulateOcr({
+        document: pdfDocument(await makePdf(1)),
+        options: {},
+        provider,
+        providerName: "google",
+      });
+      const price = COST[MODEL.GEMINI_FLASH];
+      expect(result.usage.cost).toBeCloseTo(
+        (4377 * price.input + 1388 * price.output) / 1_000_000,
+        9,
+      );
     });
 
     it("Leaves cost undefined for an unpriced model", async () => {

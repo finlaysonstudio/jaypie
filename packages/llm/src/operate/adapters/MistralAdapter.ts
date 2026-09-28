@@ -39,6 +39,10 @@ import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
 import { MistralClient } from "../../providers/mistral/client.js";
 import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import {
+  ChatCompletionsUsage,
+  chatCompletionsUsage,
+} from "../../util/chatCompletionsUsage.js";
 
 //
 //
@@ -819,8 +823,7 @@ export class MistralAdapter extends BaseProviderAdapter {
     } | null = null;
 
     // Track usage for final chunk
-    let inputTokens = 0;
-    let outputTokens = 0;
+    let usage: ChatCompletionsUsage | undefined;
     const model = mistralRequest.model || this.defaultModel;
 
     for await (const chunk of stream) {
@@ -837,12 +840,7 @@ export class MistralAdapter extends BaseProviderAdapter {
           };
           finish_reason?: string;
         }>;
-        usage?: {
-          prompt_tokens?: number;
-          completion_tokens?: number;
-          promptTokens?: number;
-          completionTokens?: number;
-        };
+        usage?: ChatCompletionsUsage;
       }
       const typedChunk = chunk as StreamChunk;
       const choices = typedChunk.choices;
@@ -927,28 +925,14 @@ export class MistralAdapter extends BaseProviderAdapter {
 
       // Extract usage if present (usually in the final chunk)
       if (typedChunk.usage) {
-        inputTokens =
-          typedChunk.usage.prompt_tokens || typedChunk.usage.promptTokens || 0;
-        outputTokens =
-          typedChunk.usage.completion_tokens ||
-          typedChunk.usage.completionTokens ||
-          0;
+        usage = typedChunk.usage;
       }
     }
 
     // Emit done chunk with final usage
     yield {
       type: LlmStreamChunkType.Done,
-      usage: [
-        {
-          input: inputTokens,
-          output: outputTokens,
-          reasoning: 0,
-          total: inputTokens + outputTokens,
-          provider: this.name,
-          model,
-        },
-      ],
+      usage: [chatCompletionsUsage(usage, { model, provider: this.name })],
     };
   }
 
@@ -1005,33 +989,10 @@ export class MistralAdapter extends BaseProviderAdapter {
 
   extractUsage(response: unknown, model: string): LlmUsageItem {
     const mistralResponse = response as MistralResponse;
-
-    if (!mistralResponse.usage) {
-      return {
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        total: 0,
-        provider: this.name,
-        model,
-      };
-    }
-
-    const usage = mistralResponse.usage;
-    const cacheRead =
-      usage.promptTokensDetails?.cachedTokens ??
-      usage.prompt_tokens_details?.cached_tokens ??
-      0;
-
-    return {
-      input: usage.promptTokens || usage.prompt_tokens || 0,
-      output: usage.completionTokens || usage.completion_tokens || 0,
-      reasoning: 0,
-      total: usage.totalTokens || usage.total_tokens || 0,
-      provider: this.name,
-      model,
-      ...(cacheRead ? { cacheRead } : {}),
-    };
+    return chatCompletionsUsage(
+      mistralResponse.usage as ChatCompletionsUsage | undefined,
+      { model, provider: this.name },
+    );
   }
 
   //
@@ -1331,6 +1292,9 @@ export class MistralAdapter extends BaseProviderAdapter {
 
       // Handle different message types
       if (message.role === "system") {
+        // The loop prepends the system prompt to history and also passes it
+        // as `system`; send it once.
+        if (system && message.content === system) continue;
         mistralMessages.push({
           role: "system",
           content: message.content as string,
