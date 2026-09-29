@@ -181,10 +181,16 @@ export class RetryExecutor {
             : this.errorClassifier.classify(error);
           if (classified.category === ErrorCategory.RateLimit) {
             if (!this.policy.shouldRetryRateLimit(rateLimitAttempt)) {
-              log.error(
-                `API call rate limited after ${this.policy.rateLimitRetries} retries`,
-              );
-              log.var({ error });
+              // With no budget (a fallback chain failing fast) the caller
+              // decides what the failure means; do not report it as exhausted
+              if (this.policy.rateLimitRetries === 0) {
+                log.debug("API call rate limited; not retrying");
+              } else {
+                log.error(
+                  `API call rate limited after ${this.policy.rateLimitRetries} retries`,
+                );
+                log.var({ error });
+              }
 
               await this.hookRunner.runOnUnrecoverableError(options.hooks, {
                 input: options.context.input as never,
@@ -221,10 +227,20 @@ export class RetryExecutor {
 
           // Check if we've exhausted retries
           if (!this.policy.shouldRetry(attempt)) {
-            log.error(
-              `API call failed after ${this.policy.maxRetries} retries`,
-            );
-            log.var({ error });
+            // With no budget (a fallback chain failing fast) the caller
+            // decides what the failure means; do not report it as exhausted
+            if (this.policy.maxRetries === 0) {
+              log.debug(
+                timedOut
+                  ? `API call timed out after ${(error as LlmTimeoutError).timeoutMs}ms; not retrying`
+                  : "API call failed; not retrying",
+              );
+            } else {
+              log.error(
+                `API call failed after ${this.policy.maxRetries} retries`,
+              );
+              log.var({ error });
+            }
 
             await this.hookRunner.runOnUnrecoverableError(options.hooks, {
               input: options.context.input as never,
@@ -260,7 +276,11 @@ export class RetryExecutor {
           }
 
           const delay = this.policy.getDelayForAttempt(attempt);
-          log.debug(`API call failed. Retrying in ${delay}ms...`);
+          log.debug(
+            timedOut
+              ? `API call timed out after ${(error as LlmTimeoutError).timeoutMs}ms. Retrying in ${delay}ms...`
+              : `API call failed. Retrying in ${delay}ms...`,
+          );
 
           await this.hookRunner.runOnRetryableError(options.hooks, {
             input: options.context.input as never,

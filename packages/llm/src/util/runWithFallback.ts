@@ -2,6 +2,7 @@ import log from "@jaypie/logger";
 
 import { LlmAbortError } from "../errors/LlmError.js";
 import { LlmFallbackConfig } from "../types/LlmProvider.interface.js";
+import { failureKind, tallyFailure } from "./tallyFailure.js";
 
 export interface FallbackAttemptContext<TInstance> {
   /** 1 for the primary, incrementing through the chain and the linger pass */
@@ -90,15 +91,26 @@ export async function runWithFallback<TInstance, TResult>({
         throw error;
       }
       lastError = error as Error;
-      log.warn(
-        lingering
-          ? `Provider ${provider} failed after lingering`
-          : `Provider ${provider} failed`,
-        {
-          attemptsRemaining: candidates.length - attempts,
-          error: lastError.message,
-        },
-      );
+      const attemptsRemaining = candidates.length - attempts;
+      const failover = attemptsRemaining > 0;
+      tallyFailure({ error, failover, model: config?.model, provider });
+      const detail = {
+        attemptsRemaining,
+        error: lastError.message,
+        kind: failureKind(error),
+      };
+      // Handing off to the next model is the chain working as designed; only
+      // the failure that reaches the caller warns
+      if (failover) {
+        log.debug(`Provider ${provider} failed; failing over`, detail);
+      } else {
+        log.warn(
+          lingering
+            ? `Provider ${provider} failed after lingering`
+            : `Provider ${provider} failed`,
+          detail,
+        );
+      }
     }
   }
 
