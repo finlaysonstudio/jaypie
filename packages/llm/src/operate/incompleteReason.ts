@@ -1,3 +1,5 @@
+import { LlmStopReason } from "../types/LlmProvider.interface.js";
+
 //
 //
 // Incomplete stop reasons
@@ -34,4 +36,48 @@ export function incompleteReasonFrom(
   reasons: ReadonlySet<string>,
 ): string | undefined {
   return stopReason && reasons.has(stopReason) ? stopReason : undefined;
+}
+
+//
+//
+// Standard stop reason
+//
+
+// Every provider's incomplete stop reason, lowercased, to the standard one.
+// A reason missing here still settles incomplete, as `Other`.
+const STANDARD_STOP_REASONS: Record<string, LlmStopReason> = {
+  blocklist: LlmStopReason.ContentFilter,
+  content_filter: LlmStopReason.ContentFilter,
+  content_filtered: LlmStopReason.ContentFilter,
+  guardrail_intervened: LlmStopReason.ContentFilter,
+  length: LlmStopReason.MaxTokens,
+  max_output_tokens: LlmStopReason.MaxTokens,
+  max_tokens: LlmStopReason.MaxTokens,
+  prohibited_content: LlmStopReason.ContentFilter,
+  recitation: LlmStopReason.ContentFilter,
+  refusal: LlmStopReason.Refusal,
+  safety: LlmStopReason.ContentFilter,
+  spii: LlmStopReason.ContentFilter,
+};
+
+/**
+ * The standard stop reason for one model response. Derived from the parsed
+ * response rather than the raw stop reason, because providers disagree on
+ * how a tool call reports (OpenAI `completed`, Gemini `STOP`, Anthropic
+ * `tool_use`) while every adapter agrees on `hasToolCalls`.
+ */
+export function standardStopReason({
+  hasToolCalls = false,
+  incompleteReason,
+}: {
+  hasToolCalls?: boolean;
+  incompleteReason?: string;
+} = {}): LlmStopReason {
+  if (incompleteReason) {
+    return (
+      STANDARD_STOP_REASONS[incompleteReason.toLowerCase()] ??
+      LlmStopReason.Other
+    );
+  }
+  return hasToolCalls ? LlmStopReason.ToolUse : LlmStopReason.EndTurn;
 }

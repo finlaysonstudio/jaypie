@@ -17,6 +17,7 @@ import {
   LlmProgressEventType,
   LlmResponseErrorReason,
   LlmResponseStatus,
+  LlmStopReason,
 } from "../../types/LlmProvider.interface.js";
 import { ErrorCategory, ParsedResponse, StandardToolCall } from "../types.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
@@ -969,6 +970,28 @@ describe("OperateLoop", () => {
         expect(result.content).toEqual({ name: "John", age: 30 });
       });
 
+      it("reports a structured_output tool answer as end_turn", async () => {
+        mockAdapter.hasStructuredOutput = vi.fn(() => true);
+        mockAdapter.extractStructuredOutput = vi.fn(() => ({ name: "John" }));
+        mockAdapter.parseResponse.mockReturnValueOnce({
+          content: "",
+          hasToolCalls: true,
+          raw: {},
+          stopReason: "tool_use",
+        } as ParsedResponse);
+
+        const loop = new OperateLoop({
+          adapter: mockAdapter,
+          client: mockClient,
+        });
+
+        const result = await loop.execute("Get data", {
+          format: { type: "object" },
+        });
+
+        expect(result.stopReason).toBe(LlmStopReason.EndTurn);
+      });
+
       it("backfills declared array fields omitted from structured output", async () => {
         mockAdapter.hasStructuredOutput = vi.fn(() => true);
         mockAdapter.extractStructuredOutput = vi.fn(() => ({
@@ -1147,7 +1170,39 @@ describe("OperateLoop", () => {
         status: 502,
         title: "Incomplete Response",
       });
+      expect(response.stopReason).toBe(LlmStopReason.ContentFilter);
       expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports a truncated response as max_tokens", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: "Partial",
+        hasToolCalls: false,
+        incompleteReason: "MAX_TOKENS",
+        stopReason: "MAX_TOKENS",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Summarize");
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.stopReason).toBe(LlmStopReason.MaxTokens);
+    });
+
+    it("reports a finished response as end_turn", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Hello");
+
+      expect(response.status).toBe(LlmResponseStatus.Completed);
+      expect(response.stopReason).toBe(LlmStopReason.EndTurn);
     });
   });
 

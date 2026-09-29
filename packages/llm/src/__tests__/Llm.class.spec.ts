@@ -3,7 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Subject
 import Llm from "../Llm.js";
 import { DEFAULT, PROVIDER } from "../constants.js";
-import { LlmAbortError, LlmTimeoutError } from "../errors/LlmError.js";
+import {
+  LlmAbortError,
+  LlmIncompleteError,
+  LlmTimeoutError,
+} from "../errors/LlmError.js";
+import {
+  LlmResponseErrorReason,
+  LlmResponseStatus,
+} from "../types/LlmProvider.interface.js";
 
 // Track mock calls for testing
 let openAiOperateMock = vi.fn();
@@ -287,6 +295,153 @@ describe("Llm Class", () => {
 
         expect(result.fallbackUsed).toBe(true);
         expect(result.provider).toBe("anthropic");
+      });
+    });
+
+    describe("incomplete response", () => {
+      const cutOff = (content: string, provider: string) => ({
+        content,
+        error: {
+          detail: "Model stopped before finishing: max_output_tokens",
+          reason: "incomplete",
+          status: 502,
+          title: "Incomplete Response",
+        },
+        provider,
+        status: "incomplete",
+        stopReason: "max_tokens",
+      });
+
+      it("fails over when the primary returns an incomplete response", async () => {
+        openAiOperateMock.mockResolvedValue(
+          cutOff("Truncated partial", "openai"),
+        );
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+
+        const result = await llm.operate("test");
+
+        expect(result.content).toBe("Mocked Anthropic operate response");
+        expect(result.fallbackUsed).toBe(true);
+        expect(result.fallbackAttempts).toBe(2);
+        expect(result.provider).toBe("anthropic");
+      });
+
+      it("returns a lone model's incomplete response", async () => {
+        openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME);
+        const result = await llm.operate("test");
+
+        expect(result.content).toBe("Partial");
+        expect(result.status).toBe(LlmResponseStatus.Incomplete);
+        expect(result.fallbackAttempts).toBe(1);
+        expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+      });
+
+      it("returns the last incomplete when the whole chain cuts off, without lingering", async () => {
+        openAiOperateMock.mockResolvedValue(cutOff("Partial A", "openai"));
+        anthropicOperateMock.mockResolvedValue(
+          cutOff("Partial B", "anthropic"),
+        );
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        const result = await llm.operate("test");
+
+        expect(result.content).toBe("Partial B");
+        expect(result.status).toBe(LlmResponseStatus.Incomplete);
+        expect(result.fallbackAttempts).toBe(2);
+        expect(result.fallbackUsed).toBe(true);
+        expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+      });
+
+      it("returns the primary's incomplete when the fallback throws", async () => {
+        openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        const result = await llm.operate("test");
+
+        expect(result.content).toBe("Partial");
+        expect(result.fallbackAttempts).toBe(2);
+        expect(result.fallbackUsed).toBe(false);
+        expect(result.provider).toBe("openai");
+      });
+
+      it("does not fail over on a loop policy stop", async () => {
+        openAiOperateMock.mockResolvedValue({
+          content: "",
+          error: {
+            detail: "Model requested function call but exceeded 1 turns",
+            reason: "max_turns",
+            status: 429,
+            title: "Too Many Requests",
+          },
+          provider: "openai",
+          status: "incomplete",
+        });
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        const result = await llm.operate("test");
+
+        expect(result.error?.reason).toBe(LlmResponseErrorReason.MaxTurns);
+        expect(result.fallbackAttempts).toBe(1);
+        expect(anthropicOperateMock).not.toHaveBeenCalled();
+      });
+
+      describe("incomplete: throw", () => {
+        it("throws LlmIncompleteError carrying the response", async () => {
+          openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME);
+          const error = await llm
+            .operate("test", { incomplete: "throw" })
+            .catch((thrown) => thrown);
+
+          expect(error).toBeInstanceOf(LlmIncompleteError);
+          expect(error.status).toBe(502);
+          expect(error.provider).toBe("openai");
+          expect(error.response.content).toBe("Partial");
+          expect(error.response.stopReason).toBe("max_tokens");
+          expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("returns the fallback's answer after failing over", async () => {
+          openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME, {
+            fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+          });
+          const result = await llm.operate("test", { incomplete: "throw" });
+
+          expect(result.content).toBe("Mocked Anthropic operate response");
+          expect(result.fallbackUsed).toBe(true);
+        });
+
+        it("throws once the whole chain cuts off", async () => {
+          openAiOperateMock.mockResolvedValue(cutOff("Partial A", "openai"));
+          anthropicOperateMock.mockResolvedValue(
+            cutOff("Partial B", "anthropic"),
+          );
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME, {
+            fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+          });
+
+          await expect(
+            llm.operate("test", { incomplete: "throw" }),
+          ).rejects.toBeInstanceOf(LlmIncompleteError);
+          expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+          expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+        });
       });
     });
 

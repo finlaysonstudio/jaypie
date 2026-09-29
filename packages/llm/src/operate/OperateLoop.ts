@@ -17,6 +17,7 @@ import {
   LlmProgressEventType,
   LlmResponseStatus,
   LlmResumeOption,
+  LlmStopReason,
   LlmToolCall,
   LlmToolResult,
 } from "../types/LlmProvider.interface.js";
@@ -38,6 +39,7 @@ import {
   isExchangeRequested,
 } from "./exchange/index.js";
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
+import { standardStopReason } from "./incompleteReason.js";
 import {
   ERROR,
   incompleteStop,
@@ -727,6 +729,7 @@ export class OperateLoop {
     if (parsed.stopReason) {
       state.lastStopReason = parsed.stopReason;
     }
+    state.responseBuilder.setStopReason(standardStopReason(parsed));
 
     // Add raw response
 
@@ -746,7 +749,9 @@ export class OperateLoop {
     // A response the provider cut short (output token ceiling, content
     // filter) settles as incomplete with the partial text as content, so a
     // caller can tell a truncated answer from a finished one instead of
-    // receiving prose that fails the format contract.
+    // receiving prose that fails the format contract. The content stays the
+    // raw partial even when a `format` was requested: a truncated answer is
+    // not the object the format promises, so it is not shaped into one.
     if (parsed.incompleteReason) {
       const stop = incompleteStop(parsed.incompleteReason);
       log.warn(stop.detail);
@@ -766,6 +771,8 @@ export class OperateLoop {
         state.responseBuilder.setContent(
           this.applyFormatArrayDefaults(structuredOutput, options),
         );
+        // The structured_output tool call is the answer, not a tool request
+        state.responseBuilder.setStopReason(LlmStopReason.EndTurn);
         state.responseBuilder.complete();
         return false; // Stop loop
       }

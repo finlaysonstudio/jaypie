@@ -1,8 +1,23 @@
 import log from "@jaypie/logger";
 
-import { LlmAbortError } from "../errors/LlmError.js";
+import { LlmAbortError, LlmIncompleteError } from "../errors/LlmError.js";
+import { ErrorCategory } from "../operate/types.js";
 import { LlmFallbackConfig } from "../types/LlmProvider.interface.js";
 import { failureKind, tallyFailure } from "./tallyFailure.js";
+
+//
+//
+// Constants
+//
+
+// Tallied in place of a thrown error when a returned result fails over, so
+// the report counts it under the `incomplete` kind
+const SOFT_FAILURE = new LlmIncompleteError();
+
+//
+//
+// Types
+//
 
 export interface FallbackAttemptContext<TInstance> {
   /** 1 for the primary, incrementing through the chain and the linger pass */
@@ -35,6 +50,15 @@ export interface FallbackAttemptContext<TInstance> {
  * The attempt callback owns what "success" means, so the same loop serves
  * `operate` (which settles an exchange on success), `ocr`, and `question`.
  * A caller abort ({@link LlmAbortError}) is terminal and never falls over.
+ *
+ * `shouldFailover` marks a returned result as a soft failure (operate's
+ * incomplete response): the chain moves past it like a thrown error, but it
+ * is kept. When nothing better arrives, the latest one is returned instead of
+ * throwing, since a partial answer beats an error. A primary that returned
+ * one never lingers: rerunning the same model would cut off the same way.
+ *
+ * `settle` finalizes whichever result reaches the caller, with the total
+ * attempts made.
  */
 export async function runWithFallback<TInstance, TResult>({
   attempt,
@@ -43,6 +67,8 @@ export async function runWithFallback<TInstance, TResult>({
   onExhausted,
   primary,
   primaryProvider,
+  settle = ({ result }) => result,
+  shouldFailover,
 }: {
   attempt: (context: FallbackAttemptContext<TInstance>) => Promise<TResult>;
   chain: LlmFallbackConfig[];
@@ -53,6 +79,11 @@ export async function runWithFallback<TInstance, TResult>({
   }) => Promise<void> | void;
   primary: TInstance;
   primaryProvider: string;
+  settle?: (context: {
+    attempts: number;
+    result: TResult;
+  }) => Promise<TResult> | TResult;
+  shouldFailover?: (result: TResult) => boolean;
 }): Promise<TResult> {
   const failFast = chain.length > 0;
   const candidates: Array<
@@ -73,13 +104,22 @@ export async function runWithFallback<TInstance, TResult>({
 
   let attempts = 0;
   let lastError: Error | undefined;
+  let softFailure: { result: TResult } | undefined;
+  let skipLinger = false;
+  // Candidates still to run after `made` attempts, less a skipped linger pass
+  const remainingAfter = (made: number) =>
+    candidates.length - made - (skipLinger ? 1 : 0);
 
   for (const [index, candidate] of candidates.entries()) {
+    const lingering = failFast && index === candidates.length - 1;
+    if (lingering && skipLinger) {
+      break;
+    }
     attempts++;
     const { config, instance, provider } = candidate();
-    const lingering = failFast && index === candidates.length - 1;
+    let result: TResult;
     try {
-      return await attempt({
+      result = await attempt({
         attempts,
         config,
         failFast: failFast && !lingering,
@@ -91,7 +131,7 @@ export async function runWithFallback<TInstance, TResult>({
         throw error;
       }
       lastError = error as Error;
-      const attemptsRemaining = candidates.length - attempts;
+      const attemptsRemaining = remainingAfter(attempts);
       const failover = attemptsRemaining > 0;
       tallyFailure({ error, failover, model: config?.model, provider });
       const detail = {
@@ -111,9 +151,37 @@ export async function runWithFallback<TInstance, TResult>({
           detail,
         );
       }
+      continue;
+    }
+
+    // Outside the try: a throw from `settle` reaches the caller, it is not
+    // another failed attempt
+    if (!shouldFailover?.(result)) {
+      return await settle({ attempts, result });
+    }
+    softFailure = { result };
+    if (index === 0) {
+      skipLinger = true;
+    }
+    const attemptsRemaining = remainingAfter(attempts);
+    const failover = attemptsRemaining > 0;
+    tallyFailure({
+      error: SOFT_FAILURE,
+      failover,
+      model: config?.model,
+      provider,
+    });
+    if (failover) {
+      log.debug(`Provider ${provider} returned incomplete; failing over`, {
+        attemptsRemaining,
+        kind: ErrorCategory.Incomplete,
+      });
     }
   }
 
+  if (softFailure) {
+    return await settle({ attempts, result: softFailure.result });
+  }
   await onExhausted?.({ attempts, error: lastError as Error });
   throw lastError;
 }

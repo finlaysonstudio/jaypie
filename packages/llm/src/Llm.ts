@@ -8,6 +8,7 @@ import { runWithFallback } from "./util/runWithFallback.js";
 import { scopeFallbackOptions } from "./util/scopeFallbackOptions.js";
 import { emulateQuestion, validateQuestions } from "./question/index.js";
 import { emulateOcr, resolveOcrDocument } from "./ocr/index.js";
+import { LlmIncompleteError } from "./errors/LlmError.js";
 import { emitExchange } from "./operate/exchange/index.js";
 import {
   ExchangeStore,
@@ -27,6 +28,8 @@ import {
   LlmOperateResponse,
   LlmOptions,
   LlmProvider,
+  LlmResponseErrorReason,
+  LlmResponseStatus,
 } from "./types/LlmProvider.interface.js";
 import {
   LlmQuestionOptions,
@@ -50,6 +53,38 @@ import { OpenAiProvider } from "./providers/openai/index.js";
 import { OpenRouterProvider } from "./providers/openrouter/index.js";
 import { TypeSafeProvider } from "./providers/typesafe/index.js";
 import { XaiProvider } from "./providers/xai/index.js";
+
+//
+//
+// Constants
+//
+
+const INCOMPLETE_MODE = {
+  RETURN: "return",
+  THROW: "throw",
+} as const;
+
+//
+//
+// Helpers
+//
+
+/**
+ * True when the provider cut the answer short (output token ceiling, content
+ * filter). Loop policy stops (max turns, tool errors) also settle
+ * incomplete but are not cut-offs: another model would not change them.
+ */
+function isCutOff(response: LlmOperateResponse): boolean {
+  return (
+    response.status === LlmResponseStatus.Incomplete &&
+    response.error?.reason === LlmResponseErrorReason.Incomplete
+  );
+}
+
+//
+//
+// Main
+//
 
 class Llm implements LlmProvider {
   private _fallbackConfig?: LlmFallbackConfig[];
@@ -292,17 +327,12 @@ class Llm implements LlmProvider {
                   : {}),
               },
         );
-        const settled = {
+        return {
           ...response,
           fallbackAttempts: attempts,
           fallbackUsed: attempts > 1,
           provider: response.provider || provider,
         };
-        await this.settleExchange({
-          onExchange: resolvedOptions.onExchange,
-          response: settled,
-        });
-        return settled;
       },
       chain: fallbackChain,
       createInstance: (config) => this.createFallbackInstance(config),
@@ -327,6 +357,27 @@ class Llm implements LlmProvider {
       },
       primary: this,
       primaryProvider: this._provider,
+      settle: async ({ attempts, result }) => {
+        // Attempts made across the whole chain, which can outrun the attempt
+        // that served when the chain moved past this incomplete response
+        const settled = { ...result, fallbackAttempts: attempts };
+        await this.settleExchange({
+          onExchange: resolvedOptions.onExchange,
+          response: settled,
+        });
+        if (
+          resolvedOptions.incomplete === INCOMPLETE_MODE.THROW &&
+          isCutOff(settled)
+        ) {
+          throw new LlmIncompleteError(settled.error?.detail, {
+            response: settled,
+          });
+        }
+        return settled;
+      },
+      // A provider cut-off (output token ceiling, content filter) is not an
+      // answer; the next model may have the headroom or policy to finish
+      shouldFailover: isCutOff,
     });
   }
 

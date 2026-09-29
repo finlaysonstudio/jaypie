@@ -4,6 +4,7 @@ import {
   LlmHistory,
   LlmOperateResponse,
   LlmResponseStatus,
+  LlmStopReason,
   LlmUsage,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
@@ -68,6 +69,14 @@ export class ResponseBuilder {
    */
   setStatus(status: LlmResponseStatus): this {
     this.response.status = status;
+    return this;
+  }
+
+  /**
+   * Set the standard stop reason of the latest model response
+   */
+  setStopReason(stopReason: LlmStopReason | undefined): this {
+    this.response.stopReason = stopReason;
     return this;
   }
 
