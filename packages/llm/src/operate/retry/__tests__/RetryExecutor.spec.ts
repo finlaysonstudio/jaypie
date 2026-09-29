@@ -40,14 +40,16 @@ vi.mock("../../../util/abortableSleep.js", () => ({
   abortableSleep: vi.fn().mockResolvedValue(undefined),
 }));
 
+const mockLog = vi.hoisted(() => ({
+  debug: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+  var: vi.fn(),
+  warn: vi.fn(),
+}));
+
 vi.mock("../../../util/index.js", () => ({
-  getLogger: () => ({
-    debug: vi.fn(),
-    error: vi.fn(),
-    trace: vi.fn(),
-    var: vi.fn(),
-    warn: vi.fn(),
-  }),
+  getLogger: () => mockLog,
 }));
 
 //
@@ -749,6 +751,76 @@ describe("RetryExecutor", () => {
   });
 
   // Attempt Timeout
+  describe("Logging", () => {
+    const mockContext = {
+      input: "test",
+      options: {},
+      providerRequest: {},
+    };
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("logs an error when the transient budget is exhausted", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 1 }),
+      });
+      const operation = vi.fn().mockRejectedValue(new RetryableError());
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(mockLog.error).toHaveBeenCalledWith(
+        "API call failed after 1 retries",
+      );
+    });
+
+    it("logs debug, not error, when there is no transient budget", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 0 }),
+      });
+      const operation = vi.fn().mockRejectedValue(new RetryableError());
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(mockLog.error).not.toHaveBeenCalled();
+      expect(mockLog.debug).toHaveBeenCalledWith(
+        "API call failed; not retrying",
+      );
+    });
+
+    it("logs debug, not error, when there is no rate-limit budget", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: {
+          classify: (error: unknown) => ({
+            category: ErrorCategory.RateLimit,
+            error,
+            shouldRetry: false,
+          }),
+          isKnownError: () => true,
+          isRetryable: () => false,
+        },
+        policy: new RetryPolicy({ rateLimitRetries: 0 }),
+      });
+      const operation = vi.fn().mockRejectedValue(new Error("Rate limited"));
+
+      await expect(
+        executor.execute(operation, { context: mockContext }),
+      ).rejects.toThrow();
+
+      expect(mockLog.error).not.toHaveBeenCalled();
+      expect(mockLog.debug).toHaveBeenCalledWith(
+        "API call rate limited; not retrying",
+      );
+    });
+  });
+
   describe("Attempt Timeout", () => {
     const mockContext = {
       input: "test",
@@ -785,6 +857,27 @@ describe("RetryExecutor", () => {
       expect(await settled).toMatchObject({ name: "LlmTimeoutError" });
 
       expect(attemptSignal?.aborted).toBe(true);
+    });
+
+    it("logs a timeout with no budget at debug, not error", async () => {
+      const executor = new RetryExecutor({
+        errorClassifier: createTestErrorClassifier(),
+        policy: new RetryPolicy({ maxRetries: 0 }),
+      });
+      const operation = vi.fn(() => new Promise<string>(() => {}));
+
+      const pending = executor.execute(operation, {
+        context: mockContext,
+        timeout: 1000,
+      });
+      const settled = pending.catch((thrown) => thrown);
+      await vi.advanceTimersByTimeAsync(1000);
+      await settled;
+
+      expect(mockLog.error).not.toHaveBeenCalled();
+      expect(mockLog.debug).toHaveBeenCalledWith(
+        "API call timed out after 1000ms; not retrying",
+      );
     });
 
     it("retries a timed-out attempt on the transient budget", async () => {

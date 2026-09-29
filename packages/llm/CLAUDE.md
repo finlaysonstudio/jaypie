@@ -1096,6 +1096,20 @@ session the tally is skipped entirely: `tallyOperate` guards on
 `log.sessionActive`, so a CLI or script calling `operate()` directly builds
 no payload and the logger emits nothing.
 
+Every failed provider attempt in `runWithFallback` (`operate()`, `ocr()`,
+`question()`) also tallies through `src/util/tallyFailure.ts`:
+`failures` counts by `provider:model` and kind (`timeout`, or the
+`LlmError` category), and `fallbacks` counts each hand-off to another model
+(including the linger pass back to the primary). Failures tally even when
+the call ultimately fails.
+
+Log levels follow the outcome. A zero retry budget (every fail-fast attempt
+down a chain) logs the failure at `debug` in `RetryExecutor` rather than
+"failed after 0 retries" at `error`; a timeout names its deadline. In
+`runWithFallback`, a failure that hands off to another model logs
+`Provider X failed; failing over` at `debug`; only the failure that reaches
+the caller logs at `warn`. Exhausting a nonzero budget still logs `error`.
+
 ### Streaming with Automatic Tool Execution
 
 The `stream()` method provides real-time streaming while **automatically executing tools** - combining the responsiveness of streaming with the full tool-calling lifecycle of `operate()`.

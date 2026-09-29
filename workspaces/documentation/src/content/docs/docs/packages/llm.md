@@ -558,6 +558,8 @@ Inside a Jaypie handler, `operate()` and `stream()` tally totals onto the logger
 ```json
 {
   "llm": {
+    "failures": { "openai:gpt-5.5": { "timeout": 1 } },
+    "fallbacks": 1,
     "operates": 2,
     "toolCalls": 3,
     "tools": { "get_weather": 2, "roll": 1 },
@@ -569,7 +571,7 @@ Inside a Jaypie handler, `operate()` and `stream()` tally totals onto the logger
 }
 ```
 
-Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:model`, so fallback providers appear as separate keys. Outside a handler session the tally is skipped entirely (guarded on `log.sessionActive`), so a CLI or script calling `operate()` directly emits nothing.
+Repeated calls in one request combine (numbers sum). `usage` is keyed `provider:model`, so fallback providers appear as separate keys. `failures` counts failed provider attempts by `provider:model` and kind (`timeout`, `rate_limit`, `retryable`, `quota`, `unrecoverable`, `unknown`), and `fallbacks` counts hand-offs to another model. A failure that hands off logs at `debug`; only the failure that reaches the caller logs at `warn`. Outside a handler session the tally is skipped entirely (guarded on `log.sessionActive`), so a CLI or script calling `operate()` directly emits nothing.
 
 ## Error Handling
 

@@ -864,6 +864,7 @@ const response = await llm.operate(input, {
 - `stream()` treats `timeout` as an idle timeout: it restarts with every chunk and pauses while the consumer holds one. A stall after partial output yields an error chunk.
 - No default applies; unset means no deadline. Size it above the slowest legitimate non-streaming response (long reasoning runs take minutes).
 - `Llm.ocr` keeps `timeout` as the LlamaParse job deadline.
+- A timeout that hands off to the next model logs at `debug` (`API call timed out after 60000ms; not retrying`, then `Provider openai failed; failing over`). Only the failure that reaches the caller logs at `warn`. The report tally counts it under `failures` and `fallbacks`.
 
 ### Fallback Response Metadata
 
@@ -922,6 +923,8 @@ Inside a Jaypie handler (`expressHandler`, `lambdaHandler`, and stream variants)
 ```json
 {
   "llm": {
+    "failures": { "openai:gpt-5.5": { "timeout": 1 } },
+    "fallbacks": 1,
     "operates": 2,
     "toolCalls": 3,
     "tools": { "get_weather": 2, "roll": 1 },
@@ -941,6 +944,8 @@ Inside a Jaypie handler (`expressHandler`, `lambdaHandler`, and stream variants)
 - `operates` counts loop executions; repeated calls sum every number
 - `usage` is keyed `provider:model` — fallback providers appear as separate keys
 - `tools` appears only when tools were called
+- `failures` counts failed provider attempts by `provider:model` and kind (`timeout`, `rate_limit`, `retryable`, `quota`, `unrecoverable`, `unknown`), from `operate()`, `ocr()`, and `question()`
+- `fallbacks` counts hand-offs to another model, including the final retry of the primary once a chain is spent
 - Outside a handler session the tally is skipped entirely (guarded on `log.sessionActive`), so a CLI or script calling `operate()` directly emits nothing
 
 ## LLM Observability (Datadog)
