@@ -480,7 +480,14 @@ conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
 generation.`), exhausted quota, and billing failures classify the same
 everywhere. A daily-quota `429` is classified as
 `Quota` (terminal), not `RateLimit`. Quota errors are never retried: waiting
-does not refill an exhausted plan.
+does not refill an exhausted plan. Anthropic's spending cap (`You have
+reached your specified API usage limits`) is a billing `Quota` error.
+
+Adapters classify by HTTP `status` before any class name. A bundler renames
+classes (esbuild emits `BadRequestError3`), so a name match strips a numeric
+suffix (Anthropic) or reads the literal `error.name` the AWS SDK sets
+(Bedrock). The Anthropic and OpenAI clients give every error class a literal
+`name` (issue #604).
 
 ### Rate Limit Backoff
 

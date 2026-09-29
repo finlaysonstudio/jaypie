@@ -21,6 +21,8 @@ const RETRYABLE_MESSAGE_PATTERNS = [
 
 /** Billing / insufficient-funds signals — the account cannot be charged. */
 const BILLING_MESSAGE_PATTERNS = [
+  // Anthropic spending cap: "You have reached your specified API usage limits"
+  "api usage limits",
   "insufficient_quota",
   "insufficient funds",
   "insufficient credit",
