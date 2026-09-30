@@ -14,6 +14,7 @@ export type {
   LlmExchangeTiming,
   LlmFallbackConfig,
   LlmHistory,
+  LlmIncompleteMode,
   LlmInputContent,
   LlmInputContentFile,
   LlmInputContentImage,
@@ -42,6 +43,7 @@ export {
   LlmMessageType,
   LlmProgressEventType,
   LlmResponseErrorReason,
+  LlmStopReason,
 } from "./types/LlmProvider.interface.js";
 export type {
   LlmOcrDocument,
@@ -102,6 +104,7 @@ export type {
 export {
   LlmAbortError,
   LlmError,
+  LlmIncompleteError,
   LlmQuotaError,
   LlmRateLimitError,
   LlmTimeoutError,

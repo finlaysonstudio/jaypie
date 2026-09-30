@@ -64,6 +64,7 @@ const response = await Llm.operate("What is 2+2?", {
 | `cache` | `boolean \| 0 \| "5m" \| "1h"` | Prompt caching; on by default at `"1h"` |
 | `fallback` | `LlmFallbackConfig[] \| false` | Fallback provider chain |
 | `format` | `NaturalSchema \| JSONSchema \| ZodSchema` | Structured output schema |
+| `incomplete` | `"return" \| "throw"` | A cut-off answer returns the partial (default) or throws `LlmIncompleteError` |
 | `maxTokens` | `number` | Maximum response tokens |
 | `model` | `string` | Model identifier |
 | `system` | `string` | System prompt |
@@ -108,6 +109,8 @@ Mistral markdown is self-contained: tables are inlined, every image is described
 ## Fallback Providers
 
 Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over. `operate`, `ocr`, and `question` share this behavior.
+
+In `operate`, a response the provider cut short (an output token ceiling, a content filter) also moves to the next entry. When no entry finishes, the latest incomplete response is returned, or `LlmIncompleteError` is thrown with `incomplete: "throw"`. Jaypie 2 will default to `"throw"`. An incomplete `content` is the raw partial string even when `format` was requested; check `status` before reading it as the formatted object.
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
@@ -174,6 +177,7 @@ const response = await llm.operate(input, {
 | `provider` | `string` | Which provider handled the request |
 | `fallbackUsed` | `boolean` | Whether a fallback was used |
 | `fallbackAttempts` | `number` | Number of providers tried |
+| `stopReason` | `LlmStopReason` | Why the final model call stopped: `end_turn`, `max_tokens`, `content_filter`, `refusal`, `tool_use`, or `other` |
 
 ## Instance Methods
 
@@ -598,7 +602,7 @@ The loop settles `status: "incomplete"` with an error of its own when a policy b
 |----------|--------|---------|
 | `max_turns` | 429 | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge. |
 | `tool_errors` | 502 | Tool execution failed six times in a row and the loop stopped. |
-| `incomplete` | 502 | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason. |
+| `incomplete` | 502 | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";

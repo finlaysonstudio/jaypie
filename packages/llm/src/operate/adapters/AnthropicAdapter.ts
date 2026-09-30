@@ -365,7 +365,9 @@ function convertContentToAnthropic(
   });
 }
 
-// Error names for classification (using string names since SDK is optional)
+// Error names for classification when an error carries no HTTP status. A
+// bundler may rename classes (esbuild emits `BadRequestError3`), so names are
+// compared after stripping a numeric suffix; see `errorBaseName`.
 const RETRYABLE_ERROR_NAMES = [
   "APIConnectionError",
   "APIConnectionTimeoutError",
@@ -378,6 +380,32 @@ const NOT_RETRYABLE_ERROR_NAMES = [
   "NotFoundError",
   "PermissionDeniedError",
 ];
+
+const HTTP_STATUS = {
+  BAD_REQUEST: 400,
+  RATE_LIMIT: 429,
+  REQUEST_TIMEOUT: 408,
+  SERVER_ERROR: 500,
+} as const;
+
+/** Class name without a bundler's numeric suffix (`BadRequestError3`) */
+function errorBaseName(error: unknown): string | undefined {
+  const name = (error as Error)?.constructor?.name ?? (error as Error)?.name;
+  return name?.replace(/\d+$/, "");
+}
+
+/** HTTP status the error carries, when numeric */
+function errorStatus(error: unknown): number | undefined {
+  const status = (error as { status?: unknown })?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+function isBadRequestError(error: unknown): boolean {
+  return (
+    errorStatus(error) === HTTP_STATUS.BAD_REQUEST ||
+    errorBaseName(error) === "BadRequestError"
+  );
+}
 
 // Models known not to accept `temperature`.
 // Patterns (not exact names) so dated variants and future releases are covered
@@ -421,8 +449,7 @@ function isTemperatureDeprecationError(error: unknown): boolean {
     message?: string;
     error?: { message?: string };
   };
-  const name = (error as Error)?.constructor?.name;
-  if (name !== "BadRequestError" && err.status !== 400) return false;
+  if (!isBadRequestError(error)) return false;
   const messages = [err.message, err.error?.message].filter(
     (m): m is string => typeof m === "string",
   );
@@ -445,8 +472,7 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
     message?: string;
     error?: { message?: string };
   };
-  const name = (error as Error)?.constructor?.name;
-  if (name !== "BadRequestError" && err.status !== 400) return false;
+  if (!isBadRequestError(error)) return false;
   const messages = [err.message, err.error?.message].filter(
     (m): m is string => typeof m === "string",
   );
@@ -1135,7 +1161,37 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     const shared = classifyProviderError(error);
     if (shared) return shared;
 
-    const errorName = (error as Error)?.constructor?.name;
+    // Status first: it survives bundling, where class names do not (#604)
+    const status = errorStatus(error);
+    if (status !== undefined) {
+      if (status === HTTP_STATUS.RATE_LIMIT) {
+        return {
+          error,
+          category: ErrorCategory.RateLimit,
+          shouldRetry: false,
+          suggestedDelayMs: 60000,
+        };
+      }
+      if (
+        status >= HTTP_STATUS.SERVER_ERROR ||
+        status === HTTP_STATUS.REQUEST_TIMEOUT
+      ) {
+        return {
+          error,
+          category: ErrorCategory.Retryable,
+          shouldRetry: true,
+        };
+      }
+      if (status >= HTTP_STATUS.BAD_REQUEST) {
+        return {
+          error,
+          category: ErrorCategory.Unrecoverable,
+          shouldRetry: false,
+        };
+      }
+    }
+
+    const errorName = errorBaseName(error) ?? "";
 
     // Check for rate limit error
     if (errorName === "RateLimitError") {

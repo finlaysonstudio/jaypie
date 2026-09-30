@@ -198,7 +198,10 @@ generations do not silently truncate:
 The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
 which transport the request uses. Callers override per call via
 `providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
-OpenAI, xAI, Meta, and OpenRouter leave the limit unset. **Mistral is capped**
+OpenAI, xAI, Meta, and OpenRouter leave the limit unset, so a chain mixing
+them with a capped provider mixes output budgets (a Gemini primary at 16,384
+non-streaming, an OpenAI fallback uncapped). The skill documents the
+asymmetry; the cap stays because it guards HTTP timeouts (issue #602). **Mistral is capped**
 (32,768 model max, 16,384 non-streaming) even though it publishes no low
 ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and uncapped that ran a single live matrix
@@ -355,6 +358,19 @@ model or linger pass retries. `StreamLoop` makes it an idle timeout, armed only
 while awaiting the provider's next chunk. `ocr` keeps `timeout` as its
 LlamaParse job ceiling.
 
+**Incomplete responses fail over.** A cut-off (`status: "incomplete"` with
+`error.reason: "incomplete"`) is a soft failure: `Llm.operate` passes
+`shouldFailover` to `runWithFallback`, which moves past the result like a
+thrown error but keeps it. When nothing better arrives the latest incomplete is
+returned rather than an error, and a primary that cut off skips the linger
+pass. `settle` finalizes whichever result reaches the caller (exchange
+settlement, total `fallbackAttempts`) and runs outside the attempt's `try`, so
+its throw is not another failed attempt. `incomplete: "throw"` makes `settle`
+raise `LlmIncompleteError` (category `incomplete`, `.response` carries the
+settled response); `"return"` is the 1.x default and Jaypie 2 flips it to
+`"throw"`. Loop stops (`max_turns`, `tool_errors`) never fail over (issue
+#602).
+
 `providerOptions` never travel down the chain. Per-call `providerOptions` reach
 the primary only (its linger pass included); a fallback gets its own entry's
 `providerOptions` or none. `src/util/scopeFallbackOptions.ts` also clears the
@@ -410,6 +426,7 @@ later); `LlmError` passes the option through and declares no field of its own.
 | `LlmUnrecoverableError` | `unrecoverable` | 502      | Bad request / auth / not found                                                     |
 | `LlmTransientError`     | `retryable`     | 504      | A transient/unknown error survived the retry budget                                |
 | `LlmTimeoutError`       | `retryable`     | 504      | Extends `LlmTransientError`; an attempt outlived `timeout`; carries `timeoutMs`    |
+| `LlmIncompleteError`    | `incomplete`    | 502      | `incomplete: "throw"` and the provider cut the answer short; carries `response`    |
 
 ```typescript
 import { Llm, LLM, LlmQuotaError, LlmRateLimitError } from "@jaypie/llm";
@@ -444,7 +461,13 @@ and the guardrail stops, and Chat Completions `length` and `content_filter`;
 streams emit an error chunk from the same event), and the loop settles with
 the partial text as
 `content` rather than completing or treating it as prose that failed the
-format contract. The OCR emulator wraps that body in `LlmUnrecoverableError`
+format contract. `content` stays the raw partial string even with `format`.
+`response.stopReason` (`LlmStopReason`) normalizes the stop across providers
+through `standardStopReason` in the same file: `max_tokens`,
+`content_filter`, `refusal`, `other` for an unmapped cut-off, `tool_use` when
+the parsed response has tool calls, else `end_turn` (a `structured_output`
+tool answer is `end_turn`). It is derived from `ParsedResponse`, not the raw
+reason, because providers disagree on how tool calls report. The OCR emulator wraps that body in `LlmUnrecoverableError`
 so a chain logs the reason and moves on. The live matrix uses the
 discriminator to report an exhausted budget as inconclusive rather than as a
 missing capability (issue #505).
@@ -457,7 +480,14 @@ conditions agree: retryable structured-output compile timeouts (e.g. Anthropic
 generation.`), exhausted quota, and billing failures classify the same
 everywhere. A daily-quota `429` is classified as
 `Quota` (terminal), not `RateLimit`. Quota errors are never retried: waiting
-does not refill an exhausted plan.
+does not refill an exhausted plan. Anthropic's spending cap (`You have
+reached your specified API usage limits`) is a billing `Quota` error.
+
+Adapters classify by HTTP `status` before any class name. A bundler renames
+classes (esbuild emits `BadRequestError3`), so a name match strips a numeric
+suffix (Anthropic) or reads the literal `error.name` the AWS SDK sets
+(Bedrock). The Anthropic and OpenAI clients give every error class a literal
+`name` (issue #604).
 
 ### Rate Limit Backoff
 
@@ -1326,6 +1356,7 @@ export {
   LlmMessageRole,
   LlmMessageType,
   LlmResponseErrorReason,
+  LlmStopReason,
   LlmStreamChunkType,
 };
 

@@ -1,5 +1,6 @@
 import { JaypieError } from "@jaypie/errors";
 import { ErrorCategory } from "../operate/types.js";
+import type { LlmOperateResponse } from "../types/LlmProvider.interface.js";
 
 //
 //
@@ -25,6 +26,8 @@ export interface LlmErrorOptions {
 const ABORT_MESSAGE = "Request aborted by caller";
 const ABORT_STATUS = 499;
 const ABORT_TITLE = "Client Closed Request";
+const INCOMPLETE_MESSAGE = "Model stopped before finishing";
+const INCOMPLETE_TITLE = "Incomplete Response";
 const TIMEOUT_MESSAGE = "Request attempt timed out";
 
 //
@@ -84,6 +87,34 @@ export class LlmAbortError extends LlmError {
       ...options,
     });
     this.name = "LlmAbortError";
+  }
+}
+
+/**
+ * The provider cut the answer short (output token ceiling, content filter)
+ * and the caller asked `operate` to throw rather than return the partial
+ * (`incomplete: "throw"`). The settled response, partial content and
+ * `stopReason` included, rides on `.response`.
+ */
+export class LlmIncompleteError extends LlmError {
+  readonly response?: LlmOperateResponse;
+
+  constructor(
+    message: string = INCOMPLETE_MESSAGE,
+    {
+      response,
+      ...options
+    }: LlmErrorOptions & { response?: LlmOperateResponse } = {},
+  ) {
+    super(message, ErrorCategory.Incomplete, {
+      model: response?.model,
+      provider: response?.provider,
+      ...options,
+      status: 502,
+      title: INCOMPLETE_TITLE,
+    });
+    this.name = "LlmIncompleteError";
+    this.response = response;
   }
 }
 

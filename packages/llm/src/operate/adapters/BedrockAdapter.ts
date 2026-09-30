@@ -187,7 +187,8 @@ function isTemperatureDeprecationError(error: unknown): boolean {
 
 /** Exported for tests; not part of the package's public surface. */
 export function isCachePointUnsupportedError(error: unknown): boolean {
-  const name = (error as Error)?.constructor?.name ?? "";
+  const name =
+    (error as Error)?.name ?? (error as Error)?.constructor?.name ?? "";
   const msg = (error as Error)?.message ?? "";
   // A model that cannot cache rejects the cachePoint block with a
   // ValidationException naming caching / cachePoint. Bedrock words this as
@@ -871,7 +872,10 @@ export class BedrockAdapter extends BaseProviderAdapter {
     const shared = classifyProviderError(error);
     if (shared) return shared;
 
-    const errorName = (error as Error)?.constructor?.name;
+    // The AWS SDK sets a literal `name`; the class name does not survive
+    // bundling (esbuild emits `ThrottlingException2`) (#604)
+    const errorName =
+      (error as Error)?.name ?? (error as Error)?.constructor?.name;
     const errorMessage = (error as Error)?.message ?? "";
 
     if (

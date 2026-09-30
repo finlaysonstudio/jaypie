@@ -14,30 +14,46 @@ const ANTHROPIC_VERSION = "2023-06-01";
 //
 // Errors
 //
-// The adapter's `classifyError` keys off `error.constructor.name` (the SDK's
-// class names), so the client throws errors whose class names match. Status →
-// class mapping mirrors the SDK.
+// The adapter's `classifyError` keys off `error.status`, falling back to the
+// class name (the SDK's class names) with any bundler suffix stripped. Each
+// class also carries a literal `name`, so `error.name` stays `BadRequestError`
+// when a bundler renames the class (`BadRequestError3`). Status → class
+// mapping mirrors the SDK.
 //
 
 export class AnthropicApiError extends Error {
+  override name = "AnthropicApiError";
   readonly status: number;
   readonly error?: { message?: string };
 
   constructor(status: number, message: string, error?: { message?: string }) {
     super(message);
-    this.name = this.constructor.name;
     this.status = status;
     this.error = error;
   }
 }
 
-export class BadRequestError extends AnthropicApiError {}
-export class AuthenticationError extends AnthropicApiError {}
-export class PermissionDeniedError extends AnthropicApiError {}
-export class NotFoundError extends AnthropicApiError {}
-export class RateLimitError extends AnthropicApiError {}
-export class InternalServerError extends AnthropicApiError {}
-export class APIConnectionError extends AnthropicApiError {}
+export class BadRequestError extends AnthropicApiError {
+  override name = "BadRequestError";
+}
+export class AuthenticationError extends AnthropicApiError {
+  override name = "AuthenticationError";
+}
+export class PermissionDeniedError extends AnthropicApiError {
+  override name = "PermissionDeniedError";
+}
+export class NotFoundError extends AnthropicApiError {
+  override name = "NotFoundError";
+}
+export class RateLimitError extends AnthropicApiError {
+  override name = "RateLimitError";
+}
+export class InternalServerError extends AnthropicApiError {
+  override name = "InternalServerError";
+}
+export class APIConnectionError extends AnthropicApiError {
+  override name = "APIConnectionError";
+}
 
 function errorForStatus(
   status: number,

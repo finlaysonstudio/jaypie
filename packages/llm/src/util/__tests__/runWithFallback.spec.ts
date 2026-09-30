@@ -133,4 +133,156 @@ describe("runWithFallback", () => {
       );
     });
   });
+
+  describe("Soft Failures", () => {
+    const isSoft = (result: string) => result.startsWith("partial");
+
+    it("moves past a soft failure to the next model", async () => {
+      const attempt = vi
+        .fn()
+        .mockResolvedValueOnce("partial primary")
+        .mockResolvedValueOnce("ok");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("ok");
+      expect(attempt).toHaveBeenCalledTimes(2);
+      expect(log.debug).toHaveBeenCalledWith(
+        "Provider openai returned incomplete; failing over",
+        expect.objectContaining({ attemptsRemaining: 1, kind: "incomplete" }),
+      );
+      expect(tallyFailure).toHaveBeenCalledWith(
+        expect.objectContaining({ failover: true, provider: "openai" }),
+      );
+    });
+
+    it("returns a lone model's soft failure", async () => {
+      const attempt = vi.fn().mockResolvedValue("partial primary");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [],
+        createInstance: () => "fallback",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial primary");
+      expect(attempt).toHaveBeenCalledTimes(1);
+      expect(log.debug).not.toHaveBeenCalled();
+    });
+
+    it("skips the linger pass when the primary soft-failed", async () => {
+      const attempt = vi
+        .fn()
+        .mockResolvedValueOnce("partial primary")
+        .mockResolvedValueOnce("partial fallback");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial fallback");
+      expect(attempt).toHaveBeenCalledTimes(2);
+    });
+
+    it("returns the soft failure over a later error", async () => {
+      const attempt = vi
+        .fn()
+        .mockResolvedValueOnce("partial primary")
+        .mockRejectedValueOnce(timeout());
+      const onExhausted = vi.fn();
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        onExhausted,
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial primary");
+      expect(attempt).toHaveBeenCalledTimes(2);
+      expect(onExhausted).not.toHaveBeenCalled();
+    });
+
+    it("still lingers when only a fallback soft-failed", async () => {
+      const attempt = vi
+        .fn()
+        .mockRejectedValueOnce(timeout())
+        .mockResolvedValueOnce("partial fallback")
+        .mockResolvedValueOnce("ok");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("ok");
+      expect(attempt).toHaveBeenCalledTimes(3);
+      expect(attempt).toHaveBeenLastCalledWith(
+        expect.objectContaining({ failFast: false, instance: "primary" }),
+      );
+    });
+
+    it("settles the returned result with total attempts", async () => {
+      const settle = vi.fn(
+        ({ attempts, result }: { attempts: number; result: string }) =>
+          `${result}:${attempts}`,
+      );
+
+      const result = await runWithFallback({
+        attempt: vi
+          .fn()
+          .mockResolvedValueOnce("partial primary")
+          .mockRejectedValueOnce(timeout()),
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        primary: "primary",
+        primaryProvider: "openai",
+        settle,
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial primary:2");
+      expect(settle).toHaveBeenCalledTimes(1);
+    });
+
+    it("lets a throw from settle reach the caller without failing over", async () => {
+      const attempt = vi.fn().mockResolvedValue("ok");
+
+      await expect(
+        runWithFallback({
+          attempt,
+          chain: [{ model: "claude-x", provider: "anthropic" }],
+          createInstance: () => "fallback",
+          primary: "primary",
+          primaryProvider: "openai",
+          settle: () => {
+            throw timeout();
+          },
+        }),
+      ).rejects.toThrow(LlmTimeoutError);
+      expect(attempt).toHaveBeenCalledTimes(1);
+    });
+  });
 });

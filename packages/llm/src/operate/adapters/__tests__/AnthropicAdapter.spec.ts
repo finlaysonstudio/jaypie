@@ -861,6 +861,73 @@ describe("AnthropicAdapter", () => {
         expect(result.shouldRetry).toBe(false);
       });
 
+      it("classifies the spending-cap 400 as terminal quota (billing) (#604)", async () => {
+        const { BadRequestError } =
+          await import("../../../providers/anthropic/client.js");
+        const error = new BadRequestError(
+          400,
+          "You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC.",
+        );
+
+        const result = anthropicAdapter.classifyError(error);
+
+        expect(result.category).toBe(ErrorCategory.Quota);
+        expect(result.reason).toBe("billing");
+        expect(result.shouldRetry).toBe(false);
+      });
+
+      describe("bundler-renamed error classes (#604)", () => {
+        const renamed = ({
+          name,
+          status,
+        }: {
+          name: string;
+          status?: number;
+        }) => {
+          const Renamed = { [name]: class extends Error {} }[name];
+          const error = new Renamed("Request failed");
+          return Object.assign(error, { status });
+        };
+
+        it.each([400, 401, 403, 404])(
+          "classifies a renamed %i as unrecoverable",
+          (status) => {
+            const result = anthropicAdapter.classifyError(
+              renamed({ name: "BadRequestError3", status }),
+            );
+            expect(result.category).toBe(ErrorCategory.Unrecoverable);
+            expect(result.shouldRetry).toBe(false);
+          },
+        );
+
+        it("classifies a renamed 429 as rate limit", () => {
+          const result = anthropicAdapter.classifyError(
+            renamed({ name: "RateLimitError2", status: 429 }),
+          );
+          expect(result.category).toBe(ErrorCategory.RateLimit);
+          expect(result.shouldRetry).toBe(false);
+        });
+
+        it.each([500, 529])(
+          "classifies a renamed %i as retryable",
+          (status) => {
+            const result = anthropicAdapter.classifyError(
+              renamed({ name: "InternalServerError4", status }),
+            );
+            expect(result.category).toBe(ErrorCategory.Retryable);
+            expect(result.shouldRetry).toBe(true);
+          },
+        );
+
+        it("classifies a renamed class without a status by its base name", () => {
+          const result = anthropicAdapter.classifyError(
+            renamed({ name: "BadRequestError3" }),
+          );
+          expect(result.category).toBe(ErrorCategory.Unrecoverable);
+          expect(result.shouldRetry).toBe(false);
+        });
+      });
+
       it("classifies rate limit error", async () => {
         const { RateLimitError } =
           await import("../../../providers/anthropic/client.js");

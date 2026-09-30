@@ -65,6 +65,35 @@ export enum LlmResponseErrorReason {
   ToolErrors = "tool_errors",
 }
 
+/**
+ * Why the model stopped, normalized across providers. Each provider names
+ * the same stops differently (Gemini `MAX_TOKENS`, Chat Completions
+ * `length`, Anthropic `max_tokens`, OpenAI `max_output_tokens`); this is the
+ * one vocabulary a caller branches on.
+ */
+export enum LlmStopReason {
+  /** Blocked by a provider safety, recitation, or guardrail filter */
+  ContentFilter = "content_filter",
+  /** The model finished its answer */
+  EndTurn = "end_turn",
+  /** The output token ceiling cut the answer off */
+  MaxTokens = "max_tokens",
+  /** The model stopped short for a reason with no standard mapping */
+  Other = "other",
+  /** The model declined to answer */
+  Refusal = "refusal",
+  /** The model requested tool calls (turn budget spent, or calls parked) */
+  ToolUse = "tool_use",
+}
+
+/**
+ * What `operate` does with a response the provider cut short (an output
+ * token ceiling, a content filter). A configured fallback chain moves past
+ * one either way; this decides what reaches the caller once the chain is
+ * spent.
+ */
+export type LlmIncompleteMode = "return" | "throw";
+
 export interface LlmError {
   detail?: string;
   reason?: LlmResponseErrorReason;
@@ -563,6 +592,14 @@ export interface LlmOperateOptions {
       error: any;
     }) => unknown | Promise<unknown>;
   };
+  /**
+   * What reaches the caller when the provider cuts the answer short (output
+   * token ceiling, content filter). A fallback chain advances past an
+   * incomplete either way. `"return"` (default) hands back the partial with
+   * `status: "incomplete"`; `"throw"` raises `LlmIncompleteError` carrying
+   * that response. Loop policy stops (max turns, tool errors) are unaffected.
+   */
+  incomplete?: LlmIncompleteMode;
   instructions?: string;
   model?: string;
   /**
@@ -706,6 +743,11 @@ export interface LlmOperateResponse {
   reasoning: string[];
   responses: JsonReturn[];
   status: LlmResponseStatus;
+  /**
+   * Why the final model call stopped, normalized across providers. The
+   * provider's own value rides `exchange.response.stopReason`.
+   */
+  stopReason?: LlmStopReason;
   usage: LlmUsage;
 }
 

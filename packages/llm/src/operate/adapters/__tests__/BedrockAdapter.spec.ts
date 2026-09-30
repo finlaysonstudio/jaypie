@@ -441,6 +441,24 @@ describe("BedrockAdapter", () => {
       expect(classified.shouldRetry).toBe(true);
     });
 
+    it("Classifies a bundler-renamed exception by its name property (#604)", () => {
+      class ThrottlingException2 extends Error {}
+      const error = new ThrottlingException2("Rate exceeded");
+      error.name = "ThrottlingException";
+      const classified = adapter.classifyError(error);
+      expect(classified.category).toBe(ErrorCategory.RateLimit);
+      expect(classified.shouldRetry).toBe(false);
+    });
+
+    it("Classifies a bundler-renamed validation exception as unrecoverable (#604)", () => {
+      class ValidationException5 extends Error {}
+      const error = new ValidationException5("Malformed input request");
+      error.name = "ValidationException";
+      const classified = adapter.classifyError(error);
+      expect(classified.category).toBe(ErrorCategory.Unrecoverable);
+      expect(classified.shouldRetry).toBe(false);
+    });
+
     it("Returns unknown for unrecognized errors", () => {
       const classified = adapter.classifyError(new Error("Unknown error"));
       expect(classified.category).toBe(ErrorCategory.Unknown);

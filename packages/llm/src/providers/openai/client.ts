@@ -14,33 +14,56 @@ const OPENAI_BASE_URL = "https://api.openai.com/v1";
 // Errors
 //
 // The adapter's `classifyError` uses `instanceof` against these classes, so the
-// client throws them directly. Status → class mapping mirrors the SDK; the
+// client throws them directly. Each class carries a literal `name` so
+// `error.name` survives bundler renaming. Status → class mapping mirrors the SDK; the
 // non-HTTP classes (connection/abort) are thrown when `fetch` itself rejects.
 //
 
 export class OpenAiApiError extends Error {
+  override name = "OpenAiApiError";
   readonly status: number;
   readonly error?: { message?: string };
 
   constructor(status: number, message: string, error?: { message?: string }) {
     super(message);
-    this.name = this.constructor.name;
     this.status = status;
     this.error = error;
   }
 }
 
-export class BadRequestError extends OpenAiApiError {}
-export class AuthenticationError extends OpenAiApiError {}
-export class PermissionDeniedError extends OpenAiApiError {}
-export class NotFoundError extends OpenAiApiError {}
-export class ConflictError extends OpenAiApiError {}
-export class UnprocessableEntityError extends OpenAiApiError {}
-export class RateLimitError extends OpenAiApiError {}
-export class InternalServerError extends OpenAiApiError {}
-export class APIConnectionError extends OpenAiApiError {}
-export class APIConnectionTimeoutError extends APIConnectionError {}
-export class APIUserAbortError extends OpenAiApiError {}
+export class BadRequestError extends OpenAiApiError {
+  override name = "BadRequestError";
+}
+export class AuthenticationError extends OpenAiApiError {
+  override name = "AuthenticationError";
+}
+export class PermissionDeniedError extends OpenAiApiError {
+  override name = "PermissionDeniedError";
+}
+export class NotFoundError extends OpenAiApiError {
+  override name = "NotFoundError";
+}
+export class ConflictError extends OpenAiApiError {
+  override name = "ConflictError";
+}
+export class UnprocessableEntityError extends OpenAiApiError {
+  override name = "UnprocessableEntityError";
+}
+export class RateLimitError extends OpenAiApiError {
+  override name = "RateLimitError";
+}
+export class InternalServerError extends OpenAiApiError {
+  override name = "InternalServerError";
+}
+export class APIConnectionError extends OpenAiApiError {
+  override name = "APIConnectionError";
+}
+export class APIConnectionTimeoutError extends APIConnectionError {
+  override name = "APIConnectionTimeoutError";
+}
+export class APIUserAbortError extends OpenAiApiError {
+  override name = "APIUserAbortError";
+}
 
 function errorForStatus(
   status: number,

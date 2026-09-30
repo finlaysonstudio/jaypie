@@ -186,6 +186,9 @@ export const LlmResponseErrorReason = createMockWrappedObject(
     isClass: true,
   },
 );
+export const LlmStopReason = createMockWrappedObject(original.LlmStopReason, {
+  isClass: true,
+});
 export const LlmStreamChunkType = createMockWrappedObject(
   original.LlmStreamChunkType,
   {
@@ -246,6 +249,7 @@ export const XaiProvider = createMockWrappedObject(original.XaiProvider, {
 export const ErrorCategory = original.ErrorCategory;
 export const LlmAbortError = original.LlmAbortError;
 export const LlmError = original.LlmError;
+export const LlmIncompleteError = original.LlmIncompleteError;
 export const LlmQuotaError = original.LlmQuotaError;
 export const LlmRateLimitError = original.LlmRateLimitError;
 export const LlmTimeoutError = original.LlmTimeoutError;

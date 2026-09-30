@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { LlmStopReason } from "../../types/LlmProvider.interface.js";
 import {
   INCOMPLETE_STOP_REASONS,
   incompleteReasonFrom,
+  standardStopReason,
 } from "../incompleteReason.js";
 
 describe("incompleteReason", () => {
@@ -66,6 +68,66 @@ describe("incompleteReason", () => {
       expect(
         incompleteReasonFrom("MAX_TOKENS", INCOMPLETE_STOP_REASONS.ANTHROPIC),
       ).toBeUndefined();
+    });
+  });
+});
+
+describe("standardStopReason", () => {
+  describe("Base Cases", () => {
+    it("is a function", () => {
+      expect(standardStopReason).toBeFunction();
+    });
+    it("reports a finished answer with no params", () => {
+      expect(standardStopReason()).toBe(LlmStopReason.EndTurn);
+    });
+  });
+
+  describe("Happy Paths", () => {
+    it("maps every provider's output ceiling to max_tokens", () => {
+      for (const incompleteReason of [
+        "MAX_TOKENS",
+        "length",
+        "max_output_tokens",
+        "max_tokens",
+      ]) {
+        expect(standardStopReason({ incompleteReason })).toBe(
+          LlmStopReason.MaxTokens,
+        );
+      }
+    });
+    it("maps filters to content_filter", () => {
+      for (const incompleteReason of [
+        "BLOCKLIST",
+        "PROHIBITED_CONTENT",
+        "RECITATION",
+        "SAFETY",
+        "SPII",
+        "content_filter",
+        "content_filtered",
+        "guardrail_intervened",
+      ]) {
+        expect(standardStopReason({ incompleteReason })).toBe(
+          LlmStopReason.ContentFilter,
+        );
+      }
+    });
+    it("maps refusal", () => {
+      expect(standardStopReason({ incompleteReason: "refusal" })).toBe(
+        LlmStopReason.Refusal,
+      );
+    });
+    it("reports tool calls as tool_use", () => {
+      expect(standardStopReason({ hasToolCalls: true })).toBe(
+        LlmStopReason.ToolUse,
+      );
+    });
+  });
+
+  describe("Features", () => {
+    it("falls back to other for an unmapped incomplete reason", () => {
+      expect(standardStopReason({ incompleteReason: "incomplete" })).toBe(
+        LlmStopReason.Other,
+      );
     });
   });
 });

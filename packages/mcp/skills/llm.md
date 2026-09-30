@@ -130,7 +130,13 @@ response.history; // LlmHistory - for follow-up calls
 response.usage; // Token usage per turn: { input, output, reasoning, total, cacheRead?, cacheWrite?, cacheWriteTtl? }; reasoning ⊂ output, cache ⊂ input; price with tokenCost()
 response.reasoning; // Extended thinking (if available)
 response.status; // "completed" | "incomplete" | "in_progress"
+response.stopReason; // LlmStopReason: "end_turn" | "max_tokens" | "content_filter" | "refusal" | "tool_use" | "other"
 ```
+
+`stopReason` is normalized across providers (Gemini `MAX_TOKENS`, Chat
+Completions `length`, Anthropic `max_tokens`, and OpenAI `max_output_tokens`
+all read `max_tokens`). The provider's own value rides
+`exchange.response.stopReason`.
 
 ### send() - Simple Completions
 
@@ -800,7 +806,9 @@ for await (const chunk of Llm.stream(input, {
 
 ## Fallback Providers
 
-Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over:
+Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over.
+
+A response the provider cut short (`status: "incomplete"` with `error.reason: "incomplete"`: an output token ceiling or a content filter) also moves to the next entry. When no entry finishes, the latest incomplete response is returned rather than an error, and a primary that cut off does not linger (the same model would cut off the same way). Loop stops (`max_turns`, `tool_errors`) never fall over:
 
 ```typescript
 // Instance-level configuration
@@ -826,6 +834,28 @@ const response = await Llm.operate(input, {
   fallback: [{ provider: "openai", model: LLM.MODEL.SOL }],
 });
 ```
+
+### Incomplete Responses
+
+`incomplete` decides what reaches the caller once the chain is spent. `"return"` (the default) returns the partial with `status: "incomplete"`; `"throw"` raises `LlmIncompleteError` (status 502) carrying the settled response on `.response`. Either way a chain moves past an incomplete first. Jaypie 2 will default to `"throw"`.
+
+```typescript
+import { LlmIncompleteError, LlmStopReason } from "@jaypie/llm";
+
+try {
+  const response = await Llm.operate(input, {
+    format: Extraction,
+    incomplete: "throw",
+    model: [LLM.MODEL.GEMINI_FLASH, LLM.MODEL.SOL],
+  });
+} catch (error) {
+  if (error instanceof LlmIncompleteError) {
+    error.response.stopReason; // LlmStopReason.MaxTokens
+  }
+}
+```
+
+An incomplete `content` is the raw partial text, a string even when `format` was requested: a truncated answer is not the object the format promises. Check `status` (or use `incomplete: "throw"`) before reading `content` as the formatted object.
 
 ### Provider Options in a Chain
 
@@ -1038,7 +1068,7 @@ exactly like a provider rate limit.
 | ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                       |
 | `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                               |
-| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason. |
+| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";
@@ -1254,12 +1284,19 @@ await Llm.operate(input, {
 ```
 
 OpenAI, xAI, and Meta leave the limit unset (their defaults do not truncate early).
+A chain that mixes them with Anthropic, Google, or Mistral therefore mixes
+output budgets: a Gemini primary resolves to 16,384 non-streaming while an
+OpenAI fallback sends no ceiling, so swapping the primary moves the effective
+budget with nothing at the call site changing. Reasoning tokens count against
+the ceiling. Set `providerOptions.maxOutputTokens` (Google) or `max_tokens`
+(Anthropic, Mistral) on the call or chain entry to pin it.
 Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
 no low ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and an uncapped completion turns that into a
 multi-minute request. Override with `providerOptions: { max_tokens }`.
 OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
-when needed. A truncated response surfaces `stop_reason: "max_tokens"` —
+when needed. A truncated response settles `status: "incomplete"` with
+`stopReason: "max_tokens"` and moves a fallback chain to its next entry;
 raise the limit or switch to `stream()`.
 
 ## See Also

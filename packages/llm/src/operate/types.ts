@@ -152,6 +152,11 @@ export interface ProviderToolDefinition {
 export enum ErrorCategory {
   /** The caller aborted the request through its own AbortSignal */
   Aborted = "aborted",
+  /**
+   * The provider cut the answer short (output token ceiling, content
+   * filter). Never retried on the same model; a fallback chain moves on.
+   */
+  Incomplete = "incomplete",
   /** Error is transient and can be retried */
   Retryable = "retryable",
   /** Error is due to short-term rate limiting (retry after a delay) */
