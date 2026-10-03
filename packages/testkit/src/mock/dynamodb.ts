@@ -123,6 +123,19 @@ export const updateEntity = createMockFunction<
   }),
 );
 
+// Defaults to a successful patch that returns `{ id, ...set }`. Simulate a
+// missing entity with `vi.mocked(patchEntity).mockRejectedValueOnce(new NotFoundError())`.
+export const patchEntity = createMockFunction<
+  (params: {
+    condition?: string;
+    id: string;
+    names?: Record<string, string>;
+    remove?: string[];
+    set?: Record<string, unknown>;
+    values?: Record<string, unknown>;
+  }) => Promise<StorableEntity>
+>(async ({ id, set }) => ({ id, ...set }) as StorableEntity);
+
 // Defaults to a successful transition. Simulate a conditional-check failure by
 // overriding: `vi.mocked(transitionEntity).mockRejectedValueOnce(new ConflictError())`.
 export const transitionEntity = createMockFunction<

@@ -3,11 +3,13 @@ import {
   GetCommand,
   PutCommand,
   TransactWriteCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { ConflictError, NotFoundError } from "@jaypie/errors";
+import { BadRequestError, ConflictError, NotFoundError } from "@jaypie/errors";
 import {
   assertModelStatus,
   fabricService,
+  getAllRegisteredIndexes,
   getModelSchema,
 } from "@jaypie/fabric";
 
@@ -17,7 +19,7 @@ import {
   DEFAULT_TTL_ATTRIBUTE,
   DELETED_SUFFIX,
 } from "./constants.js";
-import { indexEntity } from "./keyBuilders.js";
+import { indexEntity, serializeDates } from "./keyBuilders.js";
 import { resolveTtl, type TtlInput } from "./ttl.js";
 import type { StorableEntity } from "./types.js";
 
@@ -215,6 +217,152 @@ export async function updateEntity({
     throw error;
   }
   return updatedEntity;
+}
+
+/**
+ * Attributes `patchEntity` never writes. Changing any of them changes a GSI
+ * key or the archived/deleted suffix, which requires `updateEntity`.
+ */
+const PATCH_PROTECTED_FIELDS = [
+  "archivedAt",
+  "deletedAt",
+  "id",
+  "model",
+  "updatedAt",
+];
+const PATCH_PROTECTED_PREFIX = "index";
+const PATCH_RESERVED_PLACEHOLDER = /^(#s|:s|#r)\d+$/;
+const EXISTS_CONDITION = "attribute_exists(id)";
+
+/**
+ * True when an attribute feeds a GSI key: a fixed protected field, a
+ * generated `index*` attribute, or a pk/sk field of any registered index.
+ */
+function isPatchProtected(field: string): boolean {
+  if (
+    PATCH_PROTECTED_FIELDS.includes(field) ||
+    field.startsWith(PATCH_PROTECTED_PREFIX)
+  ) {
+    return true;
+  }
+  return getAllRegisteredIndexes().some(
+    (index) => index.pk.includes(field) || (index.sk ?? []).includes(field),
+  );
+}
+
+/**
+ * Patch an existing entity in place with a targeted DynamoDB `UpdateItem`.
+ *
+ * Sets the attributes in `set` and removes the attributes in `remove`. Every
+ * other attribute is left as stored, so concurrent writes to other fields are
+ * never overwritten with a stale copy. `updatedAt` and all GSI keys are left
+ * unchanged, so the entity keeps its position in every index (including the
+ * `indexModel` listing that `queryByScope` reads).
+ *
+ * Use `patchEntity` for counters, heartbeats, and "last X" fields. Use
+ * `updateEntity` for changes that should advance `updatedAt` or re-index.
+ *
+ * Throws `BadRequestError` (400) when `set`/`remove` is empty or names a
+ * protected attribute: `id`, `model`, `updatedAt`, `archivedAt`, `deletedAt`,
+ * any `index*` attribute, or any pk/sk field of a registered index (`scope`,
+ * `alias`, `category`, `type`, `xid`, and custom index fields).
+ *
+ * The write is guarded by `attribute_exists(id)`; a caller `condition` (with
+ * `names`/`values` bindings) is combined with that guard. Throws
+ * `NotFoundError` (404) when the entity does not exist and no `condition` is
+ * passed, or `ConflictError` (409) when a `condition` is passed and the guard
+ * fails. The placeholders `#s<n>`, `:s<n>`, and `#r<n>` are reserved for the
+ * generated expression. Returns the entity as stored after the patch.
+ */
+export async function patchEntity({
+  condition,
+  id,
+  names,
+  remove = [],
+  set = {},
+  values,
+}: {
+  condition?: string;
+  id: string;
+  names?: Record<string, string>;
+  remove?: string[];
+  set?: Record<string, unknown>;
+  values?: Record<string, unknown>;
+}): Promise<StorableEntity> {
+  const setFields = Object.keys(set);
+  if (setFields.length === 0 && remove.length === 0) {
+    throw new BadRequestError("patchEntity requires `set` or `remove`");
+  }
+  const protectedFields = [...setFields, ...remove].filter(isPatchProtected);
+  if (protectedFields.length > 0) {
+    throw new BadRequestError(
+      `patchEntity cannot change index or timestamp attributes (${protectedFields.join(", ")}); use updateEntity`,
+    );
+  }
+
+  const reserved = [
+    ...Object.keys(names ?? {}),
+    ...Object.keys(values ?? {}),
+  ].filter((key) => PATCH_RESERVED_PLACEHOLDER.test(key));
+  if (reserved.length > 0) {
+    throw new BadRequestError(
+      `patchEntity reserves #s<n>, :s<n>, and #r<n> placeholders (${reserved.join(", ")})`,
+    );
+  }
+
+  const docClient = getDocClient();
+  const tableName = getTableName();
+
+  const attributeNames: Record<string, string> = { ...names };
+  const attributeValues: Record<string, unknown> = { ...values };
+  const clauses: string[] = [];
+
+  if (setFields.length > 0) {
+    const assignments = setFields.map((field, i) => {
+      attributeNames[`#s${i}`] = field;
+      attributeValues[`:s${i}`] = serializeDates(set[field]);
+      return `#s${i} = :s${i}`;
+    });
+    clauses.push(`SET ${assignments.join(", ")}`);
+  }
+  if (remove.length > 0) {
+    const removals = remove.map((field, i) => {
+      attributeNames[`#r${i}`] = field;
+      return `#r${i}`;
+    });
+    clauses.push(`REMOVE ${removals.join(", ")}`);
+  }
+
+  const command = new UpdateCommand({
+    ConditionExpression: condition
+      ? `${EXISTS_CONDITION} AND (${condition})`
+      : EXISTS_CONDITION,
+    ExpressionAttributeNames: attributeNames,
+    ...(Object.keys(attributeValues).length > 0
+      ? { ExpressionAttributeValues: attributeValues }
+      : {}),
+    Key: { id },
+    ReturnValues: "ALL_NEW",
+    TableName: tableName,
+    UpdateExpression: clauses.join(" "),
+  });
+
+  try {
+    const response = await docClient.send(command);
+    return response.Attributes as StorableEntity;
+  } catch (error) {
+    if (
+      (error as { name?: string })?.name === "ConditionalCheckFailedException"
+    ) {
+      if (condition) {
+        throw new ConflictError(
+          "The conditional patch was rejected because the entity does not exist or the persisted state no longer matches the condition",
+        );
+      }
+      throw new NotFoundError(`Entity ${id} not found`);
+    }
+    throw error;
+  }
 }
 
 const STATUS_FIELD = "status";

@@ -60,6 +60,10 @@ describe("@jaypie/dynamodb exports", () => {
       expect(dynamodb.destroyEntity).toBeFunction();
     });
 
+    it("exports patchEntity", () => {
+      expect(dynamodb.patchEntity).toBeFunction();
+    });
+
     it("exports transitionEntity", () => {
       expect(dynamodb.transitionEntity).toBeFunction();
     });

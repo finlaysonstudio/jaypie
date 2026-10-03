@@ -46,7 +46,7 @@ export function calculateScope(parent?: ParentReference): string {
  * `@aws-sdk/util-dynamodb` cannot marshall Date instances natively
  * (`convertClassInstanceToMap` would marshal them to empty maps, losing data).
  */
-function serializeDates<T>(value: T): T {
+export function serializeDates<T>(value: T): T {
   if (value instanceof Date) {
     return value.toISOString() as unknown as T;
   }

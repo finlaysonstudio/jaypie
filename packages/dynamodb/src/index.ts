@@ -28,6 +28,7 @@ export {
   deleteEntity,
   destroyEntity,
   getEntity,
+  patchEntity,
   transactWriteEntities,
   transitionEntity,
   updateEntity,

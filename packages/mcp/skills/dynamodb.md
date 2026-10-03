@@ -127,7 +127,7 @@ interface StorableEntity {
 ### Entity Operations
 
 ```typescript
-import { APEX, createEntity, getEntity, updateEntity, deleteEntity, archiveEntity, destroyEntity } from "@jaypie/dynamodb";
+import { APEX, createEntity, getEntity, patchEntity, updateEntity, deleteEntity, archiveEntity, destroyEntity } from "@jaypie/dynamodb";
 
 // Create entity — indexEntity auto-populates GSI keys, createdAt, updatedAt
 const record = await createEntity({
@@ -148,8 +148,11 @@ const record = await createEntity({
 // Get by primary key (id only)
 const item = await getEntity({ id: "abc-123" });
 
-// Update — sets updatedAt, re-indexes
+// Update — writes the whole item, sets updatedAt, re-indexes (moves GSI entries)
 await updateEntity({ entity: { ...item, name: "Updated Name" } });
+
+// Patch — sets only the listed fields; updatedAt and GSI keys unchanged
+await patchEntity({ id: "abc-123", set: { lastUsedAt: new Date() } });
 
 // Conditional update — write-time guard; throws ConflictError if it fails
 await updateEntity({
@@ -176,12 +179,54 @@ await destroyEntity({ id: "abc-123" });
 |----------|-------------|
 | `createEntity({ entity, preserveTimestamps? })` | Create entity; returns `null` if `id` exists (conditional `attribute_not_exists(id)`) |
 | `getEntity({ id })` | Get by primary key (id only) |
-| `updateEntity({ entity, condition?, names?, preserveTimestamps?, values? })` | Update (sets `updatedAt`, re-indexes). Pass `condition` (a ConditionExpression, with `names`/`values` bindings) to guard the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `updateEntity({ entity, condition?, names?, preserveTimestamps?, values? })` | Update (writes the whole item, sets `updatedAt`, re-indexes; each call moves the entity's GSI entries). Pass `condition` (a ConditionExpression, with `names`/`values` bindings) to guard the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails |
+| `patchEntity({ id, set?, remove?, condition?, names?, values? })` | Targeted `UpdateItem`: sets/removes only the listed attributes; leaves `updatedAt` and every GSI key unchanged. Throws `BadRequestError` (400) for index keys and timestamps, `NotFoundError` (404) when absent, `ConflictError` (409) when `condition` fails. See [Patching Fields Without Re-indexing](#patching-fields-without-re-indexing) |
 | `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race, `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (`deletedAt`, `#deleted` suffix on GSI pk) |
 | `archiveEntity({ id })` | Archive (`archivedAt`, `#archived` suffix on GSI pk) |
 | `destroyEntity({ id })` | Hard delete (permanent) |
 | `transactWriteEntities({ entities, conditionalCreate?, condition?, preserveTimestamps? })` | Write many entities atomically; `conditionalCreate: true` guards every `Put` with `attribute_not_exists(id)` (`condition` for a custom expression), throwing `ConflictError` (409) when a conditional check fails |
+
+### Patching Fields Without Re-indexing
+
+`updateEntity` writes the whole item with `PutItem` and sets `updatedAt` to the write time. For entities that are written often (counters, heartbeats, "last X" fields), that has two consequences:
+
+1. **The index entry moves.** `updatedAt` is part of every GSI sort key (`scope#updatedAt`), so each `updateEntity` moves the entity's `indexModel` entry (and every other index entry). DynamoDB moves a GSI entry by deleting it and inserting it again, asynchronously, and GSI reads are always eventually consistent. A `queryByScope` (or any other index query) that runs between the delete and the insert does not return the entity.
+2. **Stale fields overwrite newer ones.** The `Put` writes every attribute as the caller read it. When two read-modify-write calls overlap, the later one undoes the earlier one (for example, a status change or a credential rotation).
+
+`patchEntity` sends a targeted `UpdateItem` that sets and removes only the listed attributes. It does not change `updatedAt` or any index key, so the entity stays in place in every index, and it never writes attributes the caller did not list.
+
+```typescript
+import { patchEntity } from "@jaypie/dynamodb";
+
+// Record a heartbeat without moving the entity in queryByScope
+await patchEntity({
+  id: endpoint.id,
+  set: { lastDeliveryAt: new Date() },
+});
+
+// Set and remove in one write, guarded by a condition
+const patched = await patchEntity({
+  id: endpoint.id,
+  set: { lastDeliveryAt: new Date(), lastStatus: 200 },
+  remove: ["lastError"],
+  condition: "#status = :active",
+  names: { "#status": "status" },
+  values: { ":active": "active" },
+});
+// patched: the full entity as stored after the write
+```
+
+| Use | When |
+|-----|------|
+| `patchEntity` | Counters, heartbeats, "last X" timestamps, and any field that is not an index key and should not reorder listings |
+| `updateEntity` | Changes to index keys (`scope`, `alias`, `category`, `type`, `xid`, custom index fields) or changes that should advance `updatedAt` |
+
+- **Protected attributes.** `set` and `remove` cannot name `id`, `model`, `updatedAt`, `archivedAt`, `deletedAt`, any `index*` attribute, or any `pk`/`sk` field of a registered index (`scope`, `alias`, `category`, `type`, `xid`, and custom index fields). These throw `BadRequestError` (400) before any write, because changing them requires re-indexing through `updateEntity`. An empty patch also throws `BadRequestError`.
+- **Existence.** Every patch is guarded by `attribute_exists(id)`, so it never creates an item. A missing entity throws `NotFoundError` (404).
+- **Conditions.** `condition` is combined with the existence guard as `attribute_exists(id) AND (condition)`. When it fails, the item is left unchanged and `ConflictError` (409) is thrown. Placeholders `#s<n>`, `:s<n>`, and `#r<n>` are reserved for the generated expression; passing them in `names`/`values` throws `BadRequestError`.
+- **Ordering.** `updatedAt` does not change, so listings sorted by `updatedAt` do not reflect a patch. Use `updateEntity` when a change should move the entity to the top of a listing.
+- **Values.** `Date` values are stored as ISO 8601 strings. TTL is not changed.
 
 ### Preserving Timestamps (Imports)
 
@@ -329,6 +374,8 @@ All queries return `{ items, lastEvaluatedKey }` and support pagination. `scope`
 import { APEX, queryByScope, queryByAlias, queryByCategory, queryByType, queryByXid } from "@jaypie/dynamodb";
 
 // List by model (scope optional)
+// Each updateEntity moves the entity's indexModel entry; patch frequently
+// written fields with patchEntity so listings stay stable
 const { items } = await queryByScope({ model: "record", scope: APEX });
 
 // List across all scopes
