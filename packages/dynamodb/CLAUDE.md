@@ -55,7 +55,8 @@ src/
 |--------|-------------|
 | `getEntity({ id })` | Get a single entity by primary key (id only) |
 | `createEntity({ entity, preserveTimestamps?, ttl? })` | Create entity; returns `null` if `id` already exists (conditional write on `attribute_not_exists(id)`). `preserveTimestamps: true` keeps the entity's own `createdAt`/`updatedAt`. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; without it the model's registered default applies |
-| `updateEntity({ entity, condition?, names?, preserveTimestamps?, ttl?, values? })` | Create or replace entity (auto-indexes, auto-timestamps; `preserveTimestamps: true` keeps the entity's own `updatedAt`). Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; the model default is **not** applied on update |
+| `updateEntity({ entity, condition?, names?, preserveTimestamps?, ttl?, values? })` | Create or replace the whole entity (auto-indexes, auto-timestamps; `preserveTimestamps: true` keeps the entity's own `updatedAt`). Every call moves the entity's GSI entries; use `patchEntity` for frequently written fields. Optional `condition` (a ConditionExpression with `names`/`values` bindings) guards the write; throws `ConflictError` (409) and leaves the item unchanged when the condition fails. Optional `ttl` (`TtlInput \| false`) sets/clears the TTL; the model default is **not** applied on update |
+| `patchEntity({ id, set?, remove?, condition?, names?, values? })` | Targeted `UpdateItem` that sets/removes only the listed attributes. Leaves `updatedAt` and every GSI key unchanged, so the entity keeps its index position and concurrent writes to other fields are never overwritten. Throws `BadRequestError` (400) for protected attributes (`id`, `model`, `updatedAt`, `archivedAt`, `deletedAt`, `index*`, registered index pk/sk fields) or an empty patch, `NotFoundError` (404) when absent, `ConflictError` (409) when `condition` fails |
 | `resolveTtl(input)` | Resolve a `TtlInput` (future epoch-seconds `number`, duration string like `"30 days"`, or ISO 8601 date) to epoch seconds. Throws `BadRequestError` on unparseable input; logs at `error` when the result is not in the future |
 | `transitionEntity({ id, from?, set })` | Conditionally update by status: reads the entity, merges `set`, writes guarded by `#status = from`; throws `ConflictError` (409) on a race and `NotFoundError` (404) when absent. Validates `from`/`set.status` against the model's `status` vocabulary |
 | `deleteEntity({ id })` | Soft delete (sets `deletedAt`, re-indexes with `#deleted` suffix) |
@@ -295,6 +296,47 @@ const record = await createEntity({
 // record.indexModelAlias -> "record#2026-01-07"
 // record.indexModelCategory -> "record#memory"
 ```
+
+### Patching Fields Without Re-indexing
+
+`updateEntity` writes the whole item with `PutItem` and sets `updatedAt` to the write time. For entities that are written often (counters, heartbeats, "last X" fields), that has two consequences:
+
+1. **The index entry moves.** `updatedAt` is part of every GSI sort key (`scope#updatedAt`), so each `updateEntity` moves the entity's `indexModel` entry (and every other index entry). DynamoDB moves a GSI entry by deleting it and inserting it again, asynchronously, and GSI reads are always eventually consistent. A `queryByScope` (or any other index query) that runs between the delete and the insert does not return the entity.
+2. **Stale fields overwrite newer ones.** The `Put` writes every attribute as the caller read it. When two read-modify-write calls overlap, the later one undoes the earlier one (for example, a status change or a credential rotation).
+
+`patchEntity` sends a targeted `UpdateItem` that sets and removes only the listed attributes. It does not change `updatedAt` or any index key, so the entity stays in place in every index, and it never writes attributes the caller did not list.
+
+```typescript
+import { patchEntity } from "@jaypie/dynamodb";
+
+// Record a heartbeat without moving the entity in queryByScope
+await patchEntity({
+  id: endpoint.id,
+  set: { lastDeliveryAt: new Date() },
+});
+
+// Set and remove in one write, guarded by a condition
+const patched = await patchEntity({
+  id: endpoint.id,
+  set: { lastDeliveryAt: new Date(), lastStatus: 200 },
+  remove: ["lastError"],
+  condition: "#status = :active",
+  names: { "#status": "status" },
+  values: { ":active": "active" },
+});
+// patched: the full entity as stored after the write
+```
+
+| Use | When |
+|-----|------|
+| `patchEntity` | Counters, heartbeats, "last X" timestamps, and any field that is not an index key and should not reorder listings |
+| `updateEntity` | Changes to index keys (`scope`, `alias`, `category`, `type`, `xid`, custom index fields) or changes that should advance `updatedAt` |
+
+- **Protected attributes.** `set` and `remove` cannot name `id`, `model`, `updatedAt`, `archivedAt`, `deletedAt`, any `index*` attribute, or any `pk`/`sk` field of a registered index (`scope`, `alias`, `category`, `type`, `xid`, and custom index fields). These throw `BadRequestError` (400) before any write, because changing them requires re-indexing through `updateEntity`. An empty patch also throws `BadRequestError`.
+- **Existence.** Every patch is guarded by `attribute_exists(id)`, so it never creates an item. A missing entity throws `NotFoundError` (404).
+- **Conditions.** `condition` is combined with the existence guard as `attribute_exists(id) AND (condition)`. When it fails, the item is left unchanged and `ConflictError` (409) is thrown. Placeholders `#s<n>`, `:s<n>`, and `#r<n>` are reserved for the generated expression; passing them in `names`/`values` throws `BadRequestError`.
+- **Ordering.** `updatedAt` does not change, so listings sorted by `updatedAt` do not reflect a patch. Use `updateEntity` when a change should move the entity to the top of a listing.
+- **Values.** `Date` values are stored as ISO 8601 strings. TTL is not changed.
 
 ### Import With Original Timestamps
 
