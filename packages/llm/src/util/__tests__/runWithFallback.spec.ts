@@ -221,6 +221,42 @@ describe("runWithFallback", () => {
       expect(onExhausted).not.toHaveBeenCalled();
     });
 
+    it("keeps an earlier soft failure over a later empty one", async () => {
+      const attempt = vi
+        .fn()
+        .mockResolvedValueOnce("partial primary")
+        .mockResolvedValueOnce("partial");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        isEmptyResult: (result: string) => result === "partial",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial primary");
+      expect(attempt).toHaveBeenCalledTimes(2);
+    });
+
+    it("returns an empty soft failure when nothing else arrives", async () => {
+      const attempt = vi.fn().mockResolvedValue("partial");
+
+      const result = await runWithFallback({
+        attempt,
+        chain: [{ model: "claude-x", provider: "anthropic" }],
+        createInstance: () => "fallback",
+        isEmptyResult: (result: string) => result === "partial",
+        primary: "primary",
+        primaryProvider: "openai",
+        shouldFailover: isSoft,
+      });
+
+      expect(result).toBe("partial");
+    });
+
     it("still lingers when only a fallback soft-failed", async () => {
       const attempt = vi
         .fn()

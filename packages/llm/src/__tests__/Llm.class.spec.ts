@@ -397,6 +397,76 @@ describe("Llm Class", () => {
         expect(anthropicOperateMock).not.toHaveBeenCalled();
       });
 
+      describe("empty response (issue #608)", () => {
+        const empty = (provider: string) => ({
+          content: undefined,
+          error: {
+            detail: "Model returned no content: STOP",
+            reason: "incomplete",
+            status: 502,
+            title: "Incomplete Response",
+          },
+          provider,
+          status: "incomplete",
+          stopReason: "other",
+        });
+
+        it("fails over when the primary returns no content", async () => {
+          openAiOperateMock.mockResolvedValue(empty("openai"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME, {
+            fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+          });
+          const result = await llm.operate("test");
+
+          expect(result.content).toBe("Mocked Anthropic operate response");
+          expect(result.fallbackUsed).toBe(true);
+          expect(result.provider).toBe("anthropic");
+        });
+
+        it("throws when a lone model returns no content", async () => {
+          openAiOperateMock.mockResolvedValue(empty("openai"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME);
+          const error = await llm.operate("test").catch((thrown) => thrown);
+
+          expect(error).toBeInstanceOf(LlmIncompleteError);
+          expect(error.status).toBe(502);
+          expect(error.message).toBe("Model returned no content: STOP");
+          expect(error.response.stopReason).toBe("other");
+        });
+
+        it("throws when the whole chain returns no content", async () => {
+          openAiOperateMock.mockResolvedValue(empty("openai"));
+          anthropicOperateMock.mockResolvedValue(empty("anthropic"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME, {
+            fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+          });
+
+          await expect(llm.operate("test")).rejects.toBeInstanceOf(
+            LlmIncompleteError,
+          );
+          expect(openAiOperateMock).toHaveBeenCalledTimes(1);
+          expect(anthropicOperateMock).toHaveBeenCalledTimes(1);
+        });
+
+        it("returns an earlier partial over a later empty response", async () => {
+          openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));
+          anthropicOperateMock.mockResolvedValue(empty("anthropic"));
+
+          const llm = new Llm(PROVIDER.OPENAI.NAME, {
+            fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+          });
+
+          const result = await llm.operate("test");
+
+          expect(result.content).toBe("Partial");
+          expect(result.provider).toBe("openai");
+          expect(result.status).toBe(LlmResponseStatus.Incomplete);
+        });
+      });
+
       describe("incomplete: throw", () => {
         it("throws LlmIncompleteError carrying the response", async () => {
           openAiOperateMock.mockResolvedValue(cutOff("Partial", "openai"));

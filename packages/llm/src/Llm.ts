@@ -81,6 +81,20 @@ function isCutOff(response: LlmOperateResponse): boolean {
   );
 }
 
+/**
+ * True when a cut-off brought nothing back. There is no partial to prefer
+ * over an error, so it throws whatever the `incomplete` mode.
+ */
+function isEmptyCutOff(response: LlmOperateResponse): boolean {
+  const { content } = response;
+  return (
+    isCutOff(response) &&
+    (content === undefined ||
+      content === null ||
+      (typeof content === "string" && content.trim() === ""))
+  );
+}
+
 //
 //
 // Main
@@ -336,6 +350,7 @@ class Llm implements LlmProvider {
       },
       chain: fallbackChain,
       createInstance: (config) => this.createFallbackInstance(config),
+      isEmptyResult: isEmptyCutOff,
       onExhausted: async ({ attempts, error }) => {
         // All providers failed: settle the exchange from the envelope the
         // loop attached to the last error before it is rethrown
@@ -366,8 +381,9 @@ class Llm implements LlmProvider {
           response: settled,
         });
         if (
-          resolvedOptions.incomplete === INCOMPLETE_MODE.THROW &&
-          isCutOff(settled)
+          (resolvedOptions.incomplete === INCOMPLETE_MODE.THROW &&
+            isCutOff(settled)) ||
+          isEmptyCutOff(settled)
         ) {
           throw new LlmIncompleteError(settled.error?.detail, {
             response: settled,

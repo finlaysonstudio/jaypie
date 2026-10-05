@@ -371,6 +371,19 @@ settled response); `"return"` is the 1.x default and Jaypie 2 flips it to
 `"throw"`. Loop stops (`max_turns`, `tool_errors`) never fail over (issue
 #602).
 
+**Empty format responses fail over.** A `format` request that comes back
+with no content (`undefined`, `null`, or whitespace) settles incomplete via
+`emptyStop` (`src/operate/loopStop.ts`), with `stopReason: "other"` and the
+provider's raw stop reason in `error.detail`. The loop tries the corrective
+turn first (salvage and fresh-context conversion are skipped: there is no
+text). `Llm.operate` passes `isEmptyResult` to `runWithFallback` so an
+empty soft failure never displaces a kept partial, and `settle` throws
+`LlmIncompleteError` on an empty cut-off regardless of `incomplete`, since
+there is no partial to prefer. Gemini reports `promptFeedback.blockReason`
+as the stop reason when a blocked prompt returns no candidate, and `OTHER`,
+`LANGUAGE`, `IMAGE_SAFETY`, and `MALFORMED_FUNCTION_CALL` are incomplete
+finishes (issue #608).
+
 `providerOptions` never travel down the chain. Per-call `providerOptions` reach
 the primary only (its linger pass included); a fallback gets its own entry's
 `providerOptions` or none. `src/util/scopeFallbackOptions.ts` also clears the
@@ -456,7 +469,7 @@ provider's reason on `ParsedResponse.incompleteReason` (OpenAI, xAI, and Meta
 read `status: "incomplete"` plus `incomplete_details.reason`, such as
 `max_output_tokens` or `content_filter`; every other adapter maps its stop
 reason through `src/operate/incompleteReason.ts`: Anthropic `max_tokens` and
-`refusal`, Google `MAX_TOKENS` and the safety finishes, Bedrock `max_tokens`
+`refusal`, Google `MAX_TOKENS`, `OTHER`, and the safety finishes, Bedrock `max_tokens`
 and the guardrail stops, and Chat Completions `length` and `content_filter`;
 streams emit an error chunk from the same event), and the loop settles with
 the partial text as

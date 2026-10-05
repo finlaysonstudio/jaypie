@@ -24,6 +24,22 @@ export const ERROR = {
 };
 
 /**
+ * The provider answered a format request with no content at all (zero output
+ * tokens, an empty candidate, a blocked prompt). Settled like a cut-off so a
+ * fallback chain moves past it: there is nothing to shape into the format.
+ */
+export function emptyStop(stopReason?: string): LlmError {
+  return {
+    detail: stopReason
+      ? `Model returned no content: ${stopReason}`
+      : "Model returned no content",
+    reason: LlmResponseErrorReason.Incomplete,
+    status: 502,
+    title: ERROR.INCOMPLETE_RESPONSE,
+  };
+}
+
+/**
  * The provider cut the model off before it finished (an output token
  * ceiling, a content filter). The partial text is still the response content
  * so a caller can see what came back, but it is not an answer.

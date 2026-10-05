@@ -110,7 +110,7 @@ Mistral markdown is self-contained: tables are inlined, every image is described
 
 Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over. `operate`, `ocr`, and `question` share this behavior.
 
-In `operate`, a response the provider cut short (an output token ceiling, a content filter) also moves to the next entry. When no entry finishes, the latest incomplete response is returned, or `LlmIncompleteError` is thrown with `incomplete: "throw"`. Jaypie 2 will default to `"throw"`. An incomplete `content` is the raw partial string even when `format` was requested; check `status` before reading it as the formatted object.
+In `operate`, a response the provider cut short (an output token ceiling, a content filter) also moves to the next entry. When no entry finishes, the latest incomplete response is returned, or `LlmIncompleteError` is thrown with `incomplete: "throw"`. Jaypie 2 will default to `"throw"`. An incomplete `content` is the raw partial string even when `format` was requested; check `status` before reading it as the formatted object. A `format` request answered with no content fails over the same way, and throws `LlmIncompleteError` when every entry comes back empty.
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
