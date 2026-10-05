@@ -1141,9 +1141,13 @@ export class GoogleAdapter extends BaseProviderAdapter {
     return candidate.content.parts.some((part) => part.functionCall);
   }
 
+  /**
+   * The candidate's finish reason. A blocked prompt returns no candidate at
+   * all, so the prompt feedback's block reason stands in for it.
+   */
   private getFinishReason(response: GeminiRawResponse): string | undefined {
     const candidate = response.candidates?.[0];
-    return candidate?.finishReason;
+    return candidate?.finishReason ?? response.promptFeedback?.blockReason;
   }
 
   private extractContent(

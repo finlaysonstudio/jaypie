@@ -43,6 +43,24 @@ describe("incompleteReason", () => {
         ),
       ).toBe("guardrail_intervened");
     });
+    it("treats Gemini's unexplained and blocked finishes as incomplete", () => {
+      for (const reason of [
+        "IMAGE_SAFETY",
+        "LANGUAGE",
+        "MALFORMED_FUNCTION_CALL",
+        "OTHER",
+      ]) {
+        expect(
+          incompleteReasonFrom(reason, INCOMPLETE_STOP_REASONS.GOOGLE),
+        ).toBe(reason);
+      }
+      expect(standardStopReason({ incompleteReason: "IMAGE_SAFETY" })).toBe(
+        LlmStopReason.ContentFilter,
+      );
+      expect(standardStopReason({ incompleteReason: "OTHER" })).toBe(
+        LlmStopReason.Other,
+      );
+    });
     it("returns undefined when the model finished", () => {
       expect(
         incompleteReasonFrom("end_turn", INCOMPLETE_STOP_REASONS.ANTHROPIC),

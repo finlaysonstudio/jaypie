@@ -56,6 +56,8 @@ export interface FallbackAttemptContext<TInstance> {
  * is kept. When nothing better arrives, the latest one is returned instead of
  * throwing, since a partial answer beats an error. A primary that returned
  * one never lingers: rerunning the same model would cut off the same way.
+ * `isEmptyResult` marks a soft failure that brought nothing back; it never
+ * displaces a kept one, so an earlier partial survives a later empty answer.
  *
  * `settle` finalizes whichever result reaches the caller, with the total
  * attempts made.
@@ -64,6 +66,7 @@ export async function runWithFallback<TInstance, TResult>({
   attempt,
   chain,
   createInstance,
+  isEmptyResult,
   onExhausted,
   primary,
   primaryProvider,
@@ -73,6 +76,7 @@ export async function runWithFallback<TInstance, TResult>({
   attempt: (context: FallbackAttemptContext<TInstance>) => Promise<TResult>;
   chain: LlmFallbackConfig[];
   createInstance: (config: LlmFallbackConfig) => TInstance;
+  isEmptyResult?: (result: TResult) => boolean;
   onExhausted?: (context: {
     attempts: number;
     error: Error;
@@ -159,7 +163,9 @@ export async function runWithFallback<TInstance, TResult>({
     if (!shouldFailover?.(result)) {
       return await settle({ attempts, result });
     }
-    softFailure = { result };
+    if (!softFailure || !isEmptyResult?.(result)) {
+      softFailure = { result };
+    }
     if (index === 0) {
       skipLinger = true;
     }

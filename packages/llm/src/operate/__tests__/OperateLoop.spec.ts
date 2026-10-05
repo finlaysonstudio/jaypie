@@ -1174,6 +1174,75 @@ describe("OperateLoop", () => {
       expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
     });
 
+    it("settles incomplete when a format request returns no content", async () => {
+      // Issue #608: Gemini returned 0 output tokens with finishReason STOP
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: undefined,
+        hasToolCalls: false,
+        stopReason: "STOP",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", {
+        format: { type: "object", properties: { total: { type: "number" } } },
+      });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.content).toBeUndefined();
+      expect(response.error).toEqual({
+        detail: "Model returned no content: STOP",
+        reason: LlmResponseErrorReason.Incomplete,
+        status: 502,
+        title: "Incomplete Response",
+      });
+      expect(response.stopReason).toBe(LlmStopReason.Other);
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it("settles incomplete when a format request returns only whitespace", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: "  \n",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", {
+        format: { type: "object", properties: { total: { type: "number" } } },
+      });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.error?.detail).toBe(
+        "Model returned no content: end_turn",
+      );
+    });
+
+    it("completes an empty response when no format was requested", async () => {
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: undefined,
+        hasToolCalls: false,
+        stopReason: "STOP",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Hello");
+
+      expect(response.status).toBe(LlmResponseStatus.Completed);
+      expect(response.error).toBeUndefined();
+    });
+
     it("reports a truncated response as max_tokens", async () => {
       mockAdapter.parseResponse.mockReturnValueOnce({
         content: "Partial",
@@ -1311,6 +1380,83 @@ describe("OperateLoop", () => {
       const lastMessage = secondBuild.messages[secondBuild.messages.length - 1];
       expect(lastMessage.role).toBe(LlmMessageRole.User);
       expect(lastMessage.content).toContain("structured_output");
+    });
+
+    it("takes a corrective turn on empty content before settling empty", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse
+        .mockReturnValueOnce({
+          content: "",
+          hasToolCalls: false,
+          stopReason: "stop",
+          raw: {},
+        } as ParsedResponse)
+        .mockReturnValueOnce({
+          content: undefined,
+          hasToolCalls: true,
+          stopReason: "tool_calls",
+          raw: {},
+        } as ParsedResponse);
+      mockAdapter.hasStructuredOutput = vi
+        .fn()
+        .mockReturnValueOnce(false)
+        .mockReturnValue(true);
+      mockAdapter.extractStructuredOutput = vi.fn(() => ({ total: 21 }));
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 3 });
+
+      expect(response.status).toBe(LlmResponseStatus.Completed);
+      expect(response.content).toEqual({ total: 21 });
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it("settles empty once the corrective turns run out", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValue({
+        content: "",
+        hasToolCalls: false,
+        stopReason: "stop",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format, turns: 2 });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.error?.detail).toBe("Model returned no content: stop");
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not convert empty content in a fresh context", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputConversion", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValueOnce({
+        content: "",
+        hasToolCalls: false,
+        stopReason: "stop",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(1);
     });
 
     it("converts prose in a fresh context when the adapter supports conversion", async () => {

@@ -41,6 +41,7 @@ import {
 import { HookRunner, hookRunner, LlmHooks } from "./hooks/index.js";
 import { standardStopReason } from "./incompleteReason.js";
 import {
+  emptyStop,
   ERROR,
   incompleteStop,
   maxTurnsStop,
@@ -107,6 +108,17 @@ function createErrorClassifier(adapter: ProviderAdapter): ErrorClassifier {
       return classified.category !== "unknown";
     },
   };
+}
+
+/**
+ * True when a response carried nothing: no content, or only whitespace.
+ */
+function isEmptyContent(content: unknown): boolean {
+  return (
+    content === undefined ||
+    content === null ||
+    (typeof content === "string" && content.trim() === "")
+  );
 }
 
 /**
@@ -1020,11 +1032,21 @@ export class OperateLoop {
     // (see convertToStructuredOutput below)
 
     // Format contract enforcement: the loop is about to complete but the
-    // model answered with prose instead of structured output.
-    if (state.formattedFormat && typeof parsed.content === "string") {
+    // model answered with prose, or with nothing, instead of structured
+    // output. Empty content skips salvage and conversion (there is no text
+    // to read) but still takes the corrective turn.
+    const emptyContent =
+      Boolean(state.formattedFormat) && isEmptyContent(parsed.content);
+    if (
+      state.formattedFormat &&
+      (emptyContent || typeof parsed.content === "string")
+    ) {
       // First salvage attempt: the text may be the JSON itself (with or
       // without a code fence).
-      const salvaged = tryParseJsonObject(parsed.content);
+      const salvaged =
+        typeof parsed.content === "string" && !emptyContent
+          ? tryParseJsonObject(parsed.content)
+          : undefined;
       if (salvaged) {
         state.responseBuilder.setContent(
           this.applyFormatArrayDefaults(salvaged, options),
@@ -1042,7 +1064,11 @@ export class OperateLoop {
       // a model that has degenerated keeps degenerating while the degenerate
       // text is in its context, and re-deriving lets it substitute values it
       // never produced. This call cannot invent, because it only sees the text.
-      if (this.adapter.supportsStructuredOutputConversion) {
+      if (
+        this.adapter.supportsStructuredOutputConversion &&
+        typeof parsed.content === "string" &&
+        !emptyContent
+      ) {
         log.debug(
           `[operate] Model returned text despite format on turn ${state.currentTurn}; converting it in a fresh context`,
         );
@@ -1075,7 +1101,7 @@ export class OperateLoop {
         state.currentTurn < state.maxTurns
       ) {
         log.debug(
-          `[operate] Model returned text despite format on turn ${state.currentTurn}; retrying with structured_output tool only`,
+          `[operate] Model returned ${emptyContent ? "nothing" : "text"} despite format on turn ${state.currentTurn}; retrying with structured_output tool only`,
         );
         for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
           state.currentInput.push(item);
@@ -1093,6 +1119,23 @@ export class OperateLoop {
         state.structuredOutputRetry = true;
         return true; // Continue to corrective turn
       }
+    }
+
+    // A format request answered with nothing (zero output tokens, an empty
+    // candidate) that the corrective turn could not recover is not an
+    // answer. It settles like a cut-off so a fallback chain moves past it,
+    // rather than completing with content the caller would only discover
+    // missing a step later.
+    if (emptyContent) {
+      const stop = emptyStop(parsed.stopReason);
+      log.warn(stop.detail, { stopReason: parsed.stopReason });
+      state.responseBuilder.setError(stop);
+      state.responseBuilder.setStopReason(LlmStopReason.Other);
+      state.responseBuilder.incomplete();
+      for (const item of this.adapter.responseToHistoryItems(parsed.raw)) {
+        state.responseBuilder.appendToHistory(item);
+      }
+      return false; // Stop loop
     }
 
     // No tool calls or no toolkit - we're done

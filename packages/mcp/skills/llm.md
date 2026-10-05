@@ -857,6 +857,8 @@ try {
 
 An incomplete `content` is the raw partial text, a string even when `format` was requested: a truncated answer is not the object the format promises. Check `status` (or use `incomplete: "throw"`) before reading `content` as the formatted object.
 
+A `format` request answered with **no content** (zero output tokens, an empty candidate, a blocked prompt) settles incomplete with `error.detail` `Model returned no content: <stop reason>`, logged at `warn`, and `stopReason: "other"`. An adapter that supports the corrective turn tries it once first. A chain moves past an empty response like any cut-off, and an earlier partial is kept over a later empty one. When nothing but empty responses come back, `operate` throws `LlmIncompleteError` whatever `incomplete` says: there is no partial to return (issue #608).
+
 ### Provider Options in a Chain
 
 `providerOptions` belongs to the model it was written for. Per-call `providerOptions` reach the primary only (including its linger pass); a fallback receives only the `providerOptions` on its own entry, or none. Options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) would otherwise break every other provider in the chain. Prefer first-class `effort` and `temperature`, which translate per provider.
@@ -1068,7 +1070,7 @@ exactly like a provider rate limit.
 | ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                       |
 | `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                               |
-| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. |
+| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. With `format`, empty content settles here too and throws once the chain is spent. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";

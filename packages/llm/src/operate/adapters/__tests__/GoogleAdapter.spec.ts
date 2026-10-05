@@ -421,6 +421,25 @@ describe("GoogleAdapter", () => {
         expect(result.incompleteReason).toBe("MAX_TOKENS");
       });
 
+      it("reports a blocked prompt's block reason when there is no candidate", () => {
+        const result = googleAdapter.parseResponse({
+          promptFeedback: { blockReason: "SAFETY" },
+        });
+
+        expect(result.content).toBeUndefined();
+        expect(result.incompleteReason).toBe("SAFETY");
+        expect(result.stopReason).toBe("SAFETY");
+      });
+
+      it("reports an unexplained finish as incomplete", () => {
+        const result = googleAdapter.parseResponse({
+          candidates: [{ finishReason: "OTHER" }],
+        });
+
+        expect(result.content).toBeUndefined();
+        expect(result.incompleteReason).toBe("OTHER");
+      });
+
       it("reports no incomplete reason when the model finished", () => {
         const result = googleAdapter.parseResponse({
           candidates: [

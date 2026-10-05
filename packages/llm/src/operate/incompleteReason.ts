@@ -17,9 +17,14 @@ export const INCOMPLETE_STOP_REASONS = {
   BEDROCK: new Set(["content_filtered", "guardrail_intervened", "max_tokens"]),
   /** Chat Completions shape: Fireworks, Mistral, OpenRouter */
   CHAT_COMPLETIONS: new Set(["content_filter", "length"]),
+  /** Finish reasons, plus `promptFeedback.blockReason` on a blocked prompt */
   GOOGLE: new Set([
     "BLOCKLIST",
+    "IMAGE_SAFETY",
+    "LANGUAGE",
+    "MALFORMED_FUNCTION_CALL",
     "MAX_TOKENS",
+    "OTHER",
     "PROHIBITED_CONTENT",
     "RECITATION",
     "SAFETY",
@@ -50,6 +55,7 @@ const STANDARD_STOP_REASONS: Record<string, LlmStopReason> = {
   content_filter: LlmStopReason.ContentFilter,
   content_filtered: LlmStopReason.ContentFilter,
   guardrail_intervened: LlmStopReason.ContentFilter,
+  image_safety: LlmStopReason.ContentFilter,
   length: LlmStopReason.MaxTokens,
   max_output_tokens: LlmStopReason.MaxTokens,
   max_tokens: LlmStopReason.MaxTokens,
