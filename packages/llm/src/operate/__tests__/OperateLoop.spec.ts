@@ -1438,6 +1438,49 @@ describe("OperateLoop", () => {
       expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
     });
 
+    // Issue #610: the corrective turn repeated until maxTurns (24 by default)
+    it("takes one corrective turn on empty content with default turns", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValue({
+        content: "",
+        hasToolCalls: false,
+        stopReason: "STOP",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const response = await loop.execute("Roll dice", { format });
+
+      expect(response.status).toBe(LlmResponseStatus.Incomplete);
+      expect(response.error?.detail).toBe("Model returned no content: STOP");
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it("takes one corrective turn on prose with default turns", async () => {
+      Object.defineProperty(mockAdapter, "supportsStructuredOutputRetry", {
+        value: true,
+      });
+      mockAdapter.parseResponse.mockReturnValue({
+        content: "You rolled a total of 21!",
+        hasToolCalls: false,
+        stopReason: "end_turn",
+        raw: {},
+      } as ParsedResponse);
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Roll dice", { format });
+
+      expect(mockAdapter.executeRequest).toHaveBeenCalledTimes(2);
+    });
+
     it("does not convert empty content in a fresh context", async () => {
       Object.defineProperty(mockAdapter, "supportsStructuredOutputConversion", {
         value: true,

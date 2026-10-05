@@ -375,7 +375,7 @@ settled response); `"return"` is the 1.x default and Jaypie 2 flips it to
 with no content (`undefined`, `null`, or whitespace) settles incomplete via
 `emptyStop` (`src/operate/loopStop.ts`), with `stopReason: "other"` and the
 provider's raw stop reason in `error.detail`. The loop tries the corrective
-turn first (salvage and fresh-context conversion are skipped: there is no
+turn once first (salvage and fresh-context conversion are skipped: there is no
 text). `Llm.operate` passes `isEmptyResult` to `runWithFallback` so an
 empty soft failure never displaces a kept partial, and `settle` throws
 `LlmIncompleteError` on an empty cut-off regardless of `incomplete`, since
@@ -844,7 +844,7 @@ const response = await Llm.operate("Greet the world", {
 - Uses the OpenAI-style native `response_format: { type: "json_schema", ... }` for format-only requests.
 - Format **and** tools combined is rejected by the API ("You cannot specify response format and function call at the same time"), so those requests preemptively use the `structured_output` fake-tool emulation (logged at debug) — same approach as Gemini 2.5.
 - A model that 400/422s on `response_format` alone is cached for the session and retried via the emulation path.
-- Emulation compliance is enforced by the operate loop: when a format request completes as prose, the loop first tries to parse the text as JSON (fence-stripped), then takes a corrective turn offering **only** the `structured_output` tool (`OperateRequest.structuredOutputRetry`), looping within the `turns` budget. Adapters opt in via `supportsStructuredOutputRetry`; Fireworks is currently the only one.
+- Emulation compliance is enforced by the operate loop: when a format request completes as prose, the loop first tries to parse the text as JSON (fence-stripped), then takes a corrective turn offering **only** the `structured_output` tool (`OperateRequest.structuredOutputRetry`), once per run and within the `turns` budget (issue #610: repeating it until `turns` ran out cost 24 requests by default). Adapters opt in via `supportsStructuredOutputRetry`; Fireworks is currently the only one.
 
 **OpenRouter notes:**
 
