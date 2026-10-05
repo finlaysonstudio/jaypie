@@ -1095,9 +1095,12 @@ export class OperateLoop {
 
       // Corrective turn: for adapters whose structured output rides a tool
       // emulation, take another turn offering only the structured_output tool
-      // and demand it be called. Bounded by maxTurns.
+      // and demand it be called. Taken once per run (a model that ignores the
+      // demand once ignores it again, and each turn resends the full prompt)
+      // and bounded by maxTurns.
       if (
         this.adapter.supportsStructuredOutputRetry &&
+        !state.structuredOutputRetry &&
         state.currentTurn < state.maxTurns
       ) {
         log.debug(

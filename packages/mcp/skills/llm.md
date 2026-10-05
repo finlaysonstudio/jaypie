@@ -384,7 +384,7 @@ string. The operate loop first parses the text as JSON, stripping a Markdown
 code fence — this runs for every provider. If that fails, adapters that opt in
 (`supportsStructuredOutputRetry`: **Fireworks** and **Google**) take a
 corrective turn offering only the `structured_output` tool and demanding it be
-called, bounded by the `turns` budget. That turn withholds the caller's own
+called. The corrective turn is taken once per run, within the `turns` budget. That turn withholds the caller's own
 tools and does not send the schema natively, leaving one unambiguous way to
 answer.
 
