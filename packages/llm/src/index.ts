@@ -22,6 +22,7 @@ export type {
   LlmInputMessage,
   LlmMessageOptions,
   LlmModelOption,
+  LlmModelOptions,
   LlmOperateInput,
   LlmOperateInputContent,
   LlmOperateInputFile,
@@ -132,6 +133,8 @@ export type {
 export { extractReasoning } from "./util/extractReasoning.js";
 export { resolveEffort } from "./util/resolveEffort.js";
 export type { LlmEffortResolution } from "./util/resolveEffort.js";
+export { resolveModelOptions } from "./util/modelOptions.js";
+export type { LlmModelOptionsResolution } from "./util/modelOptions.js";
 export { tokenCost } from "./util/tokenCost.js";
 export {
   jsonSchemaToNaturalSchema,

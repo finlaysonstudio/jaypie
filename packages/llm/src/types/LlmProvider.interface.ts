@@ -265,7 +265,11 @@ export interface LlmFallbackConfig {
   /**
    * Provider-specific options for this entry only. A fallback never receives
    * the primary's `providerOptions`: they are shaped for another provider
-   * (or model) and would break the request.
+   * (or model) and would break the request. Ignored when the call sets
+   * `modelOptions`.
+   *
+   * @deprecated Use the call's `modelOptions` keyed by this entry's model or
+   * provider. `providerOptions` is removed in 2.0.
    */
   providerOptions?: JsonObject;
   /**
@@ -274,6 +278,16 @@ export interface LlmFallbackConfig {
    */
   timeout?: number | false;
 }
+
+/**
+ * Provider-specific request fields keyed by exact model id, `MODEL` catalog
+ * key, provider (or alias), or `default`. Every matching key merges into the
+ * attempt's request.
+ */
+export type LlmModelOptions = {
+  default?: JsonObject;
+  [key: string]: JsonObject | undefined;
+};
 
 export interface LlmMessageOptions {
   data?: NaturalMap;
@@ -365,6 +379,7 @@ export interface LlmExchangeRequest {
     instructions?: boolean;
     system?: boolean;
   };
+  /** Options this attempt sent: resolved `modelOptions`, else `providerOptions` */
   providerOptions?: JsonObject;
   system?: string;
   temperature?: number;
@@ -613,6 +628,16 @@ export interface LlmOperateOptions {
   instructions?: string;
   model?: string;
   /**
+   * Provider-specific request fields per model, resolved for every attempt
+   * (primary, each fallback, and the linger pass). Every matching key merges,
+   * least to most specific: `default`, provider (or alias such as `gemini`),
+   * `MODEL` catalog key, exact model id. Objects merge deeply; arrays and
+   * scalars replace. First-class fields (`effort`, `temperature`, `format`)
+   * still win. When set, `providerOptions` is ignored. See
+   * {@link LlmModelOptions}.
+   */
+  modelOptions?: LlmModelOptions;
+  /**
    * Fires once per operate() settlement (success or failure) with a fully
    * serializable request/response envelope. Errors thrown by the callback
    * are logged and never interrupt the call.
@@ -630,6 +655,13 @@ export interface LlmOperateOptions {
     instructions?: boolean;
     system?: boolean;
   };
+  /**
+   * Provider-specific request fields for the primary attempt only. Ignored
+   * when `modelOptions` is set.
+   *
+   * @deprecated Use `modelOptions`, which reaches every attempt in a chain.
+   * `providerOptions` is removed in 2.0.
+   */
   providerOptions?: JsonObject;
   /**
    * Resume a parked exchange (one suspended at external tool calls) with

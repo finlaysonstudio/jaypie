@@ -165,7 +165,8 @@ scale across the provider's range.
 It is threaded through `OperateRequest` by both loops and is gated per provider
 so unsupported models silently ignore it. Omitting `effort` leaves the provider
 default untouched, so it is safe across a fallback chain. Bedrock is not yet
-wired. First-class `effort` wins over a raw `providerOptions.reasoning`.
+wired. First-class `effort` wins over a raw `reasoning` in `modelOptions` or
+`providerOptions`.
 
 `effort` may also be an `LlmEffortMap`. `withResolvedEffort` (`src/util/effort.ts`)
 runs first in `OperateLoop.execute` and `StreamLoop.execute`, resolving the map
@@ -208,8 +209,8 @@ generations do not silently truncate:
   models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
 
 The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
-which transport the request uses. Callers override per call via
-`providerOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
+which transport the request uses. Callers override per model via
+`modelOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
 OpenAI, xAI, Meta, and OpenRouter leave the limit unset, so a chain mixing
 them with a capped provider mixes output budgets (a Gemini primary at 16,384
 non-streaming, an OpenAI fallback uncapped). The skill documents the
@@ -396,10 +397,24 @@ as the stop reason when a blocked prompt returns no candidate, and `OTHER`,
 `LANGUAGE`, `IMAGE_SAFETY`, and `MALFORMED_FUNCTION_CALL` are incomplete
 finishes (issue #608).
 
-`providerOptions` never travel down the chain. Per-call `providerOptions` reach
-the primary only (its linger pass included); a fallback gets its own entry's
-`providerOptions` or none. `src/util/scopeFallbackOptions.ts` also clears the
-per-call `model` for fallbacks. `question` takes no `providerOptions`.
+`modelOptions` (`LlmModelOptions`) is the per-model replacement for
+`providerOptions`. `withResolvedModelOptions` (`src/util/modelOptions.ts`) runs
+first in both loops, beside `withResolvedEffort`, and replaces the attempt's
+`providerOptions` with every matching key merged least to most specific
+(`default` → provider or alias → `MODEL` catalog key → exact id; objects merge
+deeply, arrays and scalars replace). Key ranking is shared with effort maps in
+`src/util/modelKey.ts`. When `modelOptions` is set, `providerOptions` (call and
+chain entry) is ignored, so adapters keep reading `request.providerOptions`
+unchanged and first-class fields still win. `scopeFallbackOptions` keeps
+`modelOptions` on fallbacks. The exported `resolveModelOptions` returns the
+merged object and matched keys.
+
+`providerOptions` is deprecated and removed in 2.0. Until then it never
+travels down the chain: per-call `providerOptions` reach the primary only (its
+linger pass included); a fallback gets its own entry's `providerOptions` or
+none. `src/util/scopeFallbackOptions.ts` also clears the per-call `model` for
+fallbacks. `question` takes no `providerOptions`. `Llm.send` is deprecated and
+receives no new features (fallback, `effort`, `modelOptions`).
 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
@@ -693,8 +708,8 @@ only `instructions` is given. Each engine answers its own way:
 - **Mistral** answers in the same call: `format` becomes a strict
   `document_annotation_format` (through `mistralAdapter.formatOutputSchema`)
   and `instructions` becomes `document_annotation_prompt`. Mistral rejects a
-  prompt without a format, so bare instructions ride in a `{ content: String
-  }` schema that is unwrapped to a string. Document annotation reads only the
+  prompt without a format, so bare instructions ride in a
+  `{ content: String }` schema that is unwrapped to a string. Document annotation reads only the
   first 8 pages and says nothing past them (a 10-page PDF returns 200), so
   when `pages_processed` exceeds 8 the answer comes from one text-only
   `operate()` over the markdown on `PROVIDER.MISTRAL.DEFAULT`; its tokens join

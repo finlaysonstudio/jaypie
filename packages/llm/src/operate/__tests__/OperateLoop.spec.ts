@@ -262,6 +262,71 @@ describe("OperateLoop", () => {
     });
   });
 
+  describe("Model Options", () => {
+    it("merges every matching modelOptions key into providerOptions", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", {
+        modelOptions: {
+          default: { a: 1, nested: { x: 1 } },
+          mock: { nested: { y: 2 } },
+          "mock-model": { b: 2 },
+          other: { c: 3 },
+        },
+      });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].providerOptions).toEqual(
+        { a: 1, b: 2, nested: { x: 1, y: 2 } },
+      );
+    });
+
+    it("ignores providerOptions when modelOptions is set", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", {
+        modelOptions: { mock: { a: 1 } },
+        providerOptions: { b: 2 },
+      });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].providerOptions).toEqual(
+        { a: 1 },
+      );
+    });
+
+    it("keeps providerOptions without modelOptions", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", { providerOptions: { b: 2 } });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].providerOptions).toEqual(
+        { b: 2 },
+      );
+    });
+
+    it("records the resolved options on the exchange", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const result = await loop.execute("Hello", {
+        modelOptions: { mock: { a: 1 } },
+        onExchange: vi.fn(),
+      });
+
+      expect(result.exchange?.request.providerOptions).toEqual({ a: 1 });
+    });
+  });
+
   describe("Effort", () => {
     it("passes a single effort level through unchanged", async () => {
       const loop = new OperateLoop({
