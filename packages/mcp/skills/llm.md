@@ -1346,7 +1346,7 @@ truncate:
 - **Non-streaming** (`operate()`, `send()`): capped at 16,384 tokens —
   larger non-streaming responses risk HTTP timeouts (stream instead)
 - **Streaming** (`stream()`): the model maximum — e.g., 128,000 for current
-  Claude models (64,000 for Haiku), 65,536 for Gemini 2.5/3.x
+  Claude models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
 
 Override per model with `modelOptions`:
 

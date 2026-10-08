@@ -1871,6 +1871,18 @@ describe("AnthropicAdapter", () => {
         expect(result.temperature).toBeUndefined();
       });
 
+      it("strips temperature for claude-haiku-5 models", () => {
+        const request: OperateRequest = {
+          model: "claude-haiku-5-5",
+          messages: [],
+          temperature: 0,
+        };
+
+        const result = anthropicAdapter.buildRequest(request);
+
+        expect(result.temperature).toBeUndefined();
+      });
+
       it("strips temperature for claude-sonnet-5 models", () => {
         const request: OperateRequest = {
           model: "claude-sonnet-5-5",

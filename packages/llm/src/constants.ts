@@ -44,7 +44,7 @@ export const MODEL = {
   FABLE: "claude-fable-5-1",
   OPUS: "claude-opus-5-5",
   SONNET: "claude-sonnet-5-5",
-  HAIKU: "claude-haiku-4-5",
+  HAIKU: "claude-haiku-5-5",
   MYTHOS: "claude-mythos-5",
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
@@ -258,6 +258,14 @@ export const COST: Record<string, LlmModelCost> = {
     cachedInputWrite: { "1h": 2.0, "5m": 1.25 },
     input: 1.0,
     output: 5.0,
+  },
+  // Haiku 5.5 is $0.10/$0.50 for prompts up to 100K tokens; the $0.50/$2.50
+  // long-prompt rate card is a surcharge and is not priced here.
+  "claude-haiku-5-5": {
+    cachedInputRead: 0.01,
+    cachedInputWrite: { "1h": 0.2, "5m": 0.125 },
+    input: 0.1,
+    output: 0.5,
   },
   "claude-mythos-5": {
     cachedInputRead: 1.0,
