@@ -422,6 +422,7 @@ function isBadRequestError(error: unknown): boolean {
 // without code changes — Anthropic is trending toward removing temperature on
 // newer Claude models.
 const MODELS_WITHOUT_TEMPERATURE: RegExp[] = [
+  /^claude-haiku-[5-9]/,
   /^claude-opus-4-[789]/,
   /^claude-opus-[5-9]/,
   /^claude-sonnet-[5-9]/,

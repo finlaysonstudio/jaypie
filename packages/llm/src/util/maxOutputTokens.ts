@@ -19,6 +19,7 @@ const MODEL_MAX_OUTPUT_TOKENS: { pattern: RegExp; tokens: number }[] = [
   { pattern: /^claude-opus-4-(0$|1$|1-|2025)/, tokens: 32_000 },
   { pattern: /^claude-opus-4-5/, tokens: 64_000 },
   { pattern: /^claude-sonnet-4-(0$|5$|5-|2025)/, tokens: 64_000 },
+  { pattern: /claude-haiku-([5-9]|\d{2,})/, tokens: 128_000 },
   { pattern: /haiku/, tokens: 64_000 },
   { pattern: /claude|fable|mythos|opus|sonnet/, tokens: 128_000 },
   // Google — https://ai.google.dev/gemini-api/docs/models

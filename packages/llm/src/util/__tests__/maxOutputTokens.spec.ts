@@ -31,6 +31,10 @@ describe("maxOutputTokens", () => {
       expect(maxOutputTokens("claude-haiku-4-5")).toBe(64000);
     });
 
+    it("resolves Claude Haiku 5.5 to 128000", () => {
+      expect(maxOutputTokens("claude-haiku-5-5")).toBe(128000);
+    });
+
     it("resolves legacy Anthropic models to their lower caps", () => {
       expect(maxOutputTokens("claude-opus-4-0")).toBe(32000);
       expect(maxOutputTokens("claude-opus-4-1")).toBe(32000);
