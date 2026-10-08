@@ -2,8 +2,12 @@ import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
-import { logPaperedEffort, toAnthropicEffort } from "../../util/effort.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
+import {
+  type LlmEffortNative,
+  logPaperedEffort,
+  toAnthropicEffort,
+} from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   INCOMPLETE_STOP_REASONS,
@@ -497,6 +501,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.ANTHROPIC.NAME;
   readonly defaultModel = PROVIDER.ANTHROPIC.DEFAULT;
 
+  resolveEffort(
+    effort: LlmEffort,
+    { model }: { model: string },
+  ): LlmEffortNative | undefined {
+    if (!supportsAnthropicEffort(model)) return undefined;
+    const mapping = toAnthropicEffort(effort);
+    return { mapping, native: { output_config: { effort: mapping.value } } };
+  }
+
   // Session-level cache of models observed to reject `temperature` at runtime.
   // Populated by executeRequest on 400 errors so repeat calls skip the param.
   private runtimeNoTemperatureModels = new Set<string>();
@@ -691,21 +704,21 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
     // Normalized reasoning effort -> output_config.effort (merged so a format
     // config above survives). First-class effort wins over providerOptions.
-    if (
-      request.effort &&
-      supportsAnthropicEffort(anthropicRequest.model as string)
-    ) {
-      const mapping = toAnthropicEffort(request.effort);
-      logPaperedEffort({
-        mapping,
-        model: anthropicRequest.model as string,
-        provider: this.name,
-        requested: request.effort,
-      });
-      anthropicRequest.output_config = {
-        ...anthropicRequest.output_config,
-        effort: mapping.value,
-      };
+    if (request.effort) {
+      const model = anthropicRequest.model as string;
+      const effort = this.resolveEffort(request.effort, { model });
+      if (effort) {
+        logPaperedEffort({
+          mapping: effort.mapping,
+          model,
+          provider: this.name,
+          requested: request.effort,
+        });
+        anthropicRequest.output_config = {
+          ...anthropicRequest.output_config,
+          ...(effort.native.output_config as { effort: string }),
+        };
+      }
     }
 
     // First-class temperature takes precedence over providerOptions

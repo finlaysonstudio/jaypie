@@ -1,6 +1,6 @@
 export { default as Llm } from "./Llm.js";
 export * as LLM from "./constants.js";
-export type { LlmEffort, LlmModelCost } from "./constants.js";
+export type { LlmEffort, LlmEffortMap, LlmModelCost } from "./constants.js";
 export type {
   LlmCache,
   LlmCacheWriteTtl,
@@ -130,6 +130,8 @@ export type {
 
 // Utilities
 export { extractReasoning } from "./util/extractReasoning.js";
+export { resolveEffort } from "./util/resolveEffort.js";
+export type { LlmEffortResolution } from "./util/resolveEffort.js";
 export { tokenCost } from "./util/tokenCost.js";
 export {
   jsonSchemaToNaturalSchema,

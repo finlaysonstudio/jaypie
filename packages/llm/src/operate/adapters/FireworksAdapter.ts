@@ -2,8 +2,12 @@ import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
-import { logPaperedEffort, toFireworksEffort } from "../../util/effort.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
+import {
+  type LlmEffortNative,
+  logPaperedEffort,
+  toFireworksEffort,
+} from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   INCOMPLETE_STOP_REASONS,
@@ -337,6 +341,13 @@ export class FireworksAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.FIREWORKS.NAME;
   readonly defaultModel = PROVIDER.FIREWORKS.DEFAULT;
 
+  // Fireworks accepts `reasoning_effort` on every model and no-ops where
+  // unsupported, so there is no per-model gating
+  resolveEffort(effort: LlmEffort): LlmEffortNative {
+    const mapping = toFireworksEffort(effort);
+    return { mapping, native: { reasoning_effort: mapping.value } };
+  }
+
   // Structured output with tools rides the structured_output tool emulation
   // (Fireworks rejects response_format + tools), and emulation compliance is
   // a model decision — opt in to OperateLoop's corrective retry turn.
@@ -471,14 +482,14 @@ export class FireworksAdapter extends BaseProviderAdapter {
     // param on every model and no-ops where unsupported, so no per-model
     // gating. First-class effort wins over providerOptions.
     if (request.effort) {
-      const mapping = toFireworksEffort(request.effort);
+      const effort = this.resolveEffort(request.effort);
       logPaperedEffort({
-        mapping,
+        mapping: effort.mapping,
         model: fireworksRequest.model,
         provider: this.name,
         requested: request.effort,
       });
-      fireworksRequest.reasoning_effort = mapping.value as string;
+      Object.assign(fireworksRequest, effort.native);
     }
 
     // First-class temperature takes precedence over providerOptions

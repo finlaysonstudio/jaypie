@@ -2,8 +2,8 @@ import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
-import { toOpenRouterEffort } from "../../util/effort.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
+import { type LlmEffortNative, toOpenRouterEffort } from "../../util/effort.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
   INCOMPLETE_STOP_REASONS,
@@ -389,6 +389,13 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.OPENROUTER.NAME;
   readonly defaultModel = PROVIDER.OPENROUTER.DEFAULT;
 
+  // OpenRouter accepts the full ladder on every route and maps it to the
+  // routed provider's nearest supported level itself
+  resolveEffort(effort: LlmEffort): LlmEffortNative {
+    const mapping = toOpenRouterEffort(effort);
+    return { mapping, native: { reasoning: { effort: mapping.value } } };
+  }
+
   // Session-level cache of models observed to reject native
   // `response_format: json_schema`. When a model is in this set, buildRequest
   // engages the legacy fake-tool path instead of native structured output.
@@ -516,9 +523,10 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     // full ladder and maps to the routed provider's nearest supported level.
     // First-class effort wins over providerOptions.
     if (request.effort) {
+      const effort = this.resolveEffort(request.effort);
       openRouterRequest.reasoning = {
         ...openRouterRequest.reasoning,
-        effort: toOpenRouterEffort(request.effort).value,
+        ...(effort.native.reasoning as { effort: string }),
       };
     }
 

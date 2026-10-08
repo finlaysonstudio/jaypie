@@ -92,6 +92,14 @@ export interface OperateContext {
  * Provider-agnostic request options
  * Each adapter will convert this to provider-specific format
  */
+/**
+ * Operate options once the loop has resolved `effort` (a single level or a
+ * per-model map) to the one level this attempt sends.
+ */
+export type ResolvedOperateOptions = Omit<LlmOperateOptions, "effort"> & {
+  effort?: LlmEffort;
+};
+
 export interface OperateRequest {
   /** The model to use */
   model: string;

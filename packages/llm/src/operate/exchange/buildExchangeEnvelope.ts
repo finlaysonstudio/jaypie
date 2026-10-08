@@ -6,11 +6,10 @@ import {
   LlmHistory,
   LlmInputMessage,
   LlmOperateInput,
-  LlmOperateOptions,
   LlmOperateResponse,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
-import { ProviderToolDefinition } from "../types.js";
+import { ProviderToolDefinition, ResolvedOperateOptions } from "../types.js";
 
 /**
  * The loop state the envelope reads. Narrowed to the fields both the operate
@@ -96,7 +95,7 @@ export function buildExchangeEnvelope({
   duration: number;
   initialHistoryLength: number;
   input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
-  options: LlmOperateOptions;
+  options: ResolvedOperateOptions;
   /** Resume payload when the loop parked at external tool calls */
   pending?: LlmExchangePending;
   response: LlmOperateResponse;
