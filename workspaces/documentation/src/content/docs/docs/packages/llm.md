@@ -402,6 +402,8 @@ const response = await Llm.operate(prompt, {
 // Returns typed object
 ```
 
+Anthropic's native structured output accepts at most 16 union-typed parameters per schema, and every `.nullable()` field counts as one. A larger schema is answered through a `structured_output` tool call instead and still returns parsed JSON in `content`.
+
 ## Files and Images
 
 ### Image Input

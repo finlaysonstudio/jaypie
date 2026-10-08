@@ -865,6 +865,7 @@ const response = await Llm.operate("Greet the world", {
 - Streaming structured outputs arrive as `LlmStreamChunkType.Text` deltas — concat to assemble JSON, or use `operate()` to get a parsed object directly.
 - `stop_reason: "refusal"` and `stop_reason: "max_tokens"` are surfaced as text rather than parsed JSON. `provider.send(..., { response })` throws on these; `operate()` surfaces them via `response.content` as a string.
 - A model that rejects `output_config` is cached for the session and transparently retried via the legacy fake-tool emulation. Citations + structured output (a 400 documented as incompatible) and `output_format`-deprecation 400s are **not** retried — those errors propagate so callers can see the real cause.
+- Native structured output rejects a schema with more than 16 union-typed parameters (`anyOf` or a `type` array; every `.nullable()` field is one). `buildRequest` counts them (`countUnionParameters`) and sends a schema over the limit straight to the `structured_output` tool path, logged at debug. The API's 400 ("too many parameters with union types") is also retried through the tool path, for a schema the count misjudges. Neither demotes the model: the limit belongs to the schema, so the same model keeps native `output_config.format` for smaller schemas (issue #616).
 
 **Fireworks notes:**
 

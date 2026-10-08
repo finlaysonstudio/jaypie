@@ -1638,6 +1638,141 @@ describe("AnthropicAdapter", () => {
       expect(thrown).toBe(error);
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
+
+    describe("union parameter limit (issue #616)", () => {
+      const UNION_LIMIT_MESSAGE =
+        "Schemas contains too many parameters with union types (41 parameters with type arrays or anyOf). This causes exponential compilation cost. Reduce the number of nullable or union-typed parameters (limit: 16 parameters with unions).";
+
+      const nullableSchema = (count: number, { typeArray = false } = {}) => ({
+        type: "object",
+        properties: Object.fromEntries(
+          Array.from({ length: count }, (_, index) => [
+            `field${index}`,
+            typeArray
+              ? { type: ["string", "null"] }
+              : { anyOf: [{ type: "string" }, { type: "null" }] },
+          ]),
+        ),
+      });
+
+      const buildFormatRequest = (format: unknown) =>
+        anthropicAdapter.buildRequest({
+          format,
+          messages: [],
+          model: "claude-sonnet-5",
+        } as unknown as OperateRequest) as {
+          output_config?: { format?: unknown };
+          tool_choice?: { type: string };
+          tools?: { name: string }[];
+        };
+
+      it("retries through the tool path without demoting the model", async () => {
+        const { BadRequestError } =
+          await import("../../../providers/anthropic/client.js");
+        // @ts-expect-error Mock doesn't require constructor args
+        const error = new BadRequestError();
+        (error as unknown as { status: number }).status = 400;
+        error.message = UNION_LIMIT_MESSAGE;
+        const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+        const warn = vi.spyOn(log, "warn").mockImplementation(() => {});
+        debug.mockClear();
+        warn.mockClear();
+
+        const successResponse = {
+          content: [
+            {
+              type: "tool_use",
+              id: "abc",
+              name: "structured_output",
+              input: { field0: null },
+            },
+          ],
+          stop_reason: "tool_use",
+          usage: { input_tokens: 1, output_tokens: 1 },
+        };
+        const mockCreate = vi.fn();
+        mockCreate.mockRejectedValueOnce(error as unknown as Error);
+        mockCreate.mockResolvedValueOnce(successResponse);
+        const mockClient = { messages: { create: mockCreate } };
+
+        const result = await anthropicAdapter.executeRequest(mockClient, {
+          model: "claude-sonnet-5",
+          messages: [{ role: "user", content: "Hi" }],
+          max_tokens: 1024,
+          stream: false,
+          output_config: {
+            format: { type: "json_schema", schema: nullableSchema(41) },
+          },
+        });
+
+        expect(result as unknown).toBe(successResponse);
+        expect(mockCreate).toHaveBeenCalledTimes(2);
+        const fallbackBody = mockCreate.mock.calls[1][0] as {
+          output_config?: unknown;
+          tools?: { name: string }[];
+        };
+        expect(fallbackBody.output_config).toBeUndefined();
+        expect(
+          fallbackBody.tools?.some((t) => t.name === "structured_output"),
+        ).toBe(true);
+        expect(anthropicAdapter.parseResponse(result).content).toEqual({
+          field0: null,
+        });
+        expect(debug).toHaveBeenCalledWith(
+          expect.stringContaining("too many union-typed parameters"),
+        );
+        expect(warn).not.toHaveBeenCalled();
+        debug.mockRestore();
+        warn.mockRestore();
+
+        // The limit belongs to the schema: a small schema stays native
+        const small = buildFormatRequest(nullableSchema(2));
+        expect(small.output_config?.format).toBeDefined();
+        expect(small.tools).toBeUndefined();
+      });
+
+      it("sends a schema over the limit straight to the tool path", () => {
+        const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+        debug.mockClear();
+        const request = buildFormatRequest(nullableSchema(17));
+        expect(debug).toHaveBeenCalledWith(
+          expect.stringContaining("schema exceeds 16 union-typed parameters"),
+        );
+        debug.mockRestore();
+        expect(request.output_config?.format).toBeUndefined();
+        expect(request.tools?.map((t) => t.name)).toEqual([
+          "structured_output",
+        ]);
+        expect(request.tool_choice).toEqual({ type: "any" });
+      });
+
+      it("counts type arrays and nested unions", () => {
+        const request = buildFormatRequest({
+          type: "object",
+          properties: {
+            nested: {
+              type: "array",
+              items: nullableSchema(9, { typeArray: true }),
+            },
+            ...nullableSchema(8).properties,
+          },
+        });
+        expect(request.output_config?.format).toBeUndefined();
+        expect(request.tools?.map((t) => t.name)).toEqual([
+          "structured_output",
+        ]);
+      });
+
+      it("keeps a schema at the limit on native output_config", () => {
+        const debug = vi.spyOn(log, "debug").mockImplementation(() => {});
+        debug.mockClear();
+        const request = buildFormatRequest(nullableSchema(16));
+        expect(debug).not.toHaveBeenCalled();
+        debug.mockRestore();
+        expect(request.output_config?.format).toBeDefined();
+        expect(request.tools).toBeUndefined();
+      });
+    });
   });
 
   // Specific Scenarios
