@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { type LlmEffort, PROVIDER } from "../../constants.js";
 import {
   type LlmEffortMapping,
+  type LlmEffortNative,
   logPaperedEffort,
   toOpenAiEffort,
 } from "../../util/effort.js";
@@ -189,6 +190,15 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     return toOpenAiEffort(effort, { model });
   }
 
+  resolveEffort(
+    effort: LlmEffort,
+    { model }: { model: string },
+  ): LlmEffortNative | undefined {
+    if (!this.supportsReasoningEffort(model)) return undefined;
+    const mapping = this.mapReasoningEffort(effort, model);
+    return { mapping, native: { reasoning: { effort: mapping.value } } };
+  }
+
   //
   // Request Building
   //
@@ -252,10 +262,12 @@ export class OpenAiAdapter extends BaseProviderAdapter {
 
     // Normalized reasoning effort -> reasoning.effort (merged so the
     // summary:auto above survives). First-class effort wins over providerOptions.
-    if (request.effort && this.supportsReasoningEffort(model)) {
-      const mapping = this.mapReasoningEffort(request.effort, model);
+    const effort = request.effort
+      ? this.resolveEffort(request.effort, { model })
+      : undefined;
+    if (request.effort && effort) {
       logPaperedEffort({
-        mapping,
+        mapping: effort.mapping,
         model,
         provider: this.name,
         requested: request.effort,
@@ -264,7 +276,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         (openaiRequest.reasoning as Record<string, unknown> | undefined) ?? {};
       openaiRequest.reasoning = {
         ...existingReasoning,
-        effort: mapping.value,
+        ...(effort.native.reasoning as JsonObject),
       };
     }
 

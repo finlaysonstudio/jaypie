@@ -167,6 +167,18 @@ so unsupported models silently ignore it. Omitting `effort` leaves the provider
 default untouched, so it is safe across a fallback chain. Bedrock is not yet
 wired. First-class `effort` wins over a raw `providerOptions.reasoning`.
 
+`effort` may also be an `LlmEffortMap`. `withResolvedEffort` (`src/util/effort.ts`)
+runs first in `OperateLoop.execute` and `StreamLoop.execute`, resolving the map
+against the serving model and adapter name (exact id → `MODEL` catalog key whose
+value is exactly the model → provider or alias → `default`), so every request
+and exchange downstream carries one `LlmEffort` (`ResolvedOperateOptions`).
+`LlmFallbackConfig.effort` replaces the call's value for its entry in
+`Llm.operate`. Each adapter's `resolveEffort(effort, { model })` owns its gating
+and returns `{ mapping, native }` (the request fragment `buildRequest` merges);
+the exported `resolveEffort` (`src/util/resolveEffort.ts`) routes the model to
+an adapter and returns that fragment, so the export and the wire request cannot
+drift.
+
 Each mapper returns `{ value, papered, known? }`. `papered` is `true` when the
 neutral level had no distinct native rung and was collapsed or clamped onto a
 neighbor (e.g. `highest` → Grok `high`, or `highest` → OpenAI `high` on a model

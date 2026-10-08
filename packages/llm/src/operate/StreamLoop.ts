@@ -35,6 +35,7 @@ import {
 } from "../observability/llmobs.js";
 import { abortableSleep } from "../util/abortableSleep.js";
 import { combineAbortSignals } from "../util/abortSignal.js";
+import { withResolvedEffort } from "../util/effort.js";
 import {
   armAttemptTimeout,
   resolveAttemptTimeout,
@@ -64,6 +65,7 @@ import {
   OperateRequest,
   PendingToolCall,
   ProviderToolDefinition,
+  ResolvedOperateOptions,
   StandardToolCall,
 } from "./types.js";
 
@@ -147,9 +149,15 @@ export class StreamLoop {
    */
   async *execute(
     input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions = {},
+    operateOptions: LlmOperateOptions = {},
   ): AsyncIterable<LlmStreamChunk> {
     const log = getLogger();
+    // An effort map resolves against the model and provider serving this
+    // attempt; everything downstream sees one level
+    const options = withResolvedEffort(operateOptions, {
+      defaultModel: this.adapter.defaultModel,
+      provider: this.adapter.name,
+    });
     // Verify adapter supports streaming
     if (!this.adapter.executeStreamRequest) {
       throw new BadGatewayError(
@@ -460,7 +468,7 @@ export class StreamLoop {
     duration: number;
     exchangeRequested: boolean;
     input: string | LlmHistory | LlmInputMessage | LlmOperateInput;
-    options: LlmOperateOptions;
+    options: ResolvedOperateOptions;
     startedAt: string;
     state: StreamLoopState;
   }): Promise<void> {
@@ -569,7 +577,7 @@ export class StreamLoop {
 
   private buildInitialRequest(
     state: StreamLoopState,
-    options: LlmOperateOptions,
+    options: ResolvedOperateOptions,
   ): OperateRequest {
     return {
       cache: options.cache,

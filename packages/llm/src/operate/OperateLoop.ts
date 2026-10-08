@@ -62,12 +62,14 @@ import {
   RetryPolicy,
 } from "./retry/index.js";
 import { resolveAttemptTimeout } from "../util/attemptTimeout.js";
+import { withResolvedEffort } from "../util/effort.js";
 import {
   OperateContext,
   OperateLoopState,
   OperateRequest,
   PendingToolCall,
   ProviderToolDefinition,
+  ResolvedOperateOptions,
   StandardToolResult,
 } from "./types.js";
 
@@ -179,9 +181,15 @@ export class OperateLoop {
    */
   async execute(
     input?: string | LlmHistory | LlmInputMessage | LlmOperateInput,
-    options: LlmOperateOptions = {},
+    operateOptions: LlmOperateOptions = {},
   ): Promise<LlmOperateResponse> {
     const log = getLogger();
+    // An effort map resolves against the model and provider serving this
+    // attempt; everything downstream sees one level
+    const options = withResolvedEffort(operateOptions, {
+      defaultModel: this.adapter.defaultModel,
+      provider: this.adapter.name,
+    });
     // Log what was passed to operate
     log.trace("[operate] Starting operate loop");
     log.trace.var({ "operate.input": input });
@@ -568,7 +576,7 @@ export class OperateLoop {
 
   private buildInitialRequest(
     state: OperateLoopState,
-    options: LlmOperateOptions,
+    options: ResolvedOperateOptions,
   ): OperateRequest {
     return {
       cache: options.cache,

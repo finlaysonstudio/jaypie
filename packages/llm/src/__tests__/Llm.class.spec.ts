@@ -639,6 +639,35 @@ describe("Llm Class", () => {
       });
     });
 
+    describe("effort", () => {
+      it("carries an effort map to every attempt for the loop to resolve", async () => {
+        openAiOperateMock.mockRejectedValueOnce(new Error("OpenAI failed"));
+        const effort = { anthropic: "high", default: "low" } as const;
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        await llm.operate("test", { effort });
+
+        expect(openAiOperateMock.mock.calls[0][1].effort).toEqual(effort);
+        expect(anthropicOperateMock.mock.calls[0][1].effort).toEqual(effort);
+      });
+
+      it("lets a chain entry replace the call effort", async () => {
+        openAiOperateMock.mockRejectedValueOnce(new Error("OpenAI failed"));
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ effort: "lowest", provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        await llm.operate("test", { effort: { default: "high" } });
+
+        expect(openAiOperateMock.mock.calls[0][1].effort).toEqual({
+          default: "high",
+        });
+        expect(anthropicOperateMock.mock.calls[0][1].effort).toBe("lowest");
+      });
+    });
+
     describe("rate limit waits", () => {
       // Working down a chain, every attempt fails fast on any error; only the
       // linger pass on the primary keeps the retry policy

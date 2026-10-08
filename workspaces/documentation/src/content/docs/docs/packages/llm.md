@@ -156,6 +156,23 @@ const response = await llm.operate(input, {
 });
 ```
 
+### Effort in a Chain
+
+`effort` accepts a per-model map so each attempt (primary, fallback, linger pass) runs at its own level. The first match wins: exact model id, a `MODEL` catalog key whose value is exactly the model (`sol`, `gemini_flash`), the provider (`openai`, `anthropic`, `google`, or the alias `gemini`), then `default`. No match leaves the provider default. An entry's own `effort` replaces the call's.
+
+```typescript
+const response = await llm.operate(input, {
+  model: LLM.MODEL.GEMINI_FLASH,
+  fallback: [
+    { provider: "openai", model: LLM.MODEL.SOL },
+    { provider: "anthropic", model: LLM.MODEL.OPUS, effort: "highest" },
+  ],
+  effort: { gemini: "low", sol: "medium", default: "high" },
+});
+```
+
+`resolveEffort({ model, effort })` returns the resolved level and the native request fragment the provider would receive, e.g. `{ thinkingConfig: { thinkingLevel: "LOW" } }`, or no `native` when the model has no reasoning control.
+
 ### Attempt Timeout
 
 `timeout` sets a per-attempt deadline in milliseconds. Without it, a provider that accepts the connection but never answers holds the chain until the runtime gives up (undici waits 300 s for response headers). A stalled attempt is aborted and throws `LlmTimeoutError` (a `LlmTransientError`, status 504). Down a chain it moves to the next entry at once; on a single model or the linger pass it retries with the same deadline. An entry's own `timeout` replaces the call's. No default applies. `stream()` treats it as an idle timeout, restarted by every chunk.

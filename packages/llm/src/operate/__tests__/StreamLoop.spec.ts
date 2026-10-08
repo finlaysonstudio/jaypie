@@ -331,6 +331,20 @@ describe("StreamLoop", () => {
   });
 
   // Features
+  describe("Effort", () => {
+    it("resolves an effort map against the serving model", async () => {
+      const loop = new StreamLoop({ adapter: mockAdapter, client: mockClient });
+
+      await collectChunks(
+        loop.execute("Hello", {
+          effort: { default: "high", mock: "low" },
+        }),
+      );
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].effort).toBe("low");
+    });
+  });
+
   describe("Features", () => {
     describe("Automatic Tool Execution", () => {
       it("yields tool_call chunks when LLM requests tools", async () => {

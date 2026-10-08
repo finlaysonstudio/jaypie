@@ -262,6 +262,70 @@ describe("OperateLoop", () => {
     });
   });
 
+  describe("Effort", () => {
+    it("passes a single effort level through unchanged", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", { effort: "low" });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].effort).toBe("low");
+    });
+
+    it("resolves an effort map by exact model first", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", {
+        effort: { default: "high", mock: "medium", "mock-model": "lowest" },
+      });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].effort).toBe("lowest");
+    });
+
+    it("resolves an effort map by provider before default", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", {
+        effort: { default: "high", mock: "medium" },
+      });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].effort).toBe("medium");
+    });
+
+    it("leaves effort unset when the map has no match", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      await loop.execute("Hello", { effort: { openai: "high" } });
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].effort).toBeUndefined();
+    });
+
+    it("records the resolved level on the exchange", async () => {
+      const loop = new OperateLoop({
+        adapter: mockAdapter,
+        client: mockClient,
+      });
+
+      const result = await loop.execute("Hello", {
+        effort: { default: "high", mock: "medium" },
+        onExchange: vi.fn(),
+      });
+
+      expect(result.exchange?.request.effort).toBe("medium");
+    });
+  });
+
   // Features
   describe("Features", () => {
     describe("Tool Calling", () => {

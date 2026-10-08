@@ -335,7 +335,10 @@ class Llm implements LlmProvider {
             ? attemptOptions
             : {
                 ...scopeFallbackOptions(attemptOptions, { config }),
-                // A chain entry's own deadline replaces the call's
+                // A chain entry's own effort and deadline replace the call's
+                ...(config?.effort !== undefined
+                  ? { effort: config.effort }
+                  : {}),
                 ...(config?.timeout !== undefined
                   ? { timeout: config.timeout }
                   : {}),

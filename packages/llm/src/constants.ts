@@ -17,6 +17,23 @@ export const EFFORT = {
 
 export type LlmEffort = (typeof EFFORT)[keyof typeof EFFORT];
 
+/**
+ * Per-model reasoning effort. Each attempt (primary, fallback, linger pass)
+ * resolves its level in this order, first match wins:
+ *
+ * 1. Exact model id (`"gpt-6-sol"`)
+ * 2. `MODEL` catalog key whose value is exactly the model (`"sol"`,
+ *    `"gemini_flash"`, `"fireworks.glm"`); case-insensitive
+ * 3. Provider name (`"openai"`, `"anthropic"`, `"google"`), or a provider
+ *    alias (`"gemini"`)
+ * 4. `default`
+ * 5. No match leaves the provider default untouched
+ */
+export type LlmEffortMap = {
+  default?: LlmEffort;
+  [key: string]: LlmEffort | undefined;
+};
+
 export const MODEL = {
   // Amazon (Nova; the only first-class models served over Bedrock. Bedrock also
   // resells other vendors, but those routes are not catalogued — reach them by

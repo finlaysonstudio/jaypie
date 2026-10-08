@@ -2,9 +2,9 @@ import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
 import {
-  type LlmEffortMapping,
+  type LlmEffortNative,
   logPaperedEffort,
   toGeminiThinkingBudget,
   toGeminiThinkingLevel,
@@ -134,6 +134,31 @@ const NOT_RETRYABLE_STATUS_CODES = [
 export class GoogleAdapter extends BaseProviderAdapter {
   readonly name = PROVIDER.GOOGLE.NAME;
   readonly defaultModel = PROVIDER.GOOGLE.DEFAULT;
+
+  /**
+   * Gemini 3.x takes the `thinkingLevel` enum, 2.5 an integer
+   * `thinkingBudget`; other models have no thinking control.
+   */
+  resolveEffort(
+    effort: LlmEffort,
+    { model }: { model: string },
+  ): LlmEffortNative | undefined {
+    if (GEMINI_3_PATTERN.test(model)) {
+      const mapping = toGeminiThinkingLevel(effort);
+      return {
+        mapping,
+        native: { thinkingConfig: { thinkingLevel: mapping.value } },
+      };
+    }
+    if (GEMINI_25_PATTERN.test(model)) {
+      const mapping = toGeminiThinkingBudget(effort);
+      return {
+        mapping,
+        native: { thinkingConfig: { thinkingBudget: mapping.value } },
+      };
+    }
+    return undefined;
+  }
 
   // Gemini can answer a format request with prose — on the legacy path because
   // structured output rides the structured_output tool emulation, and on the
@@ -321,19 +346,10 @@ export class GoogleAdapter extends BaseProviderAdapter {
     // providerOptions.thinkingConfig survives; first-class effort wins.
     if (request.effort) {
       const model = geminiRequest.model;
-      let thinkingConfig:
-        { thinkingLevel?: string; thinkingBudget?: number } | undefined;
-      let mapping: LlmEffortMapping<string | number> | undefined;
-      if (GEMINI_3_PATTERN.test(model)) {
-        mapping = toGeminiThinkingLevel(request.effort);
-        thinkingConfig = { thinkingLevel: mapping.value as string };
-      } else if (GEMINI_25_PATTERN.test(model)) {
-        mapping = toGeminiThinkingBudget(request.effort);
-        thinkingConfig = { thinkingBudget: mapping.value as number };
-      }
-      if (thinkingConfig && mapping) {
+      const effort = this.resolveEffort(request.effort, { model });
+      if (effort) {
         logPaperedEffort({
-          mapping,
+          mapping: effort.mapping,
           model,
           provider: this.name,
           requested: request.effort,
@@ -342,7 +358,10 @@ export class GoogleAdapter extends BaseProviderAdapter {
           ...geminiRequest.config,
           thinkingConfig: {
             ...geminiRequest.config?.thinkingConfig,
-            ...thinkingConfig,
+            ...(effort.native.thinkingConfig as {
+              thinkingBudget?: number;
+              thinkingLevel?: string;
+            }),
           },
         };
       }

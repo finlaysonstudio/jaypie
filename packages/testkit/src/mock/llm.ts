@@ -266,6 +266,7 @@ export const naturalSchemaToJsonSchema = original.naturalSchemaToJsonSchema;
 export const LlmQuestionType = original.LlmQuestionType;
 export const normalizeDistribution = original.normalizeDistribution;
 export const peakConfidence = original.peakConfidence;
+export const resolveEffort = original.resolveEffort;
 export const RetryPolicy = original.RetryPolicy;
 export const tokenCost = original.tokenCost;
 export const TypeSafeClient = original.TypeSafeClient;

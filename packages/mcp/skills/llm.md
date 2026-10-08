@@ -1125,7 +1125,7 @@ describe("LLM Integration", () => {
 interface LlmOperateOptions {
   cache?: boolean | 0 | "5m" | "1h"; // Prompt caching (default on at 1h; false/0 disables)
   data?: Record<string, any>; // Placeholder substitution data
-  effort?: LlmEffort; // Provider-neutral reasoning effort (lowest|low|medium|high|highest)
+  effort?: LlmEffort | LlmEffortMap; // Reasoning effort (lowest|low|medium|high|highest), or a per-model map
   fallback?: LlmFallbackConfig[] | false; // Fallback provider chain
   format?: NaturalSchema | JsonObject | ZodType; // Structured output schema (natural syntax preferred)
   history?: LlmHistory; // Previous conversation
@@ -1144,6 +1144,9 @@ interface LlmFallbackConfig {
   provider: string; // Provider name (e.g., "openai", "anthropic", "google")
   model?: string; // Model to use (optional, uses provider default)
   apiKey?: string; // API key (optional, uses environment variable)
+  effort?: LlmEffort; // Effort for this entry only, replacing the call's effort
+  providerOptions?: JsonObject; // Provider-specific options for this entry only
+  timeout?: number | false; // Per-attempt deadline for this entry only
 }
 ```
 
@@ -1219,6 +1222,58 @@ erroring):
   request transparently retried without it. Structured output combines with
   tools natively — no emulation.
 - **Bedrock** — not yet wired; `effort` is ignored.
+
+### Per-model effort
+
+Reasoning cost differs sharply between providers at the same level, so a
+fallback chain can set `effort` per model with a map. Each attempt (primary,
+every fallback, and the linger pass) resolves its own level, first match wins:
+
+1. **Exact model id** (`"gpt-6.1-sol"`)
+2. **`MODEL` catalog key** whose value is exactly the serving model (`"sol"`
+   for `MODEL.SOL`, `"gemini_flash"`, `"fireworks.glm"`); case-insensitive,
+   any separator. Keys never match by name fragment: `"flash"` matches nothing.
+3. **Provider** (`"openai"`, `"anthropic"`, `"google"`, `"xai"`,
+   `"openrouter"`, ...) or an alias (`"gemini"` → `google`)
+4. **`default`**
+5. No match leaves the provider default untouched
+
+```typescript
+await llm.operate(input, {
+  model: "gemini-3-flash",
+  fallback: [
+    { provider: "openai", model: "gpt-6.1-sol" },
+    { provider: "anthropic", model: "claude-opus-5-5", effort: "highest" },
+  ],
+  effort: { gemini: "low", "gpt-6.1-sol": "medium", default: "high" },
+});
+```
+
+A single `LlmEffort` keeps its meaning everywhere. A fallback entry's own
+`effort` replaces the call's value (single or map) for that entry. The exchange
+records the level each attempt resolved (`LlmExchangeRequest.effort`).
+
+### `resolveEffort`
+
+`resolveEffort` returns the level a model resolves to and the request fragment
+its adapter would send (`native`), or no `native` when the model has no
+reasoning control:
+
+```typescript
+import { resolveEffort } from "@jaypie/llm";
+
+resolveEffort({ model: "gemini-3-flash", effort: "low" });
+// → { level: "low", model: "gemini-3-flash", provider: "google", papered: false,
+//     native: { thinkingConfig: { thinkingLevel: "LOW" } } }
+
+resolveEffort({ model: "claude-opus-5-5", effort: { anthropic: "high" } });
+// → { level: "high", ..., native: { output_config: { effort: "high" } } }
+```
+
+Accepts an optional `provider` when the model id alone does not route (e.g. an
+OpenRouter path). Comparing `native` across levels shows which are distinct on
+a model: `lowest` and `low` on Claude both send `{ effort: "low" }`, so one of
+the two is redundant in an effort sweep.
 
 First-class `effort` takes precedence over a raw `providerOptions.reasoning`
 (same convention as `temperature`). For control the neutral scale doesn't

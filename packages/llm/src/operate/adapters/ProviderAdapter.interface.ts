@@ -6,8 +6,10 @@ import {
   LlmOperateOptions,
   LlmUsageItem,
 } from "../../types/LlmProvider.interface.js";
+import { type LlmEffort } from "../../constants.js";
 import { LlmStreamChunk } from "../../types/LlmStreamChunk.interface.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
+import { type LlmEffortNative } from "../../util/effort.js";
 import {
   ClassifiedError,
   OperateRequest,
@@ -75,6 +77,16 @@ export interface ProviderAdapter {
    * @returns Provider-specific request object ready for the API
    */
   buildRequest(request: OperateRequest): unknown;
+
+  /**
+   * The native reasoning control an effort level produces on a model, as
+   * `buildRequest` merges it. `undefined` when the model has no reasoning
+   * control (the level is then ignored).
+   */
+  resolveEffort?(
+    effort: LlmEffort,
+    { model }: { model: string },
+  ): LlmEffortNative | undefined;
 
   /**
    * Convert a Toolkit to provider-specific tool definitions
@@ -273,6 +285,19 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
   abstract readonly defaultModel: string;
 
   abstract buildRequest(request: OperateRequest): unknown;
+
+  /**
+   * Default: no reasoning control. Adapters with one override this and merge
+   * its `native` fragment in `buildRequest`.
+   */
+  resolveEffort(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    effort: LlmEffort,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    { model }: { model: string },
+  ): LlmEffortNative | undefined {
+    return undefined;
+  }
   abstract formatTools(
     toolkit: Toolkit,
     outputSchema?: JsonObject,

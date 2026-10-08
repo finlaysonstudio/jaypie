@@ -1,6 +1,13 @@
 import { log } from "@jaypie/logger";
+import { JsonObject } from "@jaypie/types";
 
-import { EFFORT, type LlmEffort } from "../constants.js";
+import {
+  EFFORT,
+  type LlmEffort,
+  type LlmEffortMap,
+  MODEL,
+  PROVIDER,
+} from "../constants.js";
 
 /**
  * Result of translating the provider-neutral {@link LlmEffort} scale to a
@@ -23,6 +30,123 @@ export interface LlmEffortMapping<T extends string | number = string> {
   papered: boolean;
   /** Native effort value for the target provider. */
   value: T;
+}
+
+/**
+ * An adapter's answer to "what would this effort level send on this model":
+ * the scale mapping plus the request fragment it merges in. Adapters return
+ * `undefined` when the model has no reasoning control.
+ */
+export interface LlmEffortNative {
+  mapping: LlmEffortMapping<string | number>;
+  /** Request fragment, e.g. `{ thinkingConfig: { thinkingLevel: "LOW" } }` */
+  native: JsonObject;
+}
+
+//
+//
+// Effort Map Resolution
+//
+
+const EFFORT_MAP_DEFAULT_KEY = "default";
+
+/** Map keys that name a provider by another word */
+const EFFORT_PROVIDER_ALIAS: Record<string, string> = {
+  gemini: PROVIDER.GOOGLE.NAME,
+};
+
+function normalizeCatalogKey(key: string): string {
+  return key
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_");
+}
+
+/**
+ * Normalized `MODEL` catalog key -> model ids. Nested entries register under
+ * the leaf key (`GLM`) and the path (`FIREWORKS_GLM`), so a leaf shared by
+ * two subtrees resolves by whichever id the attempt actually runs.
+ */
+function buildCatalogIndex(): Map<string, Set<string>> {
+  const index = new Map<string, Set<string>>();
+  const add = (key: string, id: string) => {
+    const normalized = normalizeCatalogKey(key);
+    if (!index.has(normalized)) index.set(normalized, new Set());
+    index.get(normalized)!.add(id);
+  };
+  const walk = (node: Record<string, unknown>, path: string[]) => {
+    for (const [key, value] of Object.entries(node)) {
+      if (typeof value === "string") {
+        add(key, value);
+        if (path.length) add([...path, key].join("_"), value);
+      } else if (value && typeof value === "object") {
+        walk(value as Record<string, unknown>, [...path, key]);
+      }
+    }
+  };
+  walk(MODEL as Record<string, unknown>, []);
+  return index;
+}
+
+let catalogIndex: Map<string, Set<string>> | undefined;
+
+function catalogKeyMatches(key: string, model: string): boolean {
+  catalogIndex ??= buildCatalogIndex();
+  return catalogIndex.get(normalizeCatalogKey(key))?.has(model) ?? false;
+}
+
+/**
+ * Resolve a call's `effort` (a single level or a per-model map) to the level
+ * one attempt sends. A single level applies everywhere. A map resolves by
+ * exact model id, then `MODEL` catalog key, then provider (or alias), then
+ * `default`; no match returns `undefined`, leaving the provider default.
+ */
+export function resolveEffortLevel(
+  effort: LlmEffort | LlmEffortMap | undefined,
+  { model, provider }: { model?: string; provider?: string } = {},
+): LlmEffort | undefined {
+  if (effort === undefined || effort === null) return undefined;
+  if (typeof effort === "string") return effort;
+
+  const entries = Object.entries(effort).filter(
+    ([key, level]) => key !== EFFORT_MAP_DEFAULT_KEY && level !== undefined,
+  ) as Array<[string, LlmEffort]>;
+
+  if (model) {
+    const exact = entries.find(([key]) => key === model);
+    if (exact) return exact[1];
+    const catalog = entries.find(([key]) => catalogKeyMatches(key, model));
+    if (catalog) return catalog[1];
+  }
+  if (provider) {
+    const target = provider.toLowerCase();
+    const byProvider = entries.find(([key]) => {
+      const lower = key.toLowerCase();
+      return lower === target || EFFORT_PROVIDER_ALIAS[lower] === target;
+    });
+    if (byProvider) return byProvider[1];
+  }
+  return effort[EFFORT_MAP_DEFAULT_KEY];
+}
+
+/**
+ * Replace a call's `effort` with the level this attempt resolves to. The
+ * operate and stream loops run this first, so every request and exchange
+ * downstream carries a single level.
+ */
+export function withResolvedEffort<
+  TOptions extends { effort?: LlmEffort | LlmEffortMap; model?: string },
+>(
+  options: TOptions,
+  { defaultModel, provider }: { defaultModel: string; provider: string },
+): Omit<TOptions, "effort"> & { effort?: LlmEffort } {
+  return {
+    ...options,
+    effort: resolveEffortLevel(options.effort, {
+      model: options.model ?? defaultModel,
+      provider,
+    }),
+  };
 }
 
 /**

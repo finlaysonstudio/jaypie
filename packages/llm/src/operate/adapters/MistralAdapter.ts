@@ -2,9 +2,13 @@ import { log } from "@jaypie/logger";
 import { JsonObject, NaturalSchema } from "@jaypie/types";
 import { z } from "zod/v4";
 
-import { PROVIDER } from "../../constants.js";
+import { type LlmEffort, PROVIDER } from "../../constants.js";
 import { promptCacheKey, resolveCache } from "../../util/cacheControl.js";
-import { logPaperedEffort, toMistralEffort } from "../../util/effort.js";
+import {
+  type LlmEffortNative,
+  logPaperedEffort,
+  toMistralEffort,
+} from "../../util/effort.js";
 import { resolveMaxOutputTokens } from "../../util/maxOutputTokens.js";
 import { Toolkit } from "../../tools/Toolkit.class.js";
 import {
@@ -502,6 +506,15 @@ export class MistralAdapter extends BaseProviderAdapter {
     return REASONING_EFFORT_MODELS.test(model);
   }
 
+  resolveEffort(
+    effort: LlmEffort,
+    { model }: { model: string },
+  ): LlmEffortNative | undefined {
+    if (!this.supportsReasoningEffort(model)) return undefined;
+    const mapping = toMistralEffort(effort);
+    return { mapping, native: { reasoning_effort: mapping.value } };
+  }
+
   //
   // Request Building
   //
@@ -613,15 +626,18 @@ export class MistralAdapter extends BaseProviderAdapter {
 
     // Normalized reasoning effort -> reasoning_effort, gated by model.
     // First-class effort wins over providerOptions.
-    if (request.effort && this.supportsReasoningEffort(mistralRequest.model)) {
-      const mapping = toMistralEffort(request.effort);
-      logPaperedEffort({
-        mapping,
-        model: mistralRequest.model,
-        provider: this.name,
-        requested: request.effort,
-      });
-      mistralRequest.reasoning_effort = mapping.value as string;
+    if (request.effort) {
+      const model = mistralRequest.model;
+      const effort = this.resolveEffort(request.effort, { model });
+      if (effort) {
+        logPaperedEffort({
+          mapping: effort.mapping,
+          model,
+          provider: this.name,
+          requested: request.effort,
+        });
+        Object.assign(mistralRequest, effort.native);
+      }
     }
 
     // First-class temperature takes precedence over providerOptions

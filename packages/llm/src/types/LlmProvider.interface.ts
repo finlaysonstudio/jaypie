@@ -6,7 +6,7 @@ import {
   NaturalSchema,
 } from "@jaypie/types";
 import { z } from "zod/v4";
-import { type LlmEffort } from "../constants.js";
+import { type LlmEffort, type LlmEffortMap } from "../constants.js";
 import { type LlmRetryOptions } from "../operate/retry/RetryPolicy.js";
 import { LlmTool } from "./LlmTool.interface.js";
 import type {
@@ -258,6 +258,11 @@ export interface LlmFallbackConfig {
   /** API key for this provider (optional, uses environment variable if not specified) */
   apiKey?: string;
   /**
+   * Reasoning effort for this entry only, replacing the call's `effort`
+   * (single level or map) when it serves the request.
+   */
+  effort?: LlmEffort;
+  /**
    * Provider-specific options for this entry only. A fallback never receives
    * the primary's `providerOptions`: they are shaped for another provider
    * (or model) and would break the request.
@@ -346,6 +351,7 @@ export type LlmProgressCallback = (
 export interface LlmExchangeRequest {
   cache?: LlmCache;
   data?: NaturalMap;
+  /** Level this attempt resolved from the call's `effort` (single or map) */
   effort?: LlmEffort;
   explain?: boolean;
   /** Format normalized to JSON Schema (Zod/Natural already rendered) */
@@ -503,8 +509,12 @@ export interface LlmOperateOptions {
    * across the provider's range; omitting it leaves the provider default
    * untouched, so it is safe across a fallback chain. Providers without
    * reasoning control ignore it.
+   *
+   * A map sets the level per attempt: exact model id, then `MODEL` catalog
+   * key, then provider (or alias such as `gemini`), then `default`; no match
+   * leaves the provider default. See {@link LlmEffortMap}.
    */
-  effort?: LlmEffort;
+  effort?: LlmEffort | LlmEffortMap;
   explain?: boolean;
   /** Chain of fallback providers to try if primary fails. Set to false to disable instance-level fallback. */
   fallback?: LlmFallbackConfig[] | false;
