@@ -410,6 +410,8 @@ const result = await Llm.operate(
 );
 ```
 
+Anthropic's native structured output accepts at most 16 union-typed parameters per schema, and every `.nullable()` field counts as one. A larger schema is answered through a `structured_output` tool call instead and still returns parsed JSON in `content`.
+
 ### Bare JSON Schema
 
 `format` also duck-types a bare JSON Schema object node — `{ type: "object", properties: {...} }` — without needing the OpenAI-style `{ type: "json_schema", ... }` envelope. `required` is honored.

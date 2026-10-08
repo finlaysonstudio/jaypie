@@ -55,6 +55,12 @@ import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
+// Native structured output rejects a schema with more union-typed parameters
+// than this (`anyOf` or a `type` array; every nullable field is one). The
+// limit belongs to the schema, not the model, so such a schema is served
+// through the tool path while the model stays on native output otherwise.
+const STRUCTURED_OUTPUT_MAX_UNION_PARAMETERS = 16;
+
 /**
  * Local extension of the SDK's `MessageCreateParams` to carry
  * `output_config.format` (Anthropic native structured outputs). The SDK 0.71
@@ -446,6 +452,26 @@ function structuredOutputToolChoice(model: string): {
     : { type: "any" };
 }
 
+/**
+ * Count the schema nodes Anthropic's grammar compiler treats as union-typed:
+ * any node carrying `anyOf` or a `type` array.
+ */
+function countUnionParameters(schema: unknown): number {
+  if (!schema || typeof schema !== "object") return 0;
+  if (Array.isArray(schema)) {
+    return schema.reduce<number>(
+      (sum, entry) => sum + countUnionParameters(entry),
+      0,
+    );
+  }
+  const node = schema as Record<string, unknown>;
+  const isUnion = Array.isArray(node.anyOf) || Array.isArray(node.type);
+  return Object.values(node).reduce<number>(
+    (sum, value) => sum + countUnionParameters(value),
+    isUnion ? 1 : 0,
+  );
+}
+
 function isTemperatureDeprecationError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const err = error as {
@@ -485,6 +511,27 @@ function isStructuredOutputUnsupportedError(error: unknown): boolean {
   return messages.some((m) =>
     /output_config|output_format|json[_ ]schema|structured/i.test(m),
   );
+}
+
+/**
+ * Detect the 400 that rejects a schema for carrying too many union-typed
+ * parameters ("Schemas contains too many parameters with union types (41
+ * parameters with type arrays or anyOf)"). The model supports native
+ * structured output; this schema does not fit it (issue #616).
+ */
+function isStructuredOutputUnionLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    message?: string;
+    error?: { message?: string };
+  };
+  if (!isBadRequestError(error)) return false;
+  const messages = [err.message, err.error?.message].filter(
+    (m): m is string => typeof m === "string",
+  );
+  if (messages.some((m) => /citation/i.test(m))) return false;
+  if (messages.some((m) => /deprecated/i.test(m))) return false;
+  return messages.some((m) => /union types|anyOf|type arrays/i.test(m));
 }
 
 //
@@ -645,16 +692,23 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         : request.system;
     }
 
+    const modelRejectsStructuredOutput = !this.supportsStructuredOutput(
+      anthropicRequest.model as string,
+    );
     const useFallbackStructuredOutput =
       Boolean(request.format) &&
-      !this.supportsStructuredOutput(anthropicRequest.model as string);
+      (modelRejectsStructuredOutput ||
+        countUnionParameters(request.format) >
+          STRUCTURED_OUTPUT_MAX_UNION_PARAMETERS);
 
     const allTools: ProviderToolDefinition[] = request.tools
       ? [...request.tools]
       : [];
     if (useFallbackStructuredOutput && request.format) {
       log.debug(
-        `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_config previously rejected for this model.`,
+        modelRejectsStructuredOutput
+          ? `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; native output_config previously rejected for this model.`
+          : `[AnthropicAdapter] Using legacy structured_output tool fallback for model ${anthropicRequest.model as string}; schema exceeds ${STRUCTURED_OUTPUT_MAX_UNION_PARAMETERS} union-typed parameters.`,
       );
       allTools.push({
         name: STRUCTURED_OUTPUT_TOOL_NAME,
@@ -688,7 +742,8 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
     // Native structured output: send schema as `output_config.format`. The
     // legacy tool-emulation path is engaged only as a runtime fallback for
-    // models the API has flagged as not supporting native structured output.
+    // models the API has flagged as not supporting native structured output,
+    // and for schemas over the union-parameter limit.
     if (request.format && !useFallbackStructuredOutput) {
       anthropicRequest.output_config = {
         format: {
@@ -829,6 +884,21 @@ export class AnthropicAdapter extends BaseProviderAdapter {
           response.__jaypieStructuredOutput = true;
         }
         return response;
+      }
+
+      // If the schema is over the union-parameter limit, retry this request
+      // via the fake-tool path. The model is not cached: it still serves
+      // smaller schemas natively.
+      if (wantsStructuredOutput && isStructuredOutputUnionLimitError(error)) {
+        log.debug(
+          `[AnthropicAdapter] Model ${anthropicRequest.model as string} rejected the schema for too many union-typed parameters; falling back to legacy structured_output tool emulation for this request.`,
+        );
+        return (await anthropic.messages.create(
+          this.toFallbackStructuredOutputRequest(
+            anthropicRequest,
+          ) as Anthropic.MessageCreateParams,
+          signal ? { signal } : undefined,
+        )) as Anthropic.Message;
       }
 
       // If the model rejected native structured output, cache it and retry
