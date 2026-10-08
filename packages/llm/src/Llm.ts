@@ -229,6 +229,11 @@ class Llm implements LlmProvider {
     }
   }
 
+  /**
+   * @deprecated `send` receives no new features (fallback, effort,
+   * modelOptions, tools). Use `operate`, which covers single-turn calls with
+   * `format` for structured output.
+   */
   async send(
     message: string,
     options?: Omit<LlmMessageOptions, "model"> & { model?: LlmModelOption },
@@ -589,6 +594,11 @@ class Llm implements LlmProvider {
     useExchangeStore(store);
   }
 
+  /**
+   * @deprecated `send` receives no new features (fallback, effort,
+   * modelOptions, tools). Use `operate`, which covers single-turn calls with
+   * `format` for structured output.
+   */
   static async send(
     message: string,
     options?: Omit<LlmMessageOptions, "model"> & {

@@ -668,6 +668,33 @@ describe("Llm Class", () => {
       });
     });
 
+    describe("modelOptions", () => {
+      it("carries modelOptions to every attempt for the loop to resolve", async () => {
+        openAiOperateMock.mockRejectedValue(new Error("OpenAI failed"));
+        anthropicOperateMock.mockRejectedValue(new Error("Anthropic failed"));
+        const modelOptions = {
+          anthropic: { thinking: { type: "enabled" } },
+          openai: { reasoning: { summary: "detailed" } },
+        };
+
+        const llm = new Llm(PROVIDER.OPENAI.NAME, {
+          fallback: [{ provider: PROVIDER.ANTHROPIC.NAME }],
+        });
+        await expect(llm.operate("test", { modelOptions })).rejects.toThrow();
+
+        expect(openAiOperateMock.mock.calls[0][1].modelOptions).toEqual(
+          modelOptions,
+        );
+        expect(anthropicOperateMock.mock.calls[0][1].modelOptions).toEqual(
+          modelOptions,
+        );
+        // The linger pass on the primary
+        expect(openAiOperateMock.mock.calls[1][1].modelOptions).toEqual(
+          modelOptions,
+        );
+      });
+    });
+
     describe("rate limit waits", () => {
       // Working down a chain, every attempt fails fast on any error; only the
       // linger pass on the primary keeps the retry policy

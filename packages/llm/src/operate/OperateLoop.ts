@@ -63,6 +63,7 @@ import {
 } from "./retry/index.js";
 import { resolveAttemptTimeout } from "../util/attemptTimeout.js";
 import { withResolvedEffort } from "../util/effort.js";
+import { withResolvedModelOptions } from "../util/modelOptions.js";
 import {
   OperateContext,
   OperateLoopState,
@@ -186,10 +187,17 @@ export class OperateLoop {
     const log = getLogger();
     // An effort map resolves against the model and provider serving this
     // attempt; everything downstream sees one level
-    const options = withResolvedEffort(operateOptions, {
+    // Effort and modelOptions maps resolve against the model and provider
+    // serving this attempt; everything downstream sees one level and the
+    // provider options this attempt sends
+    const attempt = {
       defaultModel: this.adapter.defaultModel,
       provider: this.adapter.name,
-    });
+    };
+    const options = withResolvedEffort(
+      withResolvedModelOptions(operateOptions, attempt),
+      attempt,
+    );
     // Log what was passed to operate
     log.trace("[operate] Starting operate loop");
     log.trace.var({ "operate.input": input });

@@ -138,9 +138,11 @@ Completions `length`, Anthropic `max_tokens`, and OpenAI `max_output_tokens`
 all read `max_tokens`). The provider's own value rides
 `exchange.response.stopReason`.
 
-### send() - Simple Completions
+### send() - Simple Completions (deprecated)
 
-For single-shot text completions:
+`send()` is deprecated and receives no new features (fallback, `effort`,
+`modelOptions`, tools). Prefer `operate()`, with `format` for structured
+output. For single-shot text completions:
 
 ```typescript
 const response = await Llm.send("Explain REST APIs", {
@@ -859,22 +861,40 @@ An incomplete `content` is the raw partial text, a string even when `format` was
 
 A `format` request answered with **no content** (zero output tokens, an empty candidate, a blocked prompt) settles incomplete with `error.detail` `Model returned no content: <stop reason>`, logged at `warn`, and `stopReason: "other"`. An adapter that supports the corrective turn tries it once first. A chain moves past an empty response like any cut-off, and an earlier partial is kept over a later empty one. When nothing but empty responses come back, `operate` throws `LlmIncompleteError` whatever `incomplete` says: there is no partial to return (issue #608).
 
-### Provider Options in a Chain
+### Model Options in a Chain
 
-`providerOptions` belongs to the model it was written for. Per-call `providerOptions` reach the primary only (including its linger pass); a fallback receives only the `providerOptions` on its own entry, or none. Options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) would otherwise break every other provider in the chain. Prefer first-class `effort` and `temperature`, which translate per provider.
+`modelOptions` sets provider-specific request fields per model. Every attempt (primary, each fallback, and the linger pass) resolves the map against its own model, so options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) reach every model they fit and no other. Keys match the way [effort maps](#per-model-effort) do: exact model id, `MODEL` catalog key, provider (or alias such as `gemini`), `default`.
+
+Every matching key merges, least to most specific: `default` → provider → catalog key → exact id. Objects merge deeply; arrays and scalars replace. First-class fields (`effort`, `temperature`, `format`) still win.
 
 ```typescript
-const response = await llm.operate(input, {
+await llm.operate(input, {
+  model: LLM.MODEL.SOL,
   fallback: [
-    {
-      provider: "google",
-      model: LLM.MODEL.GEMINI_FLASH,
-      providerOptions: { thinkingConfig: { thinkingBudget: 1024 } },
-    },
+    { provider: "google", model: LLM.MODEL.GEMINI_FLASH },
+    { provider: "openai", model: "gpt-6-mini" },
   ],
-  providerOptions: { reasoning: { summary: "detailed" } }, // primary only
+  effort: { gemini_flash: "low", default: "medium" },
+  modelOptions: {
+    openai: { reasoning: { summary: "detailed" } },
+    gemini_flash: { thinkingConfig: { includeThoughts: true } },
+  },
 });
+// gpt-6-sol, gpt-6-mini: reasoning { summary: "detailed", effort: "medium" }
+// gemini-3.8-flash: thinkingConfig { includeThoughts: true, thinkingLevel: "LOW" }
 ```
+
+The exchange records the merged options each attempt sent (`LlmExchangeRequest.providerOptions`). `resolveModelOptions` returns them for one model, with the keys that matched in merge order:
+
+```typescript
+import { resolveModelOptions } from "@jaypie/llm";
+
+resolveModelOptions({ model: LLM.MODEL.SOL, modelOptions });
+// → { keys: ["openai"], model: "gpt-6-sol", provider: "openai",
+//     options: { reasoning: { summary: "detailed" } } }
+```
+
+`providerOptions` is deprecated and removed in 2.0. Until then, per-call `providerOptions` reach the primary only (including its linger pass) and a fallback receives only the `providerOptions` on its own entry. When `modelOptions` is set, `providerOptions` (call and chain entry) is ignored.
 
 ### Attempt Timeout
 
@@ -1066,10 +1086,10 @@ budget runs out. Those errors carry `error.reason` (`LlmResponseErrorReason`)
 because status alone cannot identify them: an exhausted turn budget is a 429,
 exactly like a provider rate limit.
 
-| `reason`      | Status | Meaning                                                                                                                                                                      |
-| ------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                       |
-| `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                               |
+| `reason`      | Status | Meaning                                                                                                                                                                                                                                                                                                                       |
+| ------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                                                                                                                                                                        |
+| `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                                                                                                                                                                                |
 | `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. With `format`, empty content settles here too and throws once the chain is spent. |
 
 ```typescript
@@ -1132,7 +1152,8 @@ interface LlmOperateOptions {
   hooks?: LlmHooks; // Lifecycle callbacks
   instructions?: string; // Additional instructions
   model?: string; // Model override
-  providerOptions?: JsonObject; // Provider-specific request fields (passthrough)
+  modelOptions?: LlmModelOptions; // Provider-specific request fields per model, every attempt
+  providerOptions?: JsonObject; // Deprecated: primary only; ignored when modelOptions is set
   system?: string; // System prompt
   temperature?: number; // Sampling temperature (0-2)
   tools?: LlmTool[] | Toolkit; // Available tools
@@ -1145,7 +1166,7 @@ interface LlmFallbackConfig {
   model?: string; // Model to use (optional, uses provider default)
   apiKey?: string; // API key (optional, uses environment variable)
   effort?: LlmEffort; // Effort for this entry only, replacing the call's effort
-  providerOptions?: JsonObject; // Provider-specific options for this entry only
+  providerOptions?: JsonObject; // Deprecated: this entry only; ignored when modelOptions is set
   timeout?: number | false; // Per-attempt deadline for this entry only
 }
 ```
@@ -1275,9 +1296,10 @@ OpenRouter path). Comparing `native` across levels shows which are distinct on
 a model: `lowest` and `low` on Claude both send `{ effort: "low" }`, so one of
 the two is redundant in an effort sweep.
 
-First-class `effort` takes precedence over a raw `providerOptions.reasoning`
-(same convention as `temperature`). For control the neutral scale doesn't
-express (an exact token budget, OpenAI `none`), use `providerOptions` directly.
+First-class `effort` takes precedence over a raw `reasoning` in
+`modelOptions` (same convention as `temperature`). For control the neutral
+scale does not express (an exact token budget, OpenAI `none`), use
+`modelOptions` directly.
 
 ## Prompt Caching
 
@@ -1307,9 +1329,9 @@ tokens surface as `cacheRead`/`cacheWrite` on usage (with `cacheWriteTtl`
 splitting writes by TTL on Anthropic and Bedrock), in the exchange envelope
 `usageTotals`, and in the report tally.
 
-## Provider Options and Output Limits
+## Model Options and Output Limits
 
-`providerOptions` passes provider-specific request fields straight through to
+`modelOptions` passes provider-specific request fields straight through to
 the underlying API: Anthropic merges them into the Messages request body;
 Google merges them into the generation config.
 
@@ -1324,19 +1346,16 @@ truncate:
 - **Streaming** (`stream()`): the model maximum — e.g., 128,000 for current
   Claude models (64,000 for Haiku), 65,536 for Gemini 2.5/3.x
 
-Override per call with `providerOptions`:
+Override per model with `modelOptions`:
 
 ```typescript
-// Anthropic: max_tokens
 await Llm.operate(input, {
   model: LLM.MODEL.SONNET,
-  providerOptions: { max_tokens: 32000 },
-});
-
-// Google: maxOutputTokens
-await Llm.operate(input, {
-  model: LLM.MODEL.GEMINI_PRO,
-  providerOptions: { maxOutputTokens: 32000 },
+  fallback: [{ provider: "google", model: LLM.MODEL.GEMINI_PRO }],
+  modelOptions: {
+    anthropic: { max_tokens: 32000 }, // Anthropic: max_tokens
+    google: { maxOutputTokens: 32000 }, // Google: maxOutputTokens
+  },
 });
 ```
 
@@ -1345,13 +1364,13 @@ A chain that mixes them with Anthropic, Google, or Mistral therefore mixes
 output budgets: a Gemini primary resolves to 16,384 non-streaming while an
 OpenAI fallback sends no ceiling, so swapping the primary moves the effective
 budget with nothing at the call site changing. Reasoning tokens count against
-the ceiling. Set `providerOptions.maxOutputTokens` (Google) or `max_tokens`
-(Anthropic, Mistral) on the call or chain entry to pin it.
+the ceiling. Set `maxOutputTokens` (Google) or `max_tokens` (Anthropic,
+Mistral) in `modelOptions` to pin it per model.
 Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
 no low ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and an uncapped completion turns that into a
-multi-minute request. Override with `providerOptions: { max_tokens }`.
-OpenRouter varies by routed model; pass `max_tokens` via `providerOptions`
+multi-minute request. Override with `modelOptions: { mistral: { max_tokens } }`.
+OpenRouter varies by routed model; pass `max_tokens` via `modelOptions`
 when needed. A truncated response settles `status: "incomplete"` with
 `stopReason: "max_tokens"` and moves a fallback chain to its next entry;
 raise the limit or switch to `stream()`.

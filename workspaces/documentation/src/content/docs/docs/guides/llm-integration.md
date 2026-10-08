@@ -2,8 +2,8 @@
 title: "LLM Integration"
 ---
 
-
 **Prerequisites:**
+
 - `npm install @jaypie/llm`
 - API key for at least one provider (Anthropic, Fireworks, Google, Meta, Mistral, OpenAI, OpenRouter, or xAI)
 
@@ -19,25 +19,25 @@ The `Llm` class handles provider-specific implementations while exposing a consi
 Models are listed as `LLM.MODEL.*` names rather than ids. The alias is stable
 across releases; the id behind it moves whenever the provider ships a successor.
 
-| Provider | Models | Env Variable |
-|----------|--------|--------------|
-| Anthropic | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE` | `ANTHROPIC_API_KEY` |
-| Bedrock | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE` | (AWS credentials) |
-| Fireworks | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
-| Google | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO` | `GOOGLE_API_KEY` |
-| Meta | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR` | `META_API_KEY` (or `MODEL_API_KEY`) |
-| Mistral | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`) | `MISTRAL_API_KEY` |
-| OpenAI | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA` | `OPENAI_API_KEY` |
-| OpenRouter | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`) | `OPENROUTER_API_KEY` |
-| xAI | `MODEL.GROK` | `XAI_API_KEY` |
+| Provider   | Models                                                                                               | Env Variable                        |
+| ---------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Anthropic  | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE`                                           | `ANTHROPIC_API_KEY`                 |
+| Bedrock    | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`                                                                  | (AWS credentials)                   |
+| Fireworks  | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY`                 |
+| Google     | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO`                                  | `GOOGLE_API_KEY`                    |
+| Meta       | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`                                                   | `META_API_KEY` (or `MODEL_API_KEY`) |
+| Mistral    | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`)                                                          | `MISTRAL_API_KEY`                   |
+| OpenAI     | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA`                                              | `OPENAI_API_KEY`                    |
+| OpenRouter | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`)                                                       | `OPENROUTER_API_KEY`                |
+| xAI        | `MODEL.GROK`                                                                                         | `XAI_API_KEY`                       |
 
 ### Core Methods
 
-| Method | Purpose | Returns |
-|--------|---------|---------|
-| `Llm.operate()` | Single prompt/response | string |
-| `Llm.stream()` | Streaming response | AsyncGenerator |
-| `llm.operate()` | Instance method with history | string |
+| Method          | Purpose                      | Returns        |
+| --------------- | ---------------------------- | -------------- |
+| `Llm.operate()` | Single prompt/response       | string         |
+| `Llm.stream()`  | Streaming response           | AsyncGenerator |
+| `llm.operate()` | Instance method with history | string         |
 
 ## Basic Usage
 
@@ -134,13 +134,16 @@ import { lambdaStreamHandler } from "jaypie";
 import Llm from "@jaypie/llm";
 
 export const handler = awslambda.streamifyResponse(
-  lambdaStreamHandler(async (event, context) => {
-    for await (const chunk of Llm.stream(event.prompt)) {
-      context.responseStream.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }
-  }, {
-    contentType: "text/event-stream",
-  })
+  lambdaStreamHandler(
+    async (event, context) => {
+      for await (const chunk of Llm.stream(event.prompt)) {
+        context.responseStream.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+    },
+    {
+      contentType: "text/event-stream",
+    },
+  ),
 );
 ```
 
@@ -241,7 +244,7 @@ const response = await Llm.operate(
       name: String,
       age: Number,
     },
-  }
+  },
 );
 // Returns: { name: "John", age: 25 }
 ```
@@ -303,36 +306,30 @@ console.log(llm.history);
 ### Image Input
 
 ```typescript
-const response = await Llm.operate(
-  "What's in this image?",
-  {
-    model: LLM.MODEL.SONNET,
-    files: [
-      {
-        type: "image",
-        data: base64ImageData,
-        mediaType: "image/png",
-      },
-    ],
-  }
-);
+const response = await Llm.operate("What's in this image?", {
+  model: LLM.MODEL.SONNET,
+  files: [
+    {
+      type: "image",
+      data: base64ImageData,
+      mediaType: "image/png",
+    },
+  ],
+});
 ```
 
 ### URL Image
 
 ```typescript
-const response = await Llm.operate(
-  "Describe this image",
-  {
-    model: LLM.MODEL.SOL,
-    files: [
-      {
-        type: "image",
-        url: "https://example.com/image.jpg",
-      },
-    ],
-  }
-);
+const response = await Llm.operate("Describe this image", {
+  model: LLM.MODEL.SOL,
+  files: [
+    {
+      type: "image",
+      url: "https://example.com/image.jpg",
+    },
+  ],
+});
 ```
 
 ## Hooks
@@ -392,16 +389,16 @@ const response = await Llm.operate(prompt, {
 
 Fields carried by each event (`turn` is 1-indexed):
 
-| Event | Fields |
-|-------|--------|
-| `start` | `model`, `provider`, `maxTurns` |
-| `model_request` | `turn`, `model` |
-| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
-| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
-| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
-| `retry` | `turn`, `error` (message string) |
-| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
+| Event            | Fields                                                                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`          | `model`, `provider`, `maxTurns`                                                                                                                                                   |
+| `model_request`  | `turn`, `model`                                                                                                                                                                   |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn)                                                                              |
+| `tool_call`      | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_result`    | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it                                     |
+| `tool_error`     | `turn`, `tool: { name }`, `error` (message string)                                                                                                                                |
+| `retry`          | `turn`, `error` (message string)                                                                                                                                                  |
+| `done`           | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative)                                                                                      |
 
 Errors thrown by the callback are logged and never interrupt the loop. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
@@ -424,18 +421,21 @@ async function askLlm(prompt) {
 
 ## Provider-Specific Options
 
-`providerOptions` reach the primary model only. Each `fallback` entry carries
-its own `providerOptions`; the primary's never leak down the chain.
+`modelOptions` sets provider-specific request fields per model. Keys are an
+exact model id, a `MODEL` catalog key, a provider (or the alias `gemini`), or
+`default`, and every attempt in a fallback chain merges the keys that match its
+own model. `providerOptions` is deprecated, reaches the primary only, and is
+removed in 2.0.
 
 ### Anthropic
 
 `max_tokens` defaults to the model's maximum output (capped at 16,384 for
-non-streaming requests). Override it through `providerOptions`:
+non-streaming requests). Override it through `modelOptions`:
 
 ```typescript
 await Llm.operate(prompt, {
   model: LLM.MODEL.SONNET,
-  providerOptions: { max_tokens: 32000 },
+  modelOptions: { anthropic: { max_tokens: 32000 } },
   temperature: 0.7,
 });
 ```

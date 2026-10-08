@@ -2,7 +2,6 @@
 title: "@jaypie/llm"
 ---
 
-
 **Prerequisites:** `npm install @jaypie/llm` and API key for provider
 
 ## Overview
@@ -19,30 +18,30 @@ npm install @jaypie/llm
 
 ### Exports
 
-| Export | Purpose |
-|--------|---------|
-| `Llm` | Main LLM class (default export): `operate`, `stream`, `ocr`, `question` |
-| `Toolkit` | Tool collection for function calling |
-| `LlmTool` | Tool type definition |
-| `LLM` | Constants: `MODEL`, `PROVIDER`, `COST`, `PAGE_COST` |
-| `tokenCost` | USD for `response.usage` from `LLM.COST` |
+| Export      | Purpose                                                                 |
+| ----------- | ----------------------------------------------------------------------- |
+| `Llm`       | Main LLM class (default export): `operate`, `stream`, `ocr`, `question` |
+| `Toolkit`   | Tool collection for function calling                                    |
+| `LlmTool`   | Tool type definition                                                    |
+| `LLM`       | Constants: `MODEL`, `PROVIDER`, `COST`, `PAGE_COST`                     |
+| `tokenCost` | USD for `response.usage` from `LLM.COST`                                |
 
 ### Providers
 
 Models are listed as `LLM.MODEL.*` names rather than ids. The alias is stable
 across releases; the id behind it moves whenever the provider ships a successor.
 
-| Provider | Models | Env Variable |
-|----------|--------|--------------|
-| `anthropic` | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE` | `ANTHROPIC_API_KEY` |
-| `bedrock` | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE` | (AWS credentials) |
-| `fireworks` | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY` |
-| `google` | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO` | `GOOGLE_API_KEY` |
-| `meta` | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR` | `META_API_KEY` (or `MODEL_API_KEY`) |
-| `mistral` | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`) | `MISTRAL_API_KEY` |
-| `openai` | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA` | `OPENAI_API_KEY` |
-| `openrouter` | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`) | `OPENROUTER_API_KEY` |
-| `xai` | `MODEL.GROK` | `XAI_API_KEY` |
+| Provider     | Models                                                                                                                              | Env Variable                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `anthropic`  | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE`                                                                          | `ANTHROPIC_API_KEY`                 |
+| `bedrock`    | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`                                                                                                 | (AWS credentials)                   |
+| `fireworks`  | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY`                 |
+| `google`     | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO`                                                                 | `GOOGLE_API_KEY`                    |
+| `meta`       | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`                                                                                  | `META_API_KEY` (or `MODEL_API_KEY`) |
+| `mistral`    | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`)                                                                                         | `MISTRAL_API_KEY`                   |
+| `openai`     | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA`                                                                             | `OPENAI_API_KEY`                    |
+| `openrouter` | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`)                                                                                      | `OPENROUTER_API_KEY`                |
+| `xai`        | `MODEL.GROK`                                                                                                                        | `XAI_API_KEY`                       |
 
 ## Llm.operate
 
@@ -59,18 +58,18 @@ const response = await Llm.operate("What is 2+2?", {
 
 ### Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `cache` | `boolean \| 0 \| "5m" \| "1h"` | Prompt caching; on by default at `"1h"` |
-| `fallback` | `LlmFallbackConfig[] \| false` | Fallback provider chain |
-| `format` | `NaturalSchema \| JSONSchema \| ZodSchema` | Structured output schema |
-| `incomplete` | `"return" \| "throw"` | A cut-off answer returns the partial (default) or throws `LlmIncompleteError` |
-| `maxTokens` | `number` | Maximum response tokens |
-| `model` | `string` | Model identifier |
-| `system` | `string` | System prompt |
-| `temperature` | `number` | Response randomness (0-1) |
-| `timeout` | `number \| false` | Per-attempt deadline in ms; idle timeout for `stream` |
-| `tools` | `Toolkit` | Available tools |
+| Option        | Type                                       | Description                                                                   |
+| ------------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
+| `cache`       | `boolean \| 0 \| "5m" \| "1h"`             | Prompt caching; on by default at `"1h"`                                       |
+| `fallback`    | `LlmFallbackConfig[] \| false`             | Fallback provider chain                                                       |
+| `format`      | `NaturalSchema \| JSONSchema \| ZodSchema` | Structured output schema                                                      |
+| `incomplete`  | `"return" \| "throw"`                      | A cut-off answer returns the partial (default) or throws `LlmIncompleteError` |
+| `maxTokens`   | `number`                                   | Maximum response tokens                                                       |
+| `model`       | `string`                                   | Model identifier                                                              |
+| `system`      | `string`                                   | System prompt                                                                 |
+| `temperature` | `number`                                   | Response randomness (0-1)                                                     |
+| `timeout`     | `number \| false`                          | Per-attempt deadline in ms; idle timeout for `stream`                         |
+| `tools`       | `Toolkit`                                  | Available tools                                                               |
 
 ## Llm.stream
 
@@ -91,14 +90,17 @@ Turns a document into per-page markdown. Mistral OCR (`MODEL.MISTRAL.OCR`, the d
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
-const { content, markdown, pages, usage } = await Llm.ocr("./scans/intake.pdf", {
-  format: {
-    category: ["deed", "invoice", "medical intake", "other"],
-    description: String,
+const { content, markdown, pages, usage } = await Llm.ocr(
+  "./scans/intake.pdf",
+  {
+    format: {
+      category: ["deed", "invoice", "medical intake", "other"],
+      description: String,
+    },
+    instructions: "Classify the document and describe it in one sentence.",
+    model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.HAIKU],
   },
-  instructions: "Classify the document and describe it in one sentence.",
-  model: [LLM.MODEL.MISTRAL.OCR, LLM.MODEL.HAIKU],
-});
+);
 content.category; // "medical intake"
 ```
 
@@ -139,22 +141,25 @@ const response = await Llm.operate(input, {
 });
 ```
 
-### Provider Options in a Chain
+### Model Options in a Chain
 
-`providerOptions` belongs to the model it was written for. Per-call `providerOptions` reach the primary only (including its linger pass); a fallback receives only the `providerOptions` on its own entry, or none. Options shaped for one provider (OpenAI `reasoning`, Gemini `thinkingConfig`) would otherwise break every other provider in the chain. Prefer first-class `effort` and `temperature`, which translate per provider.
+`modelOptions` sets provider-specific request fields per model, and every attempt (primary, fallback, linger pass) resolves it against its own model. Keys match as in effort maps: exact model id, `MODEL` catalog key, provider (or the alias `gemini`), `default`. Every matching key merges, least to most specific; objects merge deeply, arrays and scalars replace. First-class `effort`, `temperature`, and `format` still win.
 
 ```typescript
 const response = await llm.operate(input, {
-  fallback: [
-    {
-      provider: "google",
-      model: LLM.MODEL.GEMINI_FLASH,
-      providerOptions: { thinkingConfig: { thinkingBudget: 1024 } },
-    },
-  ],
-  providerOptions: { reasoning: { summary: "detailed" } }, // primary only
+  model: LLM.MODEL.SOL,
+  fallback: [{ provider: "google", model: LLM.MODEL.GEMINI_FLASH }],
+  effort: { gemini_flash: "low", default: "medium" },
+  modelOptions: {
+    openai: { reasoning: { summary: "detailed" } },
+    gemini_flash: { thinkingConfig: { includeThoughts: true } },
+  },
 });
 ```
+
+`resolveModelOptions({ model, modelOptions })` returns the merged options for one model and the keys that matched. The exchange records the options each attempt sent.
+
+`providerOptions` is deprecated and removed in 2.0. It reaches the primary only, a fallback receives its own entry's `providerOptions`, and both are ignored when `modelOptions` is set.
 
 ### Effort in a Chain
 
@@ -189,12 +194,12 @@ const response = await llm.operate(input, {
 
 ### Fallback Response Metadata
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `provider` | `string` | Which provider handled the request |
-| `fallbackUsed` | `boolean` | Whether a fallback was used |
-| `fallbackAttempts` | `number` | Number of providers tried |
-| `stopReason` | `LlmStopReason` | Why the final model call stopped: `end_turn`, `max_tokens`, `content_filter`, `refusal`, `tool_use`, or `other` |
+| Property           | Type            | Description                                                                                                     |
+| ------------------ | --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `provider`         | `string`        | Which provider handled the request                                                                              |
+| `fallbackUsed`     | `boolean`       | Whether a fallback was used                                                                                     |
+| `fallbackAttempts` | `number`        | Number of providers tried                                                                                       |
+| `stopReason`       | `LlmStopReason` | Why the final model call stopped: `end_turn`, `max_tokens`, `content_filter`, `refusal`, `tool_use`, or `other` |
 
 ## Instance Methods
 
@@ -221,7 +226,7 @@ The first constructor argument may be a provider name **or** a model name. When 
 ```typescript
 import Llm, { LLM } from "@jaypie/llm";
 
-const llm = new Llm("claude-sonnet-4-6");      // -> anthropic, retained verbatim
+const llm = new Llm("claude-sonnet-4-6"); // -> anthropic, retained verbatim
 const flash = new Llm(LLM.MODEL.GEMINI_FLASH); // -> google, whatever the alias names
 ```
 
@@ -257,13 +262,13 @@ const response = await Llm.operate("What's the weather in NYC?", {
 
 ### Tool Definition
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `name` | `string` | Tool identifier |
-| `description` | `string` | What the tool does |
-| `parameters` | `JSONSchema \| ZodSchema` | Input schema |
-| `call` | `Function` | Implementation function |
-| `readOnly` | `boolean` | Declares the tool free of side effects |
+| Property      | Type                      | Description                            |
+| ------------- | ------------------------- | -------------------------------------- |
+| `name`        | `string`                  | Tool identifier                        |
+| `description` | `string`                  | What the tool does                     |
+| `parameters`  | `JSONSchema \| ZodSchema` | Input schema                           |
+| `call`        | `Function`                | Implementation function                |
+| `readOnly`    | `boolean`                 | Declares the tool free of side effects |
 
 ### Zod Schema
 
@@ -293,12 +298,12 @@ Tools may declare `readOnly: true` (mirroring MCP's `readOnlyHint`) to state the
 
 ```typescript
 const toolkit = new Toolkit([
-  { name: "search_docs", readOnly: true, /* ... */ },
-  { name: "post_message", /* ... */ },
+  { name: "search_docs", readOnly: true /* ... */ },
+  { name: "post_message" /* ... */ },
 ]);
 
 const verification = toolkit.filter({ readOnly: true }); // search_docs only
-const effectful = toolkit.filter({ readOnly: false });   // post_message only
+const effectful = toolkit.filter({ readOnly: false }); // post_message only
 const custom = toolkit.filter((tool) => tool.name.startsWith("search_"));
 ```
 
@@ -325,6 +330,7 @@ const response = await Llm.operate("What's the weather?", {
 ```
 
 When enabled:
+
 - Each tool receives an `__Explanation` parameter requiring the model to state why it's calling the tool
 - The explanation is stripped before the tool executes (tools receive clean arguments)
 - Useful for debugging and understanding LLM decision-making
@@ -336,16 +342,13 @@ Pass `format` to receive guaranteed-valid JSON. `format` accepts Jaypie's natura
 ### Natural Schema
 
 ```typescript
-const response = await Llm.operate(
-  "Extract: 'John is 25 years old'",
-  {
-    model: LLM.MODEL.SOL,
-    format: {
-      name: String,
-      age: Number,
-    },
-  }
-);
+const response = await Llm.operate("Extract: 'John is 25 years old'", {
+  model: LLM.MODEL.SOL,
+  format: {
+    name: String,
+    age: Number,
+  },
+});
 // Returns: { name: "John", age: 25 }
 ```
 
@@ -373,7 +376,10 @@ const response = await Llm.operate(prompt, {
 Convert between Natural Schema and JSON Schema directly with `naturalSchemaToJsonSchema` (lossless) and `jsonSchemaToNaturalSchema` (lossy — constraints, descriptions, defaults, unions, and optionality have no Natural Schema equivalent and are dropped with a `log.debug` per keyword, never thrown):
 
 ```typescript
-import { naturalSchemaToJsonSchema, jsonSchemaToNaturalSchema } from "@jaypie/llm";
+import {
+  naturalSchemaToJsonSchema,
+  jsonSchemaToNaturalSchema,
+} from "@jaypie/llm";
 
 naturalSchemaToJsonSchema({ name: String, age: Number });
 // { type: "object", properties: { name: { type: "string" }, age: { type: "number" } }, required: ["name", "age"] }
@@ -482,16 +488,16 @@ const response = await Llm.operate(prompt, {
 
 Fields carried by each event (`turn` is 1-indexed):
 
-| Event | Fields |
-|-------|--------|
-| `start` | `model`, `provider`, `maxTurns` |
-| `model_request` | `turn`, `model` |
-| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn) |
-| `tool_call` | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
-| `tool_result` | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it |
-| `tool_error` | `turn`, `tool: { name }`, `error` (message string) |
-| `retry` | `turn`, `error` (message string) |
-| `done` | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative) |
+| Event            | Fields                                                                                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`          | `model`, `provider`, `maxTurns`                                                                                                                                                   |
+| `model_request`  | `turn`, `model`                                                                                                                                                                   |
+| `model_response` | `turn`, `content` (text, if any), `toolCalls` (`[{ name, arguments }]`, if any), `usage` (this turn)                                                                              |
+| `tool_call`      | `turn`, `tool: { name, arguments, message }` — fires before the tool runs; `arguments` is the JSON string; `message` is the resolved `LlmTool.message`, when the tool defines one |
+| `tool_result`    | `turn`, `tool: { name }` — the result value is deliberately omitted (it can be arbitrarily large); use the `afterEachTool` hook to receive it                                     |
+| `tool_error`     | `turn`, `tool: { name }`, `error` (message string)                                                                                                                                |
+| `retry`          | `turn`, `error` (message string)                                                                                                                                                  |
+| `done`           | `turn` (total turns used), `content` (final text or structured output), `usage` (cumulative)                                                                                      |
 
 Errors thrown by the callback are logged and never interrupt the loop. `stream()` communicates progress through its chunks; `onProgress` applies to `operate()`.
 
@@ -521,15 +527,18 @@ import { lambdaStreamHandler } from "jaypie";
 import Llm from "@jaypie/llm";
 
 export const handler = awslambda.streamifyResponse(
-  lambdaStreamHandler(async (event, context) => {
-    const { prompt } = JSON.parse(event.body);
+  lambdaStreamHandler(
+    async (event, context) => {
+      const { prompt } = JSON.parse(event.body);
 
-    for await (const chunk of Llm.stream(prompt)) {
-      context.responseStream.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }
-  }, {
-    contentType: "text/event-stream",
-  })
+      for await (const chunk of Llm.stream(prompt)) {
+        context.responseStream.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+    },
+    {
+      contentType: "text/event-stream",
+    },
+  ),
 );
 ```
 
@@ -537,14 +546,14 @@ export const handler = awslambda.streamifyResponse(
 
 `response.usage` lists token usage per model call. Every provider reports it the same way, on `operate()` and `stream()` alike:
 
-| Field | Meaning |
-|-------|---------|
-| `input` | All prompt tokens, including cache reads and writes |
-| `output` | All billed output tokens, including reasoning (thinking) |
-| `reasoning` | Reasoning tokens; part of `output` |
-| `total` | `input + output` |
-| `cacheRead` | Tokens served from the prompt cache; part of `input` |
-| `cacheWrite` | Tokens written to the prompt cache; part of `input` |
+| Field           | Meaning                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------- |
+| `input`         | All prompt tokens, including cache reads and writes                                             |
+| `output`        | All billed output tokens, including reasoning (thinking)                                        |
+| `reasoning`     | Reasoning tokens; part of `output`                                                              |
+| `total`         | `input + output`                                                                                |
+| `cacheRead`     | Tokens served from the prompt cache; part of `input`                                            |
+| `cacheWrite`    | Tokens written to the prompt cache; part of `input`                                             |
 | `cacheWriteTtl` | `cacheWrite` split by TTL (`{ "1h", "5m" }`), when the provider reports it (Anthropic, Bedrock) |
 
 `tokenCost` prices usage in USD from `LLM.COST` (list price per million tokens) and bills each token once:
@@ -558,13 +567,13 @@ const response = await Llm.operate("Summarize this", {
 const dollars = tokenCost(response.usage, { model: LLM.MODEL.SONNET });
 ```
 
-| Tokens | Rate |
-|--------|------|
-| `input` less `cacheRead` and `cacheWrite` | `input` |
-| `cacheRead` | `cachedInputRead` |
-| `cacheWrite` | `cachedInputWrite` at the TTL written (from `cacheWriteTtl`, else the `ttl` option, default `"1h"`) |
-| `output` less `reasoning` | `output` |
-| `reasoning` | `reasoning`, else `output` |
+| Tokens                                    | Rate                                                                                                |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `input` less `cacheRead` and `cacheWrite` | `input`                                                                                             |
+| `cacheRead`                               | `cachedInputRead`                                                                                   |
+| `cacheWrite`                              | `cachedInputWrite` at the TTL written (from `cacheWriteTtl`, else the `ttl` option, default `"1h"`) |
+| `output` less `reasoning`                 | `output`                                                                                            |
+| `reasoning`                               | `reasoning`, else `output`                                                                          |
 
 `model` prices any item whose own model id has no `COST` entry. The result is `undefined` when usage is empty or any item is unpriced, so an unknown price never reads as free. `MODEL.OPENROUTER.*` routes are deliberately unpriced.
 
@@ -586,7 +595,12 @@ Inside a Jaypie handler, `operate()` and `stream()` tally totals onto the logger
     "tools": { "get_weather": 2, "roll": 1 },
     "turns": 5,
     "usage": {
-      "anthropic:claude-sonnet-4-6": { "input": 1840, "output": 912, "reasoning": 0, "total": 2752 }
+      "anthropic:claude-sonnet-4-6": {
+        "input": 1840,
+        "output": 912,
+        "reasoning": 0,
+        "total": 2752
+      }
     }
   }
 }
@@ -615,11 +629,11 @@ async function askLlm(prompt) {
 
 The loop settles `status: "incomplete"` with an error of its own when a policy budget runs out. Those errors carry `error.reason` (`LlmResponseErrorReason`) because status alone cannot identify them: an exhausted turn budget is a 429, exactly like a provider rate limit.
 
-| `reason` | Status | Meaning |
-|----------|--------|---------|
-| `max_turns` | 429 | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge. |
-| `tool_errors` | 502 | Tool execution failed six times in a row and the loop stopped. |
-| `incomplete` | 502 | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. |
+| `reason`      | Status | Meaning                                                                                                                                                                                                                                     |
+| ------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max_turns`   | 429    | The model asked for another tool call after `turns` ran out. Nothing failed; the run did not converge.                                                                                                                                      |
+| `tool_errors` | 502    | Tool execution failed six times in a row and the loop stopped.                                                                                                                                                                              |
+| `incomplete`  | 502    | The provider cut the model off before it finished (an output token ceiling, a content filter). `content` holds the partial text; `error.detail` names the provider's reason and `stopReason` normalizes it. A fallback chain moves past it. |
 
 ```typescript
 import { LlmResponseErrorReason } from "@jaypie/llm";

@@ -331,6 +331,23 @@ describe("StreamLoop", () => {
   });
 
   // Features
+  describe("Model Options", () => {
+    it("resolves modelOptions against the serving model", async () => {
+      const loop = new StreamLoop({ adapter: mockAdapter, client: mockClient });
+
+      await collectChunks(
+        loop.execute("Hello", {
+          modelOptions: { default: { a: 1 }, mock: { b: 2 }, other: { c: 3 } },
+          providerOptions: { d: 4 },
+        }),
+      );
+
+      expect(mockAdapter.buildRequest.mock.calls[0][0].providerOptions).toEqual(
+        { a: 1, b: 2 },
+      );
+    });
+  });
+
   describe("Effort", () => {
     it("resolves an effort map against the serving model", async () => {
       const loop = new StreamLoop({ adapter: mockAdapter, client: mockClient });
