@@ -317,6 +317,7 @@ class Llm implements LlmProvider {
     // included.
     const failFastOptions = {
       ...optionsWithoutFallback,
+      failFast: true,
       retry: {
         ...resolvedOptions.retry,
         rateLimit: false as const,

@@ -122,6 +122,10 @@ constants only; nothing else carries a model id:
   repoint them at a newer model: a deprecated surface should decay so callers
   migrate, and refreshing it only prolongs its use. Staleness there is intended,
   not drift to correct.
+- `FORMAT_WITH_TOOLS_UNSUPPORTED` in the same file marks, by literal id, models
+  that cannot combine `format` with tools. `operate()` warns on them, a
+  fallback chain skips them, and the matrix skips their `both` cell. Add an id
+  on live evidence rather than pinning `both` in `MATRIX_EXPECT`.
 - `.claude/skills/new-model-release/SKILL.md` is the step-by-step procedure for
   landing a newly released model.
 ### Lore

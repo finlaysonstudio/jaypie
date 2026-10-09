@@ -22,6 +22,8 @@ import { MistralProvider } from "../MistralProvider.class.js";
 //
 
 const apiKey = process.env.MISTRAL_API_KEY;
+/** Room for a reasoning model to think before it answers */
+const PONG_MAX_TOKENS = 1024;
 const TIMEOUT = 120_000;
 
 /** Resolves to the mistral provider by match word, then fails at the API */
@@ -39,11 +41,13 @@ describe.skipIf(!apiKey)("MistralClient (hot)", () => {
             messages: [
               { role: "user", content: "Reply with the single word: pong" },
             ],
-            max_tokens: 20,
-          })) as { choices: Array<{ message: { content: string } }> };
+            max_tokens: PONG_MAX_TOKENS,
+          })) as { choices: Array<{ message: { content: unknown } }> };
 
+          // A reasoning model returns content as thinking and text chunks
+          // rather than a string, so match against the serialized message
           const content = response.choices?.[0]?.message?.content ?? "";
-          expect(String(content).toLowerCase()).toContain("pong");
+          expect(JSON.stringify(content).toLowerCase()).toContain("pong");
         },
         TIMEOUT,
       );

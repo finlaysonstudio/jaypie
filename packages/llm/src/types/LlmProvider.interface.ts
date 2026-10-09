@@ -531,6 +531,14 @@ export interface LlmOperateOptions {
    */
   effort?: LlmEffort | LlmEffortMap;
   explain?: boolean;
+  /**
+   * Set by the fallback chain while another model is waiting to take over, so
+   * the attempt gives up at once on a call it is known not to finish (see
+   * `FORMAT_WITH_TOOLS_UNSUPPORTED`) instead of warning and running it.
+   *
+   * @internal
+   */
+  failFast?: boolean;
   /** Chain of fallback providers to try if primary fails. Set to false to disable instance-level fallback. */
   fallback?: LlmFallbackConfig[] | false;
   format?: JsonObject | NaturalSchema | z.ZodType;

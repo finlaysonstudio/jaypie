@@ -36,6 +36,7 @@ import {
 import { abortableSleep } from "../util/abortableSleep.js";
 import { combineAbortSignals } from "../util/abortSignal.js";
 import { withResolvedEffort } from "../util/effort.js";
+import { guardFormatWithTools } from "../util/guardFormatWithTools.js";
 import { withResolvedModelOptions } from "../util/modelOptions.js";
 import {
   armAttemptTimeout,
@@ -166,6 +167,13 @@ export class StreamLoop {
       withResolvedModelOptions(operateOptions, attempt),
       attempt,
     );
+    guardFormatWithTools({
+      failFast: options.failFast,
+      format: options.format,
+      model: options.model ?? this.adapter.defaultModel,
+      provider: this.adapter.name,
+      tools: options.tools,
+    });
     // Verify adapter supports streaming
     if (!this.adapter.executeStreamRequest) {
       throw new BadGatewayError(

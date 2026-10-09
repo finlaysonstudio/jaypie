@@ -102,13 +102,20 @@ export const MODEL = {
   MUSE_SPARK_CONTRIBUTOR: "muse-spark-1.3-contributor",
   // Mistral
   MISTRAL: {
-    LARGE: "mistral-large-2512", // mistral-large-latest
-    // Medium is deliberately absent. mistral-medium-3-5 will not converge when
-    // tools and response_format are combined — it re-calls the tool instead of
-    // answering from the result, and has been observed emitting concatenated
-    // JSON as the tool *name* and hanging a request to a headers timeout.
-    // Structured output with tools is a baseline expectation of operate(), so
-    // the model is not cataloged. Its COST entry is retained per policy.
+    // Large 4, in public preview since 2026-10-06. Mistral still points
+    // mistral-large-latest at mistral-large-2512 (Large 3) as of 2026-10-09.
+    // Two known gaps, both verified live that day: it cannot combine tools
+    // with response_format (marked in FORMAT_WITH_TOOLS_UNSUPPORTED), and its
+    // document_url input answers "The model `mistral-ocr-2512` does not exist
+    // for router `ocr`", so PDFs fail until Mistral fixes the route.
+    LARGE: "mistral-large-4-0",
+    // Cataloged again as of 2026-10-09, having been removed 2026-08-02 because
+    // it will not converge when tools and response_format are combined: it
+    // re-calls the tool instead of answering from the result, and has been
+    // observed emitting concatenated JSON as the tool *name* and hanging a
+    // request to a headers timeout. That limit is now marked in
+    // FORMAT_WITH_TOOLS_UNSUPPORTED rather than keeping the model out.
+    MEDIUM: "mistral-medium-3-5", // mistral-medium-latest
     // Document extraction over POST /v1/ocr, not chat completions. Priced per
     // page, so it carries no COST entry and is excluded from the chat matrix.
     OCR: "mistral-ocr-4-1",
@@ -569,12 +576,14 @@ export const COST: Record<string, LlmModelCost> = {
   // id the API echoes on the response and price that. Callers must handle a
   // miss regardless.
   //
-  // Medium is **priced but not exported**. It is absent from MODEL.MISTRAL
-  // because it cannot combine tools with structured output reliably, but a
-  // caller can still pass the id directly and usage records reference it.
-  // Pricing a model is not endorsing it; COST answers "what did this cost",
-  // not "what should be used".
+  // mistral-large-2512 (Large 3) left the catalog on 2026-10-09 and keeps
+  // its price per policy.
+  //
+  // mistral-large-4-0 carries its list price. Mistral bills it at half that
+  // ($0.68 / $0.07 / $2.09) under a "sale price" with no announced end
+  // (verified 2026-10-09); promotional rates are not modeled.
   "mistral-large-2512": { cachedInputRead: 0.05, input: 0.5, output: 1.5 },
+  "mistral-large-4-0": { cachedInputRead: 0.14, input: 1.36, output: 4.18 },
   "mistral-medium-3-5": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
   "mistral-small-2603": { cachedInputRead: 0.015, input: 0.15, output: 0.6 },
   // TypeSafe — https://docs.typesafe.ai (verified 2026-09-18). Output tokens
@@ -628,6 +637,26 @@ const GOOGLE_PROVIDER = {
     USER: "user" as const,
   },
 } as const;
+
+/**
+ * Models that do not reliably combine `format` with `tools` in one call:
+ * given both, they restate the answer or re-call the tool instead of
+ * settling, and a request can run for minutes. `operate()` and `stream()`
+ * warn when such a model is asked for the pair, a fallback chain skips it at
+ * once, and the live matrix skips its `both` cell. Each capability works on
+ * its own. Keyed by literal id like COST, so an uncataloged id stays marked.
+ *
+ * - mistral-large-4 / mistral-large-4-0: 9 of 10 live `both` cells timed out
+ *   and none of 7 direct replays of the post-tool turn answered cleanly, with
+ *   or without reasoning (2026-10-09). Both spellings are accepted by the API.
+ * - mistral-medium-3-5: re-calls the tool instead of answering from the
+ *   result, and has emitted concatenated JSON as the tool name (2026-08-02).
+ */
+export const FORMAT_WITH_TOOLS_UNSUPPORTED: readonly string[] = [
+  "mistral-large-4",
+  "mistral-large-4-0",
+  "mistral-medium-3-5",
+];
 
 export const PROVIDER = {
   // https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html

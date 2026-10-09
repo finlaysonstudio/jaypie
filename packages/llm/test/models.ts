@@ -26,7 +26,11 @@
 //
 // Any capability not listed in `expect` defaults to "ok".
 
-import { MODEL, PROVIDER } from "../src/constants.js";
+import {
+  FORMAT_WITH_TOOLS_UNSUPPORTED,
+  MODEL,
+  PROVIDER,
+} from "../src/constants.js";
 import { determineModelProvider } from "../src/util/determineModelProvider.js";
 
 export type Capability =
@@ -132,12 +136,31 @@ const MATRIX_EXPECT: Record<
   // 2, which makes 4.5 the outlier rather than the fixture. Grok 4.7, which the
   // alias names as of 2026-09-21, passed all seven cells on its first live run.
   //
-  // Mistral sends response_format and tools together natively. mistral-medium
-  // could not do so reliably and is no longer cataloged — see the note in
-  // constants.ts. Large and Small are expected to answer every cell cleanly.
+  // Mistral sends response_format and tools together natively. Large and
+  // Medium cannot do so reliably; FORMAT_WITH_TOOLS_UNSUPPORTED marks them and
+  // matrixExpect() skips their `both` cell, so it is not pinned here. Small
+  // is expected to answer every cell cleanly.
+  //
+  // Large 4's document_url input fails on Mistral's side: "The model
+  // `mistral-ocr-2512` does not exist for router `ocr`" on every sample
+  // (2026-10-09, public preview). Drop the skip once the route answers.
+  [MODEL.MISTRAL.LARGE]: { pdf: "skip" },
   [MODEL.NOVA_LITE]: { both: "skip" },
   [MODEL.NOVA_PRO]: { structured: "skip" },
 };
+
+/**
+ * Expected outcomes for a model id, cataloged or not. A model marked in
+ * FORMAT_WITH_TOOLS_UNSUPPORTED never runs `both`: the cell is known not to
+ * settle, and operate() already warns about it.
+ */
+export function matrixExpect(
+  model: string,
+): Partial<Record<Capability, ExpectedOutcome>> | undefined {
+  return FORMAT_WITH_TOOLS_UNSUPPORTED.includes(model)
+    ? { ...MATRIX_EXPECT[model], both: "skip" }
+    : MATRIX_EXPECT[model];
+}
 
 // Models under test = the whole MODEL.* catalog plus each provider's resolved
 // default, deduped, minus the exclude set. Provider is resolved from the id so
@@ -164,7 +187,7 @@ const MATRIX_MODELS: ModelConfig[] = [
   .filter((model) => !MATRIX_EXCLUDE.has(model))
   .map((model) => {
     const provider = determineModelProvider(model).provider;
-    const expect = MATRIX_EXPECT[model];
+    const expect = matrixExpect(model);
     return {
       model,
       ...(provider ? { provider } : {}),

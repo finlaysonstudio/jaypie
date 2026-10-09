@@ -35,7 +35,11 @@ export const HOT_MODELS = {
     MODEL.GEMINI_PRO,
   ]),
   meta: exclude([MODEL.MUSE_SPARK, MODEL.MUSE_SPARK_CONTRIBUTOR]),
-  mistral: exclude([MODEL.MISTRAL.LARGE, MODEL.MISTRAL.SMALL]),
+  mistral: exclude([
+    MODEL.MISTRAL.LARGE,
+    MODEL.MISTRAL.MEDIUM,
+    MODEL.MISTRAL.SMALL,
+  ]),
   openai: exclude([MODEL.ASTRA, MODEL.LUNA, MODEL.SOL, MODEL.TERRA]),
   openrouter: exclude(Object.values(MODEL.OPENROUTER)),
   xai: exclude([MODEL.GROK]),

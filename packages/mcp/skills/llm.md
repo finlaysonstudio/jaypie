@@ -59,7 +59,7 @@ LlamaCloud serves LlamaParse, which extracts documents and generates no text. Th
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `MIMO`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `MIMO`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - `MODEL.MUSE_SPARK` and `MODEL.MUSE_SPARK_CONTRIBUTOR` are the same Meta model at two tiers. The contributor tier is roughly a tenth of the price because prompts and completions may train Meta models; it is limited to 100 RPM and does not accept `reasoning.effort: "max"`. It is an explicit opt-in: `PROVIDER.META.DEFAULT` is `MODEL.MUSE_SPARK`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
@@ -1240,10 +1240,30 @@ erroring):
   answers in prose.
 - **Mistral** — only models that reason accept the field, and they accept only
   `none` and `high`, so the neutral scale collapses to a binary: `lowest` maps
-  to `none`, everything else to `high`. Mistral Large 3 rejects the field
-  outright and is skipped; a model that rejects it at runtime is cached and the
+  to `none`, everything else to `high`. Mistral Large 3 (`mistral-large-2512`)
+  rejects the field outright and is skipped, while Large 4
+  (`MODEL.MISTRAL.LARGE`) accepts it and reasons by default when `effort` is
+  unset; a model that rejects it at runtime is cached and the
   request transparently retried without it. Structured output combines with
   tools natively — no emulation.
+
+### Models that cannot combine `format` with tools
+
+`LLM.FORMAT_WITH_TOOLS_UNSUPPORTED` lists, by literal id, the models known not
+to settle when one call carries both `format` and `tools` (currently
+`mistral-large-4`, `mistral-large-4-0`, and `mistral-medium-3-5`, which are
+`MODEL.MISTRAL.LARGE` and `MODEL.MISTRAL.MEDIUM`). They restate
+the answer or re-call the tool, and a request can run for minutes. Either
+option alone works.
+
+- `operate()` and `stream()` log a warning and run the call anyway when such a
+  model is the only one.
+- In a fallback chain (a `model` array or `fallback`), the attempt throws
+  `LlmUnrecoverableError` before any request goes out and the next model takes
+  over. If every model fails, the primary still runs once more as usual.
+
+Jaypie 2.0 splits `operate` into `ask` (structured) and `loop` (tools).
+
 - **Bedrock** — not yet wired; `effort` is ignored.
 
 ### Per-model effort

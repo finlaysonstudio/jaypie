@@ -72,6 +72,7 @@ Omitting `cachedInputWrite` means writes bill at `input`.
 | `PROVIDER.*.MODEL_MATCH_WORDS` | `determineModelProvider` cannot resolve the id. Matching is substring-on-lowercase, so most new ids resolve on an existing word. |
 | `src/__tests__/hotModels.ts` | A new alias key was added, or the model should be excluded from live hot tests. |
 | Adapter capability patterns | The model gates a capability differently — reasoning effort, temperature support, or a required beta header. |
+| `FORMAT_WITH_TOOLS_UNSUPPORTED` in `src/constants.ts` | The `both` cell does not settle on live samples (restated answers, repeated tool calls, timeouts). Marking the literal id makes `operate()` warn, a fallback chain skip the model, and the matrix skip the cell. |
 | `MATRIX_EXCLUDE` in `packages/llm/test/models.ts` | The model is unlaunched, unavailable on typical keys, or too costly to exercise every run. |
 | `MATRIX_EXPECT` in `packages/llm/test/models.ts` | A capability is expected to warn, skip, or fail rather than pass. |
 
