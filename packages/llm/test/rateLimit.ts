@@ -71,6 +71,7 @@ export class RateLimiter {
  */
 const MODEL_REQUESTS_PER_SECOND: Record<string, number> = {
   "mistral-large-2512": 0.07,
+  "mistral-large-4-0": 0.07,
   "mistral-large-latest": 0.07,
   "mistral-medium-3-5": 0.83,
   "mistral-medium-latest": 0.83,

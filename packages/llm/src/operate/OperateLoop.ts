@@ -63,6 +63,7 @@ import {
 } from "./retry/index.js";
 import { resolveAttemptTimeout } from "../util/attemptTimeout.js";
 import { withResolvedEffort } from "../util/effort.js";
+import { guardFormatWithTools } from "../util/guardFormatWithTools.js";
 import { withResolvedModelOptions } from "../util/modelOptions.js";
 import {
   OperateContext,
@@ -198,6 +199,13 @@ export class OperateLoop {
       withResolvedModelOptions(operateOptions, attempt),
       attempt,
     );
+    guardFormatWithTools({
+      failFast: options.failFast,
+      format: options.format,
+      model: options.model ?? this.adapter.defaultModel,
+      provider: this.adapter.name,
+      tools: options.tools,
+    });
     // Log what was passed to operate
     log.trace("[operate] Starting operate loop");
     log.trace.var({ "operate.input": input });

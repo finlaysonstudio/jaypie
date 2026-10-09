@@ -712,12 +712,16 @@ describe("Llm Class", () => {
 
         await expect(llm.operate("test")).rejects.toThrow("OpenAI failed");
 
-        const failFast = { retry: { rateLimit: false, transient: false } };
+        const failFast = {
+          failFast: true,
+          retry: { rateLimit: false, transient: false },
+        };
         expect(openAiOperateMock.mock.calls[0][1]).toMatchObject(failFast);
         expect(anthropicOperateMock.mock.calls[0][1]).toMatchObject(failFast);
         expect(geminiOperateMock.mock.calls[0][1]).toMatchObject(failFast);
         // The linger pass keeps the full policy
         expect(openAiOperateMock.mock.calls[1][1].retry).toBeUndefined();
+        expect(openAiOperateMock.mock.calls[1][1].failFast).toBeUndefined();
       });
 
       it("leaves the wait in place when no fallback is configured", async () => {
@@ -726,6 +730,7 @@ describe("Llm Class", () => {
         await llm.operate("test");
 
         expect(openAiOperateMock.mock.calls[0][1].retry).toBeUndefined();
+        expect(openAiOperateMock.mock.calls[0][1].failFast).toBeUndefined();
       });
 
       it("applies an explicit retry option to the linger pass only", async () => {

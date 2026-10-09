@@ -38,7 +38,7 @@ across releases; the id behind it moves whenever the provider ships a successor.
 | `fireworks`  | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY`                 |
 | `google`     | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO`                                                                 | `GOOGLE_API_KEY`                    |
 | `meta`       | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`                                                                                  | `META_API_KEY` (or `MODEL_API_KEY`) |
-| `mistral`    | `MODEL.MISTRAL.*` (`LARGE`, `SMALL`, `OCR`)                                                                                         | `MISTRAL_API_KEY`                   |
+| `mistral`    | `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `SMALL`, `OCR`)                                                                               | `MISTRAL_API_KEY`                   |
 | `openai`     | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA`                                                                             | `OPENAI_API_KEY`                    |
 | `openrouter` | `MODEL.OPENROUTER.*` (`GLM`, `LUNA`, `SONNET`)                                                                                      | `OPENROUTER_API_KEY`                |
 | `xai`        | `MODEL.GROK`                                                                                                                        | `XAI_API_KEY`                       |

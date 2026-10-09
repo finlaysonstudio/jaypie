@@ -219,7 +219,7 @@ asymmetry; the cap stays because it guards HTTP timeouts (issue #602). **Mistral
 ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and uncapped that ran a single live matrix
 cell for 7m57s against under 1.5s for every other cell (observed on
-`mistral-medium-3-5`, since removed). When adding models, update the table in
+`mistral-medium-3-5`). When adding models, update the table in
 `src/util/maxOutputTokens.ts`.
 
 ### Prompt Caching
@@ -548,7 +548,7 @@ a caller `signal` that aborts mid-wait ends the call immediately rather than
 holding the request for the remaining minute.
 
 ```typescript
-await Llm.operate(input, { model: "mistral-large-2512" }); // waits and retries
+await Llm.operate(input, { model: LLM.MODEL.MISTRAL.SMALL }); // waits and retries
 
 await Llm.operate(input, { retry: { rateLimit: false } }); // throws at once
 await Llm.operate(input, {
@@ -887,6 +887,29 @@ const response = await Llm.operate("Greet the world", {
 - Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
 - Compliance is enforced by the operate loop the same way Fireworks is: a `format` request that completes as prose is first parsed as JSON (fence-stripped), then re-asked on a corrective turn offering **only** the `structured_output` tool (`supportsStructuredOutputRetry`). That turn withholds the caller's tools and does not send the schema natively, so the demanded call is the sole way to answer.
+
+**Models that cannot combine `format` with tools.**
+`LLM.FORMAT_WITH_TOOLS_UNSUPPORTED` (`src/constants.ts`) lists, by literal id,
+the models known not to converge when given both: they restate the answer or
+re-call the tool, and a single request can run for minutes. Each capability
+works alone. `guardFormatWithTools` (`src/util/guardFormatWithTools.ts`) runs
+at the top of `OperateLoop.execute` and `StreamLoop.execute`:
+
+- A lone model, or the linger pass, logs a **warn** and runs the call anyway.
+- A fallback chain with another model waiting sets the internal `failFast`
+  option on each attempt, and the guard throws `LlmUnrecoverableError` before
+  any request goes out, so the chain moves on at once.
+- The live matrix forces `both: "skip"` for every listed id
+  (`test/models.ts`); `APP_FORCE=1` still runs the cell.
+
+The list is `mistral-large-4` / `mistral-large-4-0` (9 of 10 live `both`
+cells timed out, 2026-10-09) and `mistral-medium-3-5`, which are
+`MODEL.MISTRAL.LARGE` and `MODEL.MISTRAL.MEDIUM`. Medium was out of the catalog
+from 2026-08-02 to 2026-10-09 for this reason; the marker replaced the
+exclusion. A model earns a place
+on live evidence against that exact id, and leaves it the same way. Jaypie 2.0
+splits `operate` into `ask` (structured) and `loop` (tools), which removes the
+combination.
 
 **Fresh-context conversion (`supportsStructuredOutputConversion`).** An
 alternative to the corrective turn, tried first when an adapter opts in

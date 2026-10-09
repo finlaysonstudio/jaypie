@@ -255,6 +255,26 @@ describe("MistralAdapter", () => {
         ).toBe(0.3);
       });
 
+      it("pins top_p to 1 for greedy sampling", () => {
+        // Large 4 rejects a bare temperature 0 while it reasons
+        const request = adapter.buildRequest(
+          baseRequest({ temperature: 0 }),
+        ) as unknown as Record<string, unknown>;
+        expect(request.temperature).toBe(0);
+        expect(request.top_p).toBe(1);
+      });
+
+      it("leaves top_p alone otherwise", () => {
+        const sampled = adapter.buildRequest(
+          baseRequest({ temperature: 0.3 }),
+        ) as unknown as Record<string, unknown>;
+        expect(sampled.top_p).toBeUndefined();
+        const explicit = adapter.buildRequest(
+          baseRequest({ providerOptions: { top_p: 0.5 }, temperature: 0 }),
+        ) as unknown as Record<string, unknown>;
+        expect(explicit.top_p).toBe(0.5);
+      });
+
       it("caps non-streaming output tokens", () => {
         // An uncapped completion is a latency hazard: medium-3-5 degenerates
         // into restating its answer when format and tools are combined
@@ -338,10 +358,26 @@ describe("MistralAdapter", () => {
 
       it("omits effort for models that do not reason", () => {
         // Large 3 answers "reasoning_effort is not enabled for this model"
-        const request = adapter.buildRequest(
-          baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.LARGE }),
-        );
-        expect(request.reasoning_effort).toBeUndefined();
+        for (const model of ["mistral-large-2512", "mistral-large-latest"]) {
+          const request = adapter.buildRequest(
+            baseRequest({ effort: EFFORT.HIGH, model }),
+          );
+          expect(request.reasoning_effort).toBeUndefined();
+        }
+      });
+
+      it("sends effort to Large 4 and later", () => {
+        // Large 4 accepts none and high, and reasons when the field is absent
+        for (const model of [
+          MODEL.MISTRAL.LARGE,
+          "mistral-large-4",
+          "mistral-large-10-0",
+        ]) {
+          const request = adapter.buildRequest(
+            baseRequest({ effort: EFFORT.LOWEST, model }),
+          );
+          expect(request.reasoning_effort).toBe("none");
+        }
       });
 
       it("omits effort once a model is cached as rejecting it", () => {

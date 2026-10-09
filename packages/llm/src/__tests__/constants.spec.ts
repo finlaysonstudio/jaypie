@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { determineModelProvider } from "../util/determineModelProvider.js";
 
 // Subject
-import { COST, DEFAULT, MODEL, PAGE_COST, PROVIDER } from "../constants.js";
+import {
+  COST,
+  DEFAULT,
+  FORMAT_WITH_TOOLS_UNSUPPORTED,
+  MODEL,
+  PAGE_COST,
+  PROVIDER,
+} from "../constants.js";
 
 describe("Constants", () => {
   it("Exports constants we expect", () => {
@@ -66,16 +73,33 @@ describe("Constants", () => {
   describe("MODEL Constants", () => {
     it("Exposes a Mistral subtree", () => {
       expect(MODEL.MISTRAL).toBeObject();
-      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-2512");
+      expect(MODEL.MISTRAL.LARGE).toBe("mistral-large-4-0");
+      expect(MODEL.MISTRAL.MEDIUM).toBe("mistral-medium-3-5");
       expect(MODEL.MISTRAL.OCR).toBe("mistral-ocr-4-1");
       expect(MODEL.MISTRAL.SMALL).toBe("mistral-small-2603");
     });
 
-    it("Does not catalog mistral-medium", () => {
-      // Removed for failing to combine tools with structured output; see the
-      // note in constants.ts. Its COST entry is retained deliberately.
-      expect(Object.keys(MODEL.MISTRAL)).not.toContain("MEDIUM");
-      expect(COST["mistral-medium-3-5"]).toBeObject();
+    it("Prices every cataloged Mistral chat model and the retired Large 3", () => {
+      expect(COST[MODEL.MISTRAL.LARGE]).toBeObject();
+      expect(COST[MODEL.MISTRAL.MEDIUM]).toBeObject();
+      expect(COST[MODEL.MISTRAL.SMALL]).toBeObject();
+      expect(COST["mistral-large-2512"]).toBeObject();
+    });
+
+    it("Marks the cataloged Mistral models that cannot combine format with tools", () => {
+      expect(FORMAT_WITH_TOOLS_UNSUPPORTED).toContain(MODEL.MISTRAL.LARGE);
+      expect(FORMAT_WITH_TOOLS_UNSUPPORTED).toContain(MODEL.MISTRAL.MEDIUM);
+      expect(FORMAT_WITH_TOOLS_UNSUPPORTED).not.toContain(MODEL.MISTRAL.SMALL);
+    });
+
+    it("Marks the models that cannot combine format with tools", () => {
+      expect(FORMAT_WITH_TOOLS_UNSUPPORTED).toEqual(
+        expect.arrayContaining([
+          "mistral-large-4",
+          "mistral-large-4-0",
+          "mistral-medium-3-5",
+        ]),
+      );
     });
 
     it("Catalogs both Muse Spark tiers", () => {

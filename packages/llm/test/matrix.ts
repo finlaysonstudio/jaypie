@@ -53,6 +53,7 @@ import {
   CAPABILITIES,
   Capability,
   ExpectedOutcome,
+  matrixExpect,
   MODELS,
   ModelConfig,
 } from "./models.js";
@@ -698,7 +699,7 @@ function selectModels(): readonly ModelConfig[] {
       .filter(Boolean);
     return ids.map((id) => {
       const existing = MODELS.find((m) => m.model === id);
-      return existing ?? { model: id, expect: {} };
+      return existing ?? { model: id, expect: matrixExpect(id) ?? {} };
     });
   }
   // Otherwise shard by provider group (CI passes APP_GROUP per matrix cell).

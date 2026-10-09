@@ -188,6 +188,8 @@ const STRUCTURED_OUTPUT_SCHEMA_NAME = "response";
 const RATE_LIMIT_STATUS_CODE = 429;
 const RATE_LIMIT_TYPE = "rate_limited";
 const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 524, 529];
+/** The only `top_p` Mistral accepts alongside `temperature: 0`. */
+const GREEDY_TOP_P = 1;
 /** Model-level argument rejection, e.g. an unsupported `reasoning_effort`. */
 const INVALID_ARGS_CODE = "3051";
 /** Schema validation: unknown field, bad enum. Never succeeds on retry. */
@@ -196,11 +198,16 @@ const SCHEMA_VALIDATION_STATUS_CODE = 422;
 /**
  * Models known to accept `reasoning_effort`. Verified live 2026-08-01: Medium
  * 3.5 and Small 4 accept `none` and `high` only, while Large 3 rejects the
- * field outright ("reasoning_effort is not enabled for this model"). Anything
- * unmatched omits the field, honoring the contract that `effort` is safe to
- * set regardless of which model serves the call.
+ * field outright ("reasoning_effort is not enabled for this model"). Large 4
+ * accepts the same `none` and `high` pair (verified live 2026-10-09) and
+ * reasons by default when the field is omitted, so Large is matched from
+ * major version 4 up; the dated Large 3 id (mistral-large-2512) and
+ * `mistral-large-latest` stay unmatched. Anything unmatched omits the field,
+ * honoring the contract that `effort` is safe to set regardless of which
+ * model serves the call.
  */
-const REASONING_EFFORT_MODELS = /^mistral-(medium|small)/i;
+const REASONING_EFFORT_MODELS =
+  /^mistral-(large-([4-9]|\d{2})(-|$)|medium|small)/i;
 
 /**
  * Detect 4xx errors that indicate the model itself does not support
@@ -467,7 +474,7 @@ export class MistralAdapter extends BaseProviderAdapter {
   // Mistral model that has degenerated into restating its answer keeps doing
   // so while that text is in its context, and re-asking in conversation also
   // lets it substitute values the tools never returned (observed on
-  // mistral-medium-3-5, since removed from the catalog: a tool rolled
+  // mistral-medium-3-5: a tool rolled
   // 5,2,4,3,5 totalling 19 and the corrective turn answered 4,1,6,2,5
   // totalling 18). A call that only sees the text cannot do either.
   override readonly supportsStructuredOutputConversion = true;
@@ -644,6 +651,15 @@ export class MistralAdapter extends BaseProviderAdapter {
     if (request.temperature !== undefined) {
       (mistralRequest as unknown as Record<string, unknown>).temperature =
         request.temperature;
+    }
+
+    // Greedy sampling needs an explicit top_p. Large 4 answers a bare
+    // `temperature: 0` with 400 "top_p must be 1 when using greedy sampling"
+    // while it reasons (verified live 2026-10-09). 1 is the API default, so
+    // pinning it is a no-op on models that never asked.
+    const sampling = mistralRequest as unknown as Record<string, unknown>;
+    if (sampling.temperature === 0 && sampling.top_p === undefined) {
+      sampling.top_p = GREEDY_TOP_P;
     }
 
     return mistralRequest;
