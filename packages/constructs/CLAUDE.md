@@ -473,10 +473,10 @@ web.distributionDomainName; // d111111abcdef8.cloudfront.net
 |-----|---------|-------|
 | `Administrator` | 1h | `AdministratorAccess` |
 | `Developer` | 4h | `job-function/SystemAdministrator` plus `service:*` across the Jaypie services |
-| `Agent` | 8h | `ReadOnlyAccess` plus data-plane and operational writes, with deletion and identity change denied |
+| `Agent` | 8h | `ReadOnlyAccess` plus data-plane and operational writes, with identity change denied |
 | `Analyst` | 12h | `ReadOnlyAccess` |
 
-`Agent` exists for automated operators. It reads everything Analyst reads, writes items, objects, and messages, invokes and configures Lambdas, runs ECS tasks and Step Functions executions, and reads secret values. It cannot delete stacks or resources, change identity, or assume another role.
+`Agent` exists for automated operators. It reads everything Analyst reads, writes items, objects, and messages, invokes and configures Lambdas, runs ECS tasks and Step Functions executions, and reads secret values. It cannot change identity or assume another role. Stack and resource deletion is not granted, and it is not denied either, so a customer managed policy linked to the set can add scoped grants.
 
 ```typescript
 new JaypieSsoPermissions(this, "PermissionSets", {
@@ -487,10 +487,8 @@ new JaypieSsoPermissions(this, "PermissionSets", {
 
 Encoded specifics:
 
-- IAM wildcards apply only inside an action name, after a literal service prefix, so `"*:Delete*"` cannot be written. Every destructive action is enumerated in the `AgentDenyDestructive` statement, and a new service added to the Allow list needs its deletions added there by hand.
-- Item-level deletes stay allowed (`s3:DeleteObject`, `dynamodb:DeleteItem`, `sqs:DeleteMessage`); the calls that empty a store in one shot are denied (`s3:PutLifecycleConfiguration`, `s3:DeleteObjectVersion`, `dynamodb:UpdateTimeToLive`, `sqs:PurgeQueue`).
-- Resource-policy writes are denied across every service. Granting a principal outside the boundary is an identity change under another name.
-- CloudFormation is read-only. `UpdateStack` deletes and replaces resources as readily as `DeleteStack`, and deploys run in CI.
+- The inline policy holds three statements: `AgentWrite`, `AgentDenyIdentity`, and `AgentDenyPrivilegedPassRole`. The denies cover identity change and privileged role passing only.
+- Item-level deletes are granted (`s3:DeleteObject`, `dynamodb:DeleteItem`, `sqs:DeleteMessage`). Resource deletion, mass-expiry (`s3:PutLifecycleConfiguration`, `dynamodb:UpdateTimeToLive`, `sqs:PurgeQueue`), resource-policy writes, and CloudFormation writes are not granted by the set. No statement denies them, so a linked customer managed policy that grants one takes effect; scope such grants narrowly.
 - `sts:AssumeRole` is denied, which also blocks assuming the CDK bootstrap roles from an Agent session.
 - `lambda:UpdateFunctionConfiguration` plus `iam:PassRole` is the residual escalation path: repoint a function at a stronger role, then invoke it. `AgentDenyPrivilegedPassRole` blocks the SSO, organization, and CDK execution roles. Any other role Lambda may assume is still reachable, so scope `iam:PassRole` further if that matters.
 - `secretsmanager:GetSecretValue` is the one grant above Analyst's read surface. `ReadOnlyAccess` does not include it.
