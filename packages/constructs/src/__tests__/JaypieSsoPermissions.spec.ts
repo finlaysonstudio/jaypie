@@ -134,7 +134,7 @@ describe("JaypieSsoPermissions", () => {
       // Verify Agent permission set
       template.hasResourceProperties("AWS::SSO::PermissionSet", {
         Description:
-          "Read access with data-plane and operational writes; no deletion, no identity change",
+          "Read access with data-plane and operational writes; no identity change",
         InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
         Name: "Agent",
         SessionDuration: "PT8H",
@@ -387,30 +387,13 @@ describe("JaypieSsoPermissions", () => {
       expect(allowed).toContain("sqs:SendMessage*");
     });
 
-    it("denies deletion of stacks and resources", () => {
-      const denied = actionsFor("AgentDenyDestructive");
-      expect(denied).toContain("cloudformation:Delete*");
-      expect(denied).toContain("cloudformation:Update*");
-      expect(denied).toContain("dynamodb:DeleteTable");
-      expect(denied).toContain("lambda:Delete*");
-      expect(denied).toContain("s3:DeleteBucket*");
-      expect(denied).toContain("sqs:DeleteQueue");
-    });
-
-    it("denies the mass-expiry paths that empty a store without a delete call", () => {
-      const denied = actionsFor("AgentDenyDestructive");
-      expect(denied).toContain("dynamodb:UpdateTimeToLive");
-      expect(denied).toContain("s3:DeleteObjectVersion*");
-      expect(denied).toContain("s3:PutLifecycleConfiguration");
-      expect(denied).toContain("sqs:PurgeQueue");
-    });
-
-    it("denies resource policy writes that grant access outside the boundary", () => {
-      const denied = actionsFor("AgentDenyDestructive");
-      expect(denied).toContain("lambda:AddPermission");
-      expect(denied).toContain("s3:PutBucketPolicy");
-      expect(denied).toContain("secretsmanager:PutResourcePolicy");
-      expect(denied).toContain("sqs:AddPermission");
+    it("carries no blanket destructive-action deny", () => {
+      const { statements } = agentStatements();
+      expect(statements.map((statement) => statement.Sid)).toEqual([
+        "AgentWrite",
+        "AgentDenyIdentity",
+        "AgentDenyPrivilegedPassRole",
+      ]);
     });
 
     it("denies identity change and role assumption", () => {
