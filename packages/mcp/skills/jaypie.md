@@ -50,11 +50,10 @@ Jaypie projects use npm workspaces:
 
 ```
 project/
-├── packages/           # npm packages
+├── packages/           # npm workspaces
 │   ├── api/           # Express API
+│   ├── cdk/           # CDK app
 │   └── lib/           # Shared library
-├── workspaces/        # CDK infrastructure
-│   └── cdk/           # CDK app
 └── package.json       # Root workspace config
 ```
 

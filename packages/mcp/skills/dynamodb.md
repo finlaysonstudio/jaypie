@@ -550,7 +550,7 @@ registerModel({ model: "session", indexes: [fabricIndex()], ttl: "30 days" });
 ```
 
 ```typescript
-// workspaces/cdk/lib/data-stack.ts
+// packages/cdk/lib/data-stack.ts
 import "@project/models"; // registers models
 import { JaypieDynamoDb } from "@jaypie/constructs";
 import { getAllRegisteredIndexes } from "@jaypie/fabric";

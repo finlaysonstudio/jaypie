@@ -261,7 +261,7 @@ jobs:
 
 CDK provisions a `JaypieWebDeploymentBucket`; it does not fill it. Jaypie avoids `s3deploy.BucketDeployment`, so shipping content is a workflow step:
 
-1. `cdk-deploy` deploys the bucket, distribution, and deploy role, and writes `workspaces/cdk/cdk-outputs.json`.
+1. `cdk-deploy` deploys the bucket, distribution, and deploy role, and writes `packages/cdk/cdk-outputs.json`.
 2. `web-deploy` reads `DestinationBucketName`, `DestinationBucketDeployRoleArn`, and `DistributionId` from that file.
 3. `web-deploy` assumes the deploy role, syncs the built assets, and invalidates the distribution.
 
@@ -278,7 +278,7 @@ See `skill("cicd-actions")` for the `web-deploy` action body and `skill("web")` 
 `JaypieStack` names every stack `cdk-{PROJECT_SPONSOR}-{PROJECT_KEY}-{PROJECT_ENV}-{PROJECT_NONCE}[-{key}]` and resolves the account and region (see `skill("cdk")`). Do not compose stack names in `app.ts`:
 
 ```typescript
-// workspaces/cdk/src/app.ts
+// packages/cdk/src/app.ts
 import { App } from "aws-cdk-lib";
 import { JaypieAppStack } from "@jaypie/constructs";
 

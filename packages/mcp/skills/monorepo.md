@@ -135,8 +135,12 @@ npm install --save-dev @jaypie/eslint @jaypie/repokit @jaypie/testkit eslint vit
 
 | Directory | Purpose |
 |-----------|---------|
-| `packages/` | npm packages (default workspace) |
-| `workspaces/` | CDK-deployed infrastructure and sites |
+| `packages/` | Default for every workspace: npm packages, the CDK package (`packages/cdk`), and sites (`packages/web`) |
+| `workspaces/` | Only in a repository whose `packages/` publish to npm: the unpublished workspaces that manage them (`workspaces/cdk`, `workspaces/documentation`) |
+
+Use `packages/cdk` unless the repository publishes its packages to npm. The Jaypie repository itself is the `workspaces/` case: `packages/` holds the published libraries and `workspaces/` holds the CDK app and documentation site that deploy around them.
+
+`packages/cdk` is the default the `cdk`, `cicd-actions`, and `cicd-deploy` skills assume. The root `package.json` scripts and the vitest `test.projects` glob cover `packages/*` only, so a repository that adds `workspaces/` must pass `workspaces/cdk` to the `cdk-deploy` and `web-deploy` inputs, and its workspaces fall out of `build`, `clean`, `format:package`, `test`, and `typecheck` until every one of those globs names it.
 
 ## Scripts Reference
 
@@ -164,10 +168,9 @@ npm install --save-dev @jaypie/eslint @jaypie/repokit @jaypie/testkit eslint vit
 - etc: configurations
 - lib: usually within a src directory, modules of encapsulated logic that could be refactored out later
 - LOCAL: human local scratch directory, include in gitignore
-- packages: default and preferred name for NPM workspaces; always use for packages publishing to NPM
-- stacks: allowed name for NPM workspaces that publish via CDK
+- packages: default directory for NPM workspaces, including the CDK package (`packages/cdk`); always use for packages publishing to NPM
 - templates: usually CloudFormation
-- workspaces: allowed name for NPM workspace that do not publish
+- workspaces: unpublished workspaces (CDK, sites) in a repository whose packages publish to NPM
 - var: agent and machine local scratch directory, include in gitignore
 
 ### Discouraged Folder Names
