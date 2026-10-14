@@ -107,10 +107,10 @@ new JaypieSesIntake(this, "Intake", {
 
 ## Stack Structure
 
-Organize stacks in the `workspaces/` directory:
+The CDK package lives at `packages/cdk`, alongside every other workspace (see `skill("monorepo")`):
 
 ```
-workspaces/
+packages/
 ├── cdk/
 │   ├── src/
 │   │   ├── app.ts        # CDK app entry

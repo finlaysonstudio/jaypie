@@ -194,7 +194,6 @@ runs:
         path: |
           node_modules
           packages/*/node_modules
-          workspaces/*/node_modules
         key: ${{ runner.os }}-node-${{ inputs.node-version }}-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-${{ inputs.node-version }}-
@@ -205,8 +204,7 @@ runs:
       with:
         path: |
           packages/*/dist
-          workspaces/*/dist
-          workspaces/*/.open-next
+          packages/*/.open-next
         key: ${{ runner.os }}-build-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-build-
@@ -262,7 +260,7 @@ inputs:
   working-directory:
     description: 'Working directory for CDK commands'
     required: false
-    default: 'workspaces/cdk'
+    default: 'packages/cdk'
   require-approval:
     description: 'CDK approval mode (never, any-change, broadening)'
     required: false
@@ -310,7 +308,7 @@ inputs:
   outputs-file:
     description: 'Path to cdk-outputs.json produced by cdk deploy'
     required: false
-    default: 'workspaces/cdk/cdk-outputs.json'
+    default: 'packages/cdk/cdk-outputs.json'
   prefix:
     description: 'Output name prefix when exportOutputs({ prefix }) was used (e.g., "App")'
     required: false
@@ -318,7 +316,7 @@ inputs:
   source:
     description: 'Directory of built assets to sync'
     required: false
-    default: 'workspaces/web/dist'
+    default: 'packages/web/dist'
   region:
     description: 'AWS region'
     required: false
