@@ -198,29 +198,57 @@ reasons: `none` is rejected by the API and never emitted.
 
 ### Output Token Limits
 
-Anthropic and Google requests resolve a default output-token limit from the
-model's documented maximum output (`src/util/maxOutputTokens.ts`), so long
-generations do not silently truncate:
+Anthropic, Google, and Mistral requests resolve a default output-token limit
+from the model's documented maximum output (`src/util/maxOutputTokens.ts`),
+so long generations do not silently truncate:
 
-- **Non-streaming** (`operate()`, `send()`): capped at
-  `PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT` (16,384) — larger non-streaming
-  responses risk HTTP timeouts; stream instead
-- **Streaming** (`stream()`): the model maximum — 128,000 for current Claude
+- **Streamed transport** (`stream()`, and `operate()` on adapters with
+  `executeStreamedRequest`): the model maximum — 128,000 for current Claude
   models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+- **Non-streaming** (a request built without `stream`): capped at
+  `PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT` (16,384) — larger non-streaming
+  responses risk HTTP timeouts. The deprecated Anthropic `send()` sends the
+  same default
 
-The `stream` flag on `OperateRequest` (set by `StreamLoop`) tells adapters
-which transport the request uses. Callers override per model via
-`modelOptions` (`max_tokens` for Anthropic, `maxOutputTokens` for Google).
-OpenAI, xAI, Meta, and OpenRouter leave the limit unset, so a chain mixing
-them with a capped provider mixes output budgets (a Gemini primary at 16,384
-non-streaming, an OpenAI fallback uncapped). The skill documents the
-asymmetry; the cap stays because it guards HTTP timeouts (issue #602). **Mistral is capped**
-(32,768 model max, 16,384 non-streaming) even though it publishes no low
-ceiling: a Mistral model can degenerate into restating its answer when
-`format` and tools are combined, and uncapped that ran a single live matrix
-cell for 7m57s against under 1.5s for every other cell (observed on
-`mistral-medium-3-5`). When adding models, update the table in
-`src/util/maxOutputTokens.ts`.
+The `stream` flag on `OperateRequest` (set by `StreamLoop`, and by
+`OperateLoop` when the adapter streams) tells adapters which transport the
+request uses. Callers override per model via `modelOptions` (`max_tokens` for
+Anthropic, `maxOutputTokens` for Google). OpenAI, xAI, Meta, and OpenRouter
+leave the limit unset. **Mistral is capped** at 32,768 on every transport
+even though it publishes no low ceiling: a Mistral model can degenerate into
+restating its answer when `format` and tools are combined, and uncapped that
+ran a single live matrix cell for 7m57s against under 1.5s for every other
+cell (observed on `mistral-medium-3-5`). When adding models, update the table
+in `src/util/maxOutputTokens.ts`.
+
+### Streamed Operate Transport
+
+`operate()` streams its provider transport internally on Anthropic, Google,
+Mistral, OpenAI, xAI, and Meta, and still returns one settled
+`LlmOperateResponse` (issue #603). Each of those adapters implements
+`executeStreamedRequest(client, request, signal, { onActivity })`, which sends
+the same request with streaming on and accumulates the events back into the
+raw payload `executeRequest` returns, so `parseResponse`, `extractToolCalls`,
+`responseToHistoryItems`, `hasStructuredOutput`, stop reasons, and ids are
+untouched. The accumulators are pure functions beside each client:
+
+| Adapter             | Accumulator                                 | Source                                                                                                             |
+| ------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Anthropic           | `providers/anthropic/accumulateMessage.ts`  | `message_start`, `content_block_*` deltas (text, thinking, signature, tool input JSON, citations), `message_delta` |
+| OpenAI / xAI / Meta | `providers/openai/accumulateResponse.ts`    | The `response.completed` / `response.incomplete` object                                                            |
+| Google              | `providers/google/accumulateResponse.ts`    | `streamGenerateContent` chunks merged by candidate; adjacent text parts of one kind concatenated                   |
+| Mistral             | `providers/mistral/accumulateCompletion.ts` | Chat Completions deltas (content, thinking chunks, tool calls by index, usage)                                     |
+
+Both transports share one `sendRequest` per adapter, so parameter rejections
+(temperature, `reasoning_effort`, native structured output) are remembered and
+retried the same way, and Mistral's `__jaypieStructuredOutput` annotation
+still applies. A streamed error event (`error`, `response.failed`) throws an
+error typed by status, so it classifies like the HTTP failure it stands for;
+a stream that closes before it settles throws a retryable 500. Every received
+event calls `onActivity`, which `RetryExecutor` wires to the attempt deadline
+reset, so `timeout` is an idle timeout on the streamed transport. Bedrock,
+Fireworks, and OpenRouter keep the non-streaming `executeRequest`, where
+`timeout` bounds the whole attempt.
 
 ### Prompt Caching
 
@@ -368,7 +396,8 @@ aborting the attempt's controller, because adapters swallow errors and resolve
 empty once their signal aborts. `RetryExecutor` treats the timeout as transient
 without consulting the adapter's classifier, so a chain falls over and a lone
 model or linger pass retries. `StreamLoop` makes it an idle timeout, armed only
-while awaiting the provider's next chunk. `ocr` keeps `timeout` as its
+while awaiting the provider's next chunk; `operate()` on a streamed transport
+makes it an idle timeout too, reset on every provider event. `ocr` keeps `timeout` as its
 LlamaParse job ceiling.
 
 **Incomplete responses fail over.** A cut-off (`status: "incomplete"` with

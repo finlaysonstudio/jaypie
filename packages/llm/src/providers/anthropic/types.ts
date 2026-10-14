@@ -142,8 +142,11 @@ export namespace Anthropic {
   }
 
   export type ContentBlockDelta =
+    | { type: "citations_delta"; citation: unknown }
+    | { type: "input_json_delta"; partial_json: string }
+    | { type: "signature_delta"; signature: string }
     | { type: "text_delta"; text: string }
-    | { type: "input_json_delta"; partial_json: string };
+    | { type: "thinking_delta"; thinking: string };
 
   export type MessageStreamEvent =
     | { type: "message_start"; message: Message }
@@ -156,6 +159,7 @@ export namespace Anthropic {
     | { type: "content_block_stop"; index: number }
     | { type: "message_delta"; delta: Record<string, unknown>; usage: Usage }
     | { type: "message_stop" }
-    | { type: "ping" };
+    | { type: "ping" }
+    | { type: "error"; error: { message?: string; type?: string } };
 }
 /* eslint-enable @typescript-eslint/no-namespace */

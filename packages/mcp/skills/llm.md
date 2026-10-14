@@ -916,7 +916,8 @@ const response = await llm.operate(input, {
 - A timeout is never an `LlmAbortError`: the caller's `signal` still owns cancellation.
 - An entry's own `timeout` replaces the call's for that entry; `false` disables it.
 - `stream()` treats `timeout` as an idle timeout: it restarts with every chunk and pauses while the consumer holds one. A stall after partial output yields an error chunk.
-- No default applies; unset means no deadline. Size it above the slowest legitimate non-streaming response (long reasoning runs take minutes).
+- `operate()` on Anthropic, Google, Mistral, OpenAI, xAI, and Meta streams its transport internally, so `timeout` is an idle timeout there too: it restarts with every event the provider sends, catching a stall without cutting off a long generation that is still producing. On Bedrock, Fireworks, and OpenRouter `operate()` sends non-streaming requests and `timeout` bounds the whole attempt.
+- No default applies; unset means no deadline. On the non-streaming providers, size it above the slowest legitimate response (long reasoning runs take minutes).
 - `Llm.ocr` keeps `timeout` as the LlamaParse job deadline.
 - A timeout that hands off to the next model logs at `debug` (`API call timed out after 60000ms; not retrying`, then `Provider openai failed; failing over`). Only the failure that reaches the caller logs at `warn`. The report tally counts it under `failures` and `fallbacks`.
 
@@ -1359,14 +1360,21 @@ Google merges them into the generation config.
 
 ### Default Output Token Limits
 
-Anthropic and Google requests resolve a default output-token limit from the
-model's documented maximum output, so long generations do not silently
-truncate:
+Anthropic, Google, and Mistral requests resolve a default output-token limit
+from the model's documented maximum output, so long generations do not
+silently truncate:
 
-- **Non-streaming** (`operate()`, `send()`): capped at 16,384 tokens —
-  larger non-streaming responses risk HTTP timeouts (stream instead)
-- **Streaming** (`stream()`): the model maximum — e.g., 128,000 for current
-  Claude models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+- **Streamed transport** (`stream()`, and `operate()` on Anthropic, Google,
+  Mistral, OpenAI, xAI, and Meta): the model maximum — e.g., 128,000 for
+  current Claude models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+- **Non-streaming**: an adapter request built without the streamed
+  transport is capped at 16,384 (larger non-streaming responses risk HTTP
+  timeouts). The deprecated `send()` on Anthropic sends 16,384 as well
+
+`operate()` consumes the provider stream internally and still returns one
+settled response (same `content`, tool calls, history, stop reason, and
+usage), so streaming there is a transport detail with no caller-facing change.
+Bedrock, Fireworks, and OpenRouter keep non-streaming `operate()` requests.
 
 Override per model with `modelOptions`:
 
@@ -1383,19 +1391,19 @@ await Llm.operate(input, {
 
 OpenAI, xAI, and Meta leave the limit unset (their defaults do not truncate early).
 A chain that mixes them with Anthropic, Google, or Mistral therefore mixes
-output budgets: a Gemini primary resolves to 16,384 non-streaming while an
+output budgets: a Gemini primary resolves to its 65,536 model maximum while an
 OpenAI fallback sends no ceiling, so swapping the primary moves the effective
 budget with nothing at the call site changing. Reasoning tokens count against
 the ceiling. Set `maxOutputTokens` (Google) or `max_tokens` (Anthropic,
 Mistral) in `modelOptions` to pin it per model.
-Mistral is capped (32,768 streaming / 16,384 non-streaming) despite publishing
-no low ceiling: a Mistral model can degenerate into restating its answer when
+Mistral is capped at 32,768 on every transport despite publishing no low
+ceiling: a Mistral model can degenerate into restating its answer when
 `format` and tools are combined, and an uncapped completion turns that into a
 multi-minute request. Override with `modelOptions: { mistral: { max_tokens } }`.
 OpenRouter varies by routed model; pass `max_tokens` via `modelOptions`
 when needed. A truncated response settles `status: "incomplete"` with
 `stopReason: "max_tokens"` and moves a fallback chain to its next entry;
-raise the limit or switch to `stream()`.
+raise the limit through `modelOptions`.
 
 ## See Also
 

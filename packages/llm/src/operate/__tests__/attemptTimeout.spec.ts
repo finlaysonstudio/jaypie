@@ -197,6 +197,123 @@ describe("Attempt timeout (Issue #595)", () => {
     });
   });
 
+  describe("operate() over a streamed transport (issue #603)", () => {
+    /** An adapter whose operate() requests ride the streamed transport */
+    function withStreamedTransport(
+      execute: (
+        signal?: AbortSignal,
+        onActivity?: () => void,
+      ) => Promise<unknown>,
+    ) {
+      const streamed = vi.fn(
+        (
+          _client: unknown,
+          _request: unknown,
+          signal?: AbortSignal,
+          options?: { onActivity?: () => void },
+        ) => execute(signal, options?.onActivity),
+      );
+      Object.assign(adapter, { executeStreamedRequest: streamed });
+      return streamed;
+    }
+
+    it("prefers the streamed transport and marks the request as streaming", async () => {
+      const streamed = withStreamedTransport(() =>
+        Promise.resolve({ content: [{ text: "Hi", type: "text" }] }),
+      );
+      const loop = new OperateLoop(operateConfig(adapter));
+
+      const response = await loop.execute("Hello");
+
+      expect(response.content).toBe("Hello!");
+      expect(streamed).toHaveBeenCalledTimes(1);
+      expect(adapter.executeRequest).not.toHaveBeenCalled();
+      expect(adapter.buildRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ stream: true }),
+      );
+    });
+
+    it("keeps non-streaming requests for adapters without the transport", async () => {
+      const loop = new OperateLoop(operateConfig(adapter));
+
+      await loop.execute("Hello");
+
+      expect(adapter.executeRequest).toHaveBeenCalledTimes(1);
+      expect(adapter.buildRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ stream: false }),
+      );
+    });
+
+    it("treats timeout as an idle timeout while events keep arriving", async () => {
+      withStreamedTransport(
+        (_signal, onActivity) =>
+          new Promise((resolve) => {
+            // Five events, each just inside the idle window: the whole
+            // generation outlives the deadline several times over
+            let events = 0;
+            const tick = () => {
+              onActivity?.();
+              events++;
+              if (events === 5) {
+                resolve({ content: [{ text: "Hi", type: "text" }] });
+                return;
+              }
+              setTimeout(tick, TIMEOUT_MS - 100);
+            };
+            setTimeout(tick, TIMEOUT_MS - 100);
+          }),
+      );
+      const loop = new OperateLoop(operateConfig(adapter));
+
+      const promise = loop.execute("Hello", {
+        retry: { transient: false },
+        timeout: TIMEOUT_MS,
+      });
+      await vi.advanceTimersByTimeAsync(TIMEOUT_MS * 5);
+      const response = await promise;
+
+      expect(response.content).toBe("Hello!");
+    });
+
+    it("times out a stream that goes idle after activity, then retries", async () => {
+      let attempt = 0;
+      const streamed = withStreamedTransport((signal, onActivity) => {
+        attempt++;
+        if (attempt === 1) {
+          onActivity?.();
+          return hangUntilAborted(signal);
+        }
+        return Promise.resolve({ content: [{ text: "Hi", type: "text" }] });
+      });
+      const loop = new OperateLoop(operateConfig(adapter));
+
+      const promise = loop.execute("Hello", { timeout: TIMEOUT_MS });
+      await vi.advanceTimersByTimeAsync(TIMEOUT_MS);
+      const response = await promise;
+
+      expect(response.content).toBe("Hello!");
+      expect(streamed).toHaveBeenCalledTimes(2);
+    });
+
+    it("rejects with LlmTimeoutError when a stream stalls past the idle window", async () => {
+      withStreamedTransport((signal, onActivity) => {
+        onActivity?.();
+        return hangUntilAborted(signal);
+      });
+      const loop = new OperateLoop(operateConfig(adapter));
+
+      const promise = loop.execute("Hello", {
+        retry: { transient: false },
+        timeout: TIMEOUT_MS,
+      });
+      const settled = promise.catch((thrown) => thrown);
+      await vi.advanceTimersByTimeAsync(TIMEOUT_MS);
+      const error = await settled;
+
+      expect(error).toBeInstanceOf(LlmTimeoutError);
+    });
+  });
+
   describe("stream()", () => {
     it("retries a stream that stalls before its first chunk", async () => {
       adapter.executeStreamRequest = vi

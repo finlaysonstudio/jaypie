@@ -129,7 +129,7 @@ function renderErrorMessage(message: unknown, status: number): string {
  * is deliberately left alone because Mistral returns it as either a string or
  * an array of chunks depending on `reasoning_effort`.
  */
-function normalizeResponse(json: JsonObject): JsonObject {
+export function normalizeResponse(json: JsonObject): JsonObject {
   const choices = json.choices as Array<Record<string, unknown>> | undefined;
   if (Array.isArray(choices)) {
     for (const choice of choices) {

@@ -8,7 +8,10 @@ import { PROVIDER } from "../constants.js";
 // Non-streaming requests above ~16K output tokens risk HTTP timeouts
 // (Anthropic guidance is to stream anything larger), so non-streaming
 // defaults are capped here and only streaming requests resolve to the
-// full model maximum.
+// full model maximum. `operate()` streams its transport internally on
+// Anthropic, Google, Mistral, OpenAI, xAI, and Meta (issue #603), so the cap
+// now binds only `send()` and the adapters that still send non-streaming
+// requests (Bedrock, Fireworks, OpenRouter).
 const NON_STREAMING_MAX_TOKENS = PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT;
 
 // Maximum output tokens by model; first match wins.
@@ -31,8 +34,9 @@ const MODEL_MAX_OUTPUT_TOKENS: { pattern: RegExp; tokens: number }[] = [
   // response_format and tools together a Mistral model can degenerate into
   // restating its answer, and one uncapped `both` cell ran 7m57s in CI
   // (2026-08-02, on mistral-medium-3-5) against under 1.5s
-  // for every other cell. Capping the non-streaming default bounds that tail;
-  // streaming still resolves higher.
+  // for every other cell. This ceiling bounds that tail on every transport,
+  // streamed operate() included (it guards degenerate restating, not HTTP
+  // timeouts).
   { pattern: /^(ministral|mistral)/, tokens: 32_768 },
 ];
 

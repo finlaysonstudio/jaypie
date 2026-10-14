@@ -20,7 +20,10 @@ export {
   XaiAdapter,
   xaiAdapter,
 } from "./adapters/index.js";
-export type { ProviderAdapter } from "./adapters/index.js";
+export type {
+  ProviderAdapter,
+  StreamedRequestOptions,
+} from "./adapters/index.js";
 
 // Core Loop
 export { createOperateLoop, OperateLoop } from "./OperateLoop.js";

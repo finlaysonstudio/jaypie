@@ -41,8 +41,12 @@ import {
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
+import { accumulateMistralCompletion } from "../../providers/mistral/accumulateCompletion.js";
 import { MistralClient } from "../../providers/mistral/client.js";
-import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import {
+  BaseProviderAdapter,
+  type StreamedRequestOptions,
+} from "./ProviderAdapter.interface.js";
 import {
   ChatCompletionsUsage,
   chatCompletionsUsage,
@@ -729,18 +733,65 @@ export class MistralAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<MistralResponse> {
     const mistral = client as MistralClient;
-    const mistralRequest = request as MistralRequest;
-    const wantsStructuredOutput = Boolean(mistralRequest.response_format);
+    return this.sendRequest({
+      request: request as MistralRequest,
+      send: async (body) =>
+        (await mistral.chatCompletion(
+          body,
+          signal ? { signal } : undefined,
+        )) as unknown as MistralResponse,
+      signal,
+    });
+  }
 
-    try {
-      const response = (await mistral.chatCompletion(
-        this.toWireBody(mistralRequest),
-        signal ? { signal } : undefined,
-      )) as unknown as AnnotatedMistralResponse;
+  /**
+   * Same request as `executeRequest`, streamed (the client adds `stream` and
+   * `stream_options.include_usage`) and merged back into the completion a
+   * non-streaming call returns.
+   */
+  async executeStreamedRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+    { onActivity }: StreamedRequestOptions = {},
+  ): Promise<MistralResponse> {
+    const mistral = client as MistralClient;
+    return this.sendRequest({
+      request: request as MistralRequest,
+      send: async (body) =>
+        (await accumulateMistralCompletion(
+          mistral.streamChatCompletion(body, signal ? { signal } : undefined),
+          { onActivity },
+        )) as unknown as MistralResponse,
+      signal,
+    });
+  }
+
+  /**
+   * Send a request over the given transport, recovering from parameter
+   * rejections the way both transports share: a rejected `reasoning_effort`
+   * is remembered and dropped, and a rejected `response_format` falls back to
+   * the tool emulation.
+   */
+  private async sendRequest({
+    request: mistralRequest,
+    send,
+    signal,
+  }: {
+    request: MistralRequest;
+    send: (body: Record<string, unknown>) => Promise<MistralResponse>;
+    signal?: AbortSignal;
+  }): Promise<MistralResponse> {
+    const wantsStructuredOutput = Boolean(mistralRequest.response_format);
+    const annotate = (response: MistralResponse): MistralResponse => {
       if (wantsStructuredOutput) {
-        response.__jaypieStructuredOutput = true;
+        (response as AnnotatedMistralResponse).__jaypieStructuredOutput = true;
       }
       return response;
+    };
+
+    try {
+      return annotate(await send(this.toWireBody(mistralRequest)));
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as MistralResponse;
 
@@ -757,14 +808,7 @@ export class MistralAdapter extends BaseProviderAdapter {
         );
         const retryRequest = { ...mistralRequest } as MistralRequest;
         delete retryRequest.reasoning_effort;
-        const response = (await mistral.chatCompletion(
-          this.toWireBody(retryRequest),
-          signal ? { signal } : undefined,
-        )) as unknown as AnnotatedMistralResponse;
-        if (wantsStructuredOutput) {
-          response.__jaypieStructuredOutput = true;
-        }
-        return response;
+        return annotate(await send(this.toWireBody(retryRequest)));
       }
 
       // If the model rejected `response_format`, cache it and retry with the
@@ -775,12 +819,11 @@ export class MistralAdapter extends BaseProviderAdapter {
         log.warn(
           `[MistralAdapter] Model ${model} rejected native response_format; falling back to structured_output tool emulation.`,
         );
-        const fallbackRequest =
-          this.toFallbackStructuredOutputRequest(mistralRequest);
-        return (await mistral.chatCompletion(
-          this.toWireBody(fallbackRequest),
-          signal ? { signal } : undefined,
-        )) as unknown as MistralResponse;
+        return send(
+          this.toWireBody(
+            this.toFallbackStructuredOutputRequest(mistralRequest),
+          ),
+        );
       }
 
       throw error;

@@ -335,6 +335,7 @@ export class OperateLoop {
                 messages: state.currentInput,
                 model: modelName,
                 providerOptions: options.providerOptions,
+                stream: this.streamsTransport(),
                 structuredOutputRetry: state.structuredOutputRetry,
                 system: options.system,
                 temperature: options.temperature,
@@ -602,11 +603,47 @@ export class OperateLoop {
       messages: state.currentInput,
       model: options.model ?? this.adapter.defaultModel,
       providerOptions: options.providerOptions,
+      stream: this.streamsTransport(),
       system: options.system,
       temperature: options.temperature,
       tools: state.formattedTools,
       user: options.user,
     };
+  }
+
+  /**
+   * Whether requests travel over the adapter's streamed transport. Streaming
+   * is a transport choice: the events are accumulated back into the raw
+   * payload `executeRequest` returns, and the caller still receives one
+   * settled response. Adapters without it keep the non-streaming request.
+   */
+  private streamsTransport(): boolean {
+    return typeof this.adapter.executeStreamedRequest === "function";
+  }
+
+  /**
+   * Send one provider request over the adapter's preferred transport.
+   * `onActivity` fires per stream event, so an attempt deadline armed around
+   * this call becomes an idle timeout on the streamed transport.
+   */
+  private executeTransport({
+    onActivity,
+    providerRequest,
+    signal,
+  }: {
+    onActivity?: () => void;
+    providerRequest: unknown;
+    signal?: AbortSignal;
+  }): Promise<unknown> {
+    if (this.streamsTransport()) {
+      return this.adapter.executeStreamedRequest!(
+        this.client,
+        providerRequest,
+        signal,
+        { onActivity },
+      );
+    }
+    return this.adapter.executeRequest(this.client, providerRequest, signal);
   }
 
   private async executeOneTurn(
@@ -695,8 +732,8 @@ export class OperateLoop {
       },
       async () => {
         const response = await retryExecutor.execute(
-          (signal) =>
-            this.adapter.executeRequest(this.client, providerRequest, signal),
+          (signal, { onActivity }) =>
+            this.executeTransport({ onActivity, providerRequest, signal }),
           {
             context: {
               input: state.currentInput,
@@ -1218,15 +1255,15 @@ export class OperateLoop {
         },
       ] as unknown as LlmHistory,
       model: options.model ?? this.adapter.defaultModel,
+      stream: this.streamsTransport(),
     };
 
     try {
       const providerRequest = this.adapter.buildRequest(conversionRequest);
-      const response = await this.adapter.executeRequest(
-        this.client,
+      const response = await this.executeTransport({
         providerRequest,
-        options.signal,
-      );
+        signal: options.signal,
+      });
       const parsed = this.adapter.parseResponse(response, options);
       if (parsed.usage) {
         state.responseBuilder.addUsage(parsed.usage);

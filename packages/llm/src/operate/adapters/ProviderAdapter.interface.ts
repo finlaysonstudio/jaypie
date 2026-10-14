@@ -21,6 +21,16 @@ import {
 
 //
 //
+// Types
+//
+
+export interface StreamedRequestOptions {
+  /** Called on every stream event received; resets an idle timeout */
+  onActivity?: () => void;
+}
+
+//
+//
 // Provider Adapter Interface
 //
 
@@ -141,6 +151,26 @@ export interface ProviderAdapter {
     request: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<LlmStreamChunk>;
+
+  /**
+   * Execute a request over the provider's streaming transport and accumulate
+   * the events back into the same raw payload `executeRequest` returns, so
+   * response parsing is unchanged. `operate()` prefers this when present:
+   * streaming lifts the non-streaming output-token cap and lets `timeout`
+   * act as an idle timeout.
+   *
+   * @param client - The provider's client instance
+   * @param request - Provider-specific request object (from buildRequest)
+   * @param signal - Optional AbortSignal to cancel the request on retry
+   * @param options.onActivity - Called on every received stream event
+   * @returns Raw provider response, shaped as `executeRequest` returns it
+   */
+  executeStreamedRequest?(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+    options?: StreamedRequestOptions,
+  ): Promise<unknown>;
 
   //
   // Response Parsing

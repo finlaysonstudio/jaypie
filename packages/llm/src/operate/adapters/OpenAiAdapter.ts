@@ -22,6 +22,7 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "../../providers/openai/client.js";
+import { accumulateOpenAiResponse } from "../../providers/openai/accumulateResponse.js";
 import { zodResponseFormat } from "../../providers/openai/responseFormat.js";
 
 // Patterns for OpenAI reasoning models that support extended thinking
@@ -68,7 +69,10 @@ import {
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
-import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import {
+  BaseProviderAdapter,
+  type StreamedRequestOptions,
+} from "./ProviderAdapter.interface.js";
 
 //
 //
@@ -384,12 +388,54 @@ export class OpenAiAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<unknown> {
     const openai = client as OpenAIClient;
-    const openaiRequest = request as Record<string, unknown>;
+    return this.sendRequest({
+      request: request as Record<string, unknown>,
+      send: (params) =>
+        openai.responses.create(params, signal ? { signal } : undefined),
+      signal,
+    });
+  }
+
+  /**
+   * Same request as `executeRequest`, sent with `stream: true` and settled
+   * from the terminal event, which carries the full response object.
+   */
+  async executeStreamedRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+    { onActivity }: StreamedRequestOptions = {},
+  ): Promise<unknown> {
+    const openai = client as OpenAIClient;
+    return this.sendRequest({
+      request: request as Record<string, unknown>,
+      send: async (params) =>
+        accumulateOpenAiResponse(
+          await openai.responses.create(
+            { ...params, stream: true as const },
+            signal ? { signal } : undefined,
+          ),
+          { onActivity },
+        ),
+      signal,
+    });
+  }
+
+  /**
+   * Send a request over the given transport. A rejected `temperature` is
+   * remembered and the request retried without it, on either transport.
+   */
+  private async sendRequest({
+    request: openaiRequest,
+    send,
+    signal,
+  }: {
+    request: Record<string, unknown>;
+    send: (params: Record<string, unknown>) => Promise<unknown>;
+    signal?: AbortSignal;
+  }): Promise<unknown> {
     try {
-      return await openai.responses.create(
-        openaiRequest,
-        signal ? { signal } : undefined,
-      );
+      return await send(openaiRequest);
     } catch (error) {
       if (signal?.aborted) return undefined;
 
@@ -401,10 +447,7 @@ export class OpenAiAdapter extends BaseProviderAdapter {
         this.rememberModelRejectsTemperature(openaiRequest.model as string);
         const retryRequest = { ...openaiRequest };
         delete retryRequest.temperature;
-        return await openai.responses.create(
-          retryRequest,
-          signal ? { signal } : undefined,
-        );
+        return await send(retryRequest);
       }
 
       throw error;

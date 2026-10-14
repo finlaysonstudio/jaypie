@@ -952,4 +952,94 @@ describe("OpenAiAdapter", () => {
       expect(mockCreate).toHaveBeenCalledTimes(1);
     });
   });
+
+  // Streamed transport for operate() (issue #603)
+  describe("executeStreamedRequest", () => {
+    async function* events(list: Record<string, unknown>[]) {
+      for (const event of list) yield event;
+    }
+    const completed = {
+      id: "resp_1",
+      output: [
+        {
+          encrypted_content: "enc",
+          id: "rs_1",
+          summary: [],
+          type: "reasoning",
+        },
+        {
+          arguments: '{"city":"NYC"}',
+          call_id: "call_1",
+          id: "fc_1",
+          name: "get_weather",
+          type: "function_call",
+        },
+      ],
+      status: "completed",
+      usage: { input_tokens: 4, output_tokens: 6, total_tokens: 10 },
+    };
+
+    beforeEach(() => {
+      openAiAdapter.clearRuntimeNoTemperatureModels();
+    });
+
+    it("sends stream: true and returns the settled response", async () => {
+      const mockCreate = vi.fn().mockResolvedValue(
+        events([
+          { delta: "{}", type: "response.function_call_arguments.delta" },
+          { response: completed, type: "response.completed" },
+        ]),
+      );
+      const onActivity = vi.fn();
+      const controller = new AbortController();
+
+      const result = await openAiAdapter.executeStreamedRequest(
+        { responses: { create: mockCreate } },
+        { input: [], model: "gpt-5.4" },
+        controller.signal,
+        { onActivity },
+      );
+
+      const [params, options] = mockCreate.mock.calls[0];
+      expect(params.stream).toBe(true);
+      expect(options).toEqual({ signal: controller.signal });
+      expect(onActivity).toHaveBeenCalledTimes(2);
+      expect(result).toBe(completed);
+      const toolCalls = openAiAdapter.extractToolCalls(result);
+      expect(toolCalls).toHaveLength(1);
+      expect(toolCalls[0].callId).toBe("call_1");
+      // Reasoning items survive for replay on the next tool turn
+      expect(openAiAdapter.responseToHistoryItems(result)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "rs_1", type: "reasoning" }),
+        ]),
+      );
+    });
+
+    it("retries without temperature on the streamed transport", async () => {
+      const { BadRequestError } =
+        await import("../../../providers/openai/client.js");
+      // @ts-expect-error Mock doesn't require constructor args
+      const error = new BadRequestError();
+      (error as unknown as { status: number }).status = 400;
+      error.message =
+        "400 Unsupported parameter: 'temperature' is not supported with this model.";
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce(
+          events([{ response: completed, type: "response.completed" }]),
+        );
+
+      const result = await openAiAdapter.executeStreamedRequest(
+        { responses: { create: mockCreate } },
+        { input: [], model: "gpt-5.4", temperature: 0 },
+      );
+
+      expect(result).toBe(completed);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockCreate.mock.calls[1][0].temperature).toBeUndefined();
+      expect(mockCreate.mock.calls[1][0].stream).toBe(true);
+    });
+  });
 });

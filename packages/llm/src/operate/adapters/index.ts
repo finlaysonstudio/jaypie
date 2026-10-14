@@ -1,5 +1,8 @@
 export { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
-export type { ProviderAdapter } from "./ProviderAdapter.interface.js";
+export type {
+  ProviderAdapter,
+  StreamedRequestOptions,
+} from "./ProviderAdapter.interface.js";
 
 export { AnthropicAdapter, anthropicAdapter } from "./AnthropicAdapter.js";
 export { BedrockAdapter, bedrockAdapter } from "./BedrockAdapter.js";
