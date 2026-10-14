@@ -26,6 +26,16 @@ new JaypieDistribution(this, "Dist", {
   waf: { name: "api", rateLimitPerIp: 500 },
 });
 
+// Exempt known source CIDRs (a partner's backfill server) from the per-IP
+// rate rule. Everyone else is still limited at perIp per 5 minutes.
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: {
+    name: "api",
+    rateLimit: { exemptIps: ["203.0.113.10/32", "2001:db8::/48"], perIp: 2000 },
+  },
+});
+
 // Multiple distributions in one env — set a unique waf.name on each to
 // avoid WebACL/S3 bucket name collisions between stacks.
 new JaypieDistribution(this, "Api", { handler: api, waf: { name: "api" } });

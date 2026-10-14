@@ -34,8 +34,13 @@ import {
   resolveHostedZone,
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
+import {
+  JaypieWafRateLimit,
+  resolveWafRateLimit,
+  wafRateLimitRule,
+} from "./helpers/wafRateLimitRule";
 
-const DEFAULT_RATE_LIMIT = 2000;
+export type { JaypieWafRateLimit };
 
 const DEFAULT_MANAGED_RULES = [
   "AWSManagedRulesCommonRuleSet",
@@ -192,7 +197,17 @@ export interface JaypieWafConfig {
   logRetention?: Duration | number;
 
   /**
-   * Rate limit per IP per 5-minute window
+   * Per-IP rate limit. `perIp` sets requests per IP per 5-minute window
+   * (default 2000); `exemptIps` lists IPv4/IPv6 CIDRs the rate rule neither
+   * counts nor blocks. Supersedes `rateLimitPerIp`; setting both limits throws.
+   *
+   * @example
+   * rateLimit: { exemptIps: ["203.0.113.10/32", "2001:db8::/48"], perIp: 2000 }
+   */
+  rateLimit?: JaypieWafRateLimit;
+
+  /**
+   * Rate limit per IP per 5-minute window. Same as `rateLimit.perIp`.
    * @default 2000
    */
   rateLimitPerIp?: number;
@@ -817,7 +832,8 @@ export class JaypieDistribution
           managedRuleOverrides,
           managedRuleScopeDowns,
           managedRules = DEFAULT_MANAGED_RULES,
-          rateLimitPerIp = DEFAULT_RATE_LIMIT,
+          rateLimit,
+          rateLimitPerIp,
         } = wafConfig;
 
         // Fail synth on rule names AWS WAF would silently ignore (#362)
@@ -966,22 +982,13 @@ export class JaypieDistribution
         }
 
         // Add rate-based rule
-        rules.push({
-          name: "RateLimitPerIp",
-          priority,
-          action: { block: {} },
-          statement: {
-            rateBasedStatement: {
-              aggregateKeyType: "IP",
-              limit: rateLimitPerIp,
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: "RateLimitPerIp",
-            sampledRequestsEnabled: true,
-          },
-        });
+        rules.push(
+          wafRateLimitRule({
+            ...resolveWafRateLimit({ rateLimit, rateLimitPerIp }),
+            priority,
+            scope: this,
+          }),
+        );
 
         const webAclName = wafConfig.name
           ? constructEnvName(`${wafConfig.name}-WebAcl`)
