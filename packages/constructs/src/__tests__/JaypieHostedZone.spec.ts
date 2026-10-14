@@ -1,5 +1,3 @@
-/* eslint-disable vitest/expect-expect */
-
 import { CDK } from "../constants";
 import { App, Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
@@ -16,7 +14,7 @@ describe("JaypieHostedZone", () => {
     beforeEach(() => {
       app = new App();
       stack = new Stack(app, "TestStack");
-      const zone = new JaypieHostedZone(stack, "TestZone", {
+      new JaypieHostedZone(stack, "TestZone", {
         zoneName: "example.com",
       });
       template = Template.fromStack(stack);
@@ -55,7 +53,7 @@ describe("JaypieHostedZone", () => {
     beforeEach(() => {
       app = new App();
       stack = new Stack(app, "TestStack");
-      const zone = new JaypieHostedZone(stack, "TestZone", {
+      new JaypieHostedZone(stack, "TestZone", {
         zoneName: "example.com",
         service: "test-service",
         project: "test-project",
@@ -92,7 +90,7 @@ describe("JaypieHostedZone", () => {
       process.env.PROJECT_NONCE = "test123";
       app = new App();
       stack = new Stack(app, "TestStack");
-      const zone = new JaypieHostedZone(stack, "TestZone", {
+      new JaypieHostedZone(stack, "TestZone", {
         zoneName: "example.com",
       });
       template = Template.fromStack(stack);
@@ -109,7 +107,7 @@ describe("JaypieHostedZone", () => {
     it("uses default infrastructure service when not provided", () => {
       app = new App();
       stack = new Stack(app, "TestStack");
-      const zone = new JaypieHostedZone(stack, "TestZone", {
+      new JaypieHostedZone(stack, "TestZone", {
         zoneName: "example.com",
       });
       template = Template.fromStack(stack);

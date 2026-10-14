@@ -1,4 +1,3 @@
-/* eslint-disable vitest/expect-expect */
 // Template.hasResourceProperties and resourceCountIs assert; the rule cannot see it
 
 import { Duration, RemovalPolicy, Stack } from "aws-cdk-lib";

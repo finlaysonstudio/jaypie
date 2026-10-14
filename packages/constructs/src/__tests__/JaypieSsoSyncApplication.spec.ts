@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Stack } from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
-import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "../constants";
 import { JaypieSsoSyncApplication } from "../JaypieSsoSyncApplication.js";

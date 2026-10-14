@@ -1,6 +1,5 @@
 import { en, Faker } from "@faker-js/faker";
 import { v5 as uuidv5 } from "uuid";
-import { ConfigurationError } from "@jaypie/errors";
 import numericSeedArray from "./util/numericSeedArray.js";
 import { random, type RandomFunction } from "./random.js";
 import isUuid from "./util/isUuid.js";

@@ -24,6 +24,46 @@ export default [
 
   //
   //
+  // Tests: CDK assertions (Template.has*, resourceCountIs) are assertions
+  //
+  {
+    files: ["packages/constructs/**/*.spec.ts"],
+    rules: {
+      "vitest/expect-expect": [
+        "warn",
+        {
+          assertFunctionNames: [
+            "expect",
+            "expect.*",
+            "*.hasCondition",
+            "*.hasError",
+            "*.hasMapping",
+            "*.hasOutput",
+            "*.hasResource",
+            "*.hasResourceProperties",
+            "*.hasWarning",
+            "*.resourceCountIs",
+            "*.resourcePropertiesCountIs",
+            "*.templateMatches",
+          ],
+        },
+      ],
+    },
+  },
+
+  //
+  //
+  // Scripts: CLIs report on the console
+  //
+  {
+    files: ["bin/**", "workspaces/documentation/scripts/**"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
+  //
+  //
   // Sites: CommonJS
   //
   {
