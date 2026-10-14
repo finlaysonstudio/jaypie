@@ -135,6 +135,7 @@ export interface GeminiUsageMetadata {
  */
 export interface GeminiCandidate {
   content?: GeminiContent;
+  finishMessage?: string;
   finishReason?: string;
   index?: number;
   safetyRatings?: Array<{

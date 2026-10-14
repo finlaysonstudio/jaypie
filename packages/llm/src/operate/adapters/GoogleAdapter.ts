@@ -44,8 +44,15 @@ import {
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
-import { GoogleClient } from "../../providers/google/client.js";
-import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import { accumulateGoogleResponse } from "../../providers/google/accumulateResponse.js";
+import {
+  GenerateContentParams,
+  GoogleClient,
+} from "../../providers/google/client.js";
+import {
+  BaseProviderAdapter,
+  type StreamedRequestOptions,
+} from "./ProviderAdapter.interface.js";
 import {
   GeminiContent,
   GeminiErrorInfo,
@@ -435,24 +442,69 @@ export class GoogleAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<GeminiRawResponse> {
     const genAI = client as GoogleClient;
-    const geminiRequest = request as GeminiRequest;
+    return this.sendRequest({
+      request: request as GeminiRequest,
+      send: async (params) =>
+        (await genAI.models.generateContent(
+          params,
+          signal ? { signal } : undefined,
+        )) as unknown as GeminiRawResponse,
+      signal,
+    });
+  }
+
+  /**
+   * Same request as `executeRequest`, sent to `streamGenerateContent` and
+   * merged back into the response `generateContent` returns.
+   */
+  async executeStreamedRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+    { onActivity }: StreamedRequestOptions = {},
+  ): Promise<GeminiRawResponse> {
+    const genAI = client as GoogleClient;
+    return this.sendRequest({
+      request: request as GeminiRequest,
+      send: async (params) =>
+        accumulateGoogleResponse(
+          await genAI.models.generateContentStream(
+            params,
+            signal ? { signal } : undefined,
+          ),
+          { onActivity },
+        ),
+      signal,
+    });
+  }
+
+  /**
+   * Send a request over the given transport. A Gemini 3 model that rejects
+   * the native responseJsonSchema + tools combo is remembered and the
+   * request retried through the fake-tool emulation, on either transport.
+   */
+  private async sendRequest({
+    request: geminiRequest,
+    send,
+    signal,
+  }: {
+    request: GeminiRequest;
+    send: (params: GenerateContentParams) => Promise<GeminiRawResponse>;
+    signal?: AbortSignal;
+  }): Promise<GeminiRawResponse> {
     const wantsNativeCombo =
       !!geminiRequest.config?.responseJsonSchema &&
       !!geminiRequest.config?.tools;
+    // Cast config to any to bypass strict type checking between our internal
+    // types and the client's types. The API validates at runtime.
+    const toParams = (params: GeminiRequest): GenerateContentParams => ({
+      model: params.model,
+      contents: params.contents as any,
+      config: params.config as any,
+    });
 
     try {
-      // Cast config to any to bypass strict type checking between our internal types
-      // and the SDK's types. The SDK will validate at runtime.
-      const response = await genAI.models.generateContent(
-        {
-          model: geminiRequest.model,
-          contents: geminiRequest.contents as any,
-          config: geminiRequest.config as any,
-        },
-        signal ? { signal } : undefined,
-      );
-
-      return response as unknown as GeminiRawResponse;
+      return await send(toParams(geminiRequest));
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as GeminiRawResponse;
 
@@ -464,17 +516,9 @@ export class GoogleAdapter extends BaseProviderAdapter {
         log.warn(
           `[GoogleAdapter] Model ${model} rejected native responseJsonSchema + tools combo; falling back to legacy structured_output tool emulation.`,
         );
-        const fallbackRequest =
-          this.toFallbackStructuredOutputRequest(geminiRequest);
-        const response = await genAI.models.generateContent(
-          {
-            model: fallbackRequest.model,
-            contents: fallbackRequest.contents as any,
-            config: fallbackRequest.config as any,
-          },
-          signal ? { signal } : undefined,
+        return send(
+          toParams(this.toFallbackStructuredOutputRequest(geminiRequest)),
         );
-        return response as unknown as GeminiRawResponse;
       }
 
       throw error;

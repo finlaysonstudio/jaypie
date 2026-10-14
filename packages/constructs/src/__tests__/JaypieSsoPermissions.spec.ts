@@ -134,7 +134,7 @@ describe("JaypieSsoPermissions", () => {
       // Verify Agent permission set
       template.hasResourceProperties("AWS::SSO::PermissionSet", {
         Description:
-          "Read access with data-plane and operational writes; no identity change",
+          "Read access with data-plane writes; no identity change or code execution",
         InstanceArn: "arn:aws:sso:::instance/ssoins-1234567890abcdef",
         Name: "Agent",
         SessionDuration: "PT8H",
@@ -378,13 +378,41 @@ describe("JaypieSsoPermissions", () => {
       const allowed = actionsFor("AgentWrite");
       expect(allowed).toContain("dynamodb:PutItem");
       expect(allowed).toContain("dynamodb:DeleteItem");
-      expect(allowed).toContain("lambda:Invoke*");
-      expect(allowed).toContain("lambda:UpdateFunctionConfiguration");
       expect(allowed).toContain("s3:DeleteObject");
-      expect(allowed).toContain("s3:PutObject");
-      expect(allowed).toContain("secretsmanager:GetSecretValue");
       expect(allowed).toContain("sqs:ReceiveMessage");
       expect(allowed).toContain("sqs:SendMessage*");
+    });
+
+    // Issue #570: a session-policy deny does not follow code into a service
+    // execution role, so Agent grants nothing that runs code under one
+    it.each([
+      "ecr:PutImage",
+      "ecs:RegisterTaskDefinition",
+      "ecs:RunTask",
+      "ecs:StartTask",
+      "ecs:UpdateService",
+      "iam:PassRole",
+      "lambda:CreateEventSourceMapping",
+      "lambda:Invoke*",
+      "lambda:PublishVersion",
+      "lambda:UpdateAlias",
+      "lambda:UpdateEventSourceMapping",
+      "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
+      "pipes:StartPipe",
+      "states:StartExecution",
+      "states:StartSyncExecution",
+    ])("does not grant execution-role escape %s", (action) => {
+      expect(actionsFor("AgentWrite")).not.toContain(action);
+    });
+
+    // Issue #570: account-wide reach above Agent's boundary
+    it.each([
+      "s3:PutObject",
+      "secretsmanager:GetSecretValue",
+      "ssm:PutParameter",
+    ])("does not grant account-wide %s", (action) => {
+      expect(actionsFor("AgentWrite")).not.toContain(action);
     });
 
     it("carries no blanket destructive-action deny", () => {
@@ -405,15 +433,11 @@ describe("JaypieSsoPermissions", () => {
       expect(denied).toContain("sts:AssumeRole");
     });
 
-    it("passes roles except the privileged ones", () => {
+    it("denies passing privileged roles even when a linked policy grants PassRole", () => {
       const { statements } = agentStatements();
-      const allowed = statements.find(
-        (statement) => statement.Sid === "AgentWrite",
-      )!;
       const denied = statements.find(
         (statement) => statement.Sid === "AgentDenyPrivilegedPassRole",
       ) as unknown as { Action: string[]; Resource: string[] };
-      expect(allowed.Action).toContain("iam:PassRole");
       expect(denied.Action).toEqual(["iam:PassRole"]);
       expect(denied.Resource).toContain(
         "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*",

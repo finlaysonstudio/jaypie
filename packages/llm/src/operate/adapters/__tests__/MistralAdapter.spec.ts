@@ -913,4 +913,98 @@ describe("MistralAdapter", () => {
       });
     });
   });
+
+  // Streamed transport for operate() (issue #603)
+  describe("executeStreamedRequest", () => {
+    async function* chunks(list: unknown[]) {
+      for (const chunk of list) yield chunk;
+    }
+    const textChunks = (text: string) =>
+      chunks([
+        { choices: [{ delta: { content: text }, index: 0 }], model: "m" },
+        { choices: [{ delta: {}, finish_reason: "stop", index: 0 }] },
+        {
+          choices: [],
+          usage: { completion_tokens: 2, prompt_tokens: 3, total_tokens: 5 },
+        },
+      ]);
+
+    it("streams with the Mistral cap and returns the merged completion", async () => {
+      const streamChatCompletion = vi.fn().mockReturnValue(textChunks("ok"));
+      const onActivity = vi.fn();
+      const request = adapter.buildRequest(
+        baseRequest({ model: MODEL.MISTRAL.SMALL, stream: true }),
+      );
+
+      const response = await adapter.executeStreamedRequest(
+        { streamChatCompletion },
+        request,
+        undefined,
+        { onActivity },
+      );
+
+      expect(streamChatCompletion.mock.calls[0][0].max_tokens).toBe(32768);
+      expect(onActivity).toHaveBeenCalledTimes(3);
+      const parsed = adapter.parseResponse(response);
+      expect(parsed.content).toBe("ok");
+      expect(parsed.usage?.input).toBe(3);
+      expect(parsed.usage?.output).toBe(2);
+    });
+
+    it("annotates structured output so parseResponse parses it", async () => {
+      const streamChatCompletion = vi
+        .fn()
+        .mockReturnValue(textChunks('{"name":"Jane"}'));
+      const request = adapter.buildRequest(
+        baseRequest({
+          format: { properties: { name: { type: "string" } }, type: "object" },
+          model: MODEL.MISTRAL.SMALL,
+          stream: true,
+        }),
+      );
+
+      const response = await adapter.executeStreamedRequest(
+        { streamChatCompletion },
+        request,
+      );
+
+      expect(
+        (response as unknown as Record<string, unknown>)
+          .__jaypieStructuredOutput,
+      ).toBe(true);
+      expect(adapter.parseResponse(response).content).toEqual({
+        name: "Jane",
+      });
+    });
+
+    it("retries without reasoning_effort on the streamed transport", async () => {
+      // Like the client, the HTTP rejection surfaces on first iteration
+      async function* rejecting(): AsyncIterable<unknown> {
+        yield* [];
+        throw Object.assign(
+          new Error("reasoning_effort is not enabled for this model"),
+          { code: "3051", status: 400 },
+        );
+      }
+      const streamChatCompletion = vi
+        .fn()
+        .mockReturnValueOnce(rejecting())
+        .mockReturnValueOnce(textChunks("ok"));
+      const request = adapter.buildRequest(
+        baseRequest({ effort: EFFORT.HIGH, model: MODEL.MISTRAL.SMALL }),
+      );
+
+      const response = await adapter.executeStreamedRequest(
+        { streamChatCompletion },
+        request,
+      );
+
+      expect(streamChatCompletion).toHaveBeenCalledTimes(2);
+      expect(
+        streamChatCompletion.mock.calls[1][0].reasoning_effort,
+      ).toBeUndefined();
+      expect(adapter.parseResponse(response).content).toBe("ok");
+      adapter.clearRuntimeNoReasoningEffortModels();
+    });
+  });
 });

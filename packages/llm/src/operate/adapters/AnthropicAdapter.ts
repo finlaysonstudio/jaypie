@@ -44,9 +44,16 @@ import {
 } from "../types.js";
 import { isTransientNetworkError } from "../retry/isTransientNetworkError.js";
 import { classifyProviderError } from "../../util/classifyProviderError.js";
+import {
+  accumulateAnthropicMessage,
+  mergeDefinedFields,
+} from "../../providers/anthropic/accumulateMessage.js";
 import { AnthropicClient } from "../../providers/anthropic/client.js";
 import { Anthropic } from "../../providers/anthropic/types.js";
-import { BaseProviderAdapter } from "./ProviderAdapter.interface.js";
+import {
+  BaseProviderAdapter,
+  type StreamedRequestOptions,
+} from "./ProviderAdapter.interface.js";
 
 //
 //
@@ -118,20 +125,6 @@ type AnthropicUsage = {
   output_tokens: number;
   thinking_tokens?: number | null;
 };
-
-/** Overlay the fields a later usage report sets, keeping earlier ones. */
-function mergeDefinedUsage(
-  base: AnthropicUsage,
-  next: AnthropicUsage,
-): AnthropicUsage {
-  const merged = { ...base };
-  for (const [key, value] of Object.entries(next)) {
-    if (value !== null && value !== undefined) {
-      (merged as Record<string, unknown>)[key] = value;
-    }
-  }
-  return merged;
-}
 
 const STRUCTURED_OUTPUT_NON_PARSE_STOP_REASONS = new Set([
   "refusal",
@@ -673,7 +666,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
       max_tokens:
         resolveMaxOutputTokens(model as string, { stream: request.stream }) ??
         PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT,
-      stream: false,
+      stream: request.stream === true,
     };
 
     const cache = resolveCache(request.cache);
@@ -849,7 +842,62 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     signal?: AbortSignal,
   ): Promise<Anthropic.Message> {
     const anthropic = client as AnthropicClient;
-    const anthropicRequest = request as AnthropicRequestParams;
+    return this.sendRequest({
+      request: request as AnthropicRequestParams,
+      send: (params) =>
+        anthropic.messages.create(
+          (params.stream
+            ? { ...params, stream: false }
+            : params) as Anthropic.MessageCreateParams,
+          signal ? { signal } : undefined,
+        ) as Promise<Anthropic.Message>,
+      signal,
+    });
+  }
+
+  /**
+   * Same request as `executeRequest`, sent with `stream: true` and
+   * accumulated back into the `Message` a non-streaming call returns.
+   */
+  async executeStreamedRequest(
+    client: unknown,
+    request: unknown,
+    signal?: AbortSignal,
+    { onActivity }: StreamedRequestOptions = {},
+  ): Promise<Anthropic.Message> {
+    const anthropic = client as AnthropicClient;
+    return this.sendRequest({
+      request: request as AnthropicRequestParams,
+      send: async (params) =>
+        accumulateAnthropicMessage(
+          await anthropic.messages.create(
+            {
+              ...params,
+              stream: true,
+            } as Anthropic.MessageCreateParamsStreaming,
+            signal ? { signal } : undefined,
+          ),
+          { onActivity },
+        ),
+      signal,
+    });
+  }
+
+  /**
+   * Send a request over the given transport, recovering from parameter
+   * rejections the way both transports share: a rejected `temperature` is
+   * remembered and dropped, and a rejected native structured output falls
+   * back to the tool emulation.
+   */
+  private async sendRequest({
+    request: anthropicRequest,
+    send,
+    signal,
+  }: {
+    request: AnthropicRequestParams;
+    send: (params: AnthropicRequestParams) => Promise<Anthropic.Message>;
+    signal?: AbortSignal;
+  }): Promise<Anthropic.Message> {
     // Only a `format` marks the native structured-output path. `output_config`
     // also carries `effort`, and the legacy fake-tool fallback keeps that
     // effort setting, so testing the whole object would mis-annotate a
@@ -857,15 +905,14 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     const wantsStructuredOutput = Boolean(
       anthropicRequest.output_config?.format,
     );
-    try {
-      const response = (await anthropic.messages.create(
-        anthropicRequest as Anthropic.MessageCreateParams,
-        signal ? { signal } : undefined,
-      )) as AnnotatedAnthropicMessage;
+    const annotate = (response: Anthropic.Message): Anthropic.Message => {
       if (wantsStructuredOutput) {
-        response.__jaypieStructuredOutput = true;
+        (response as AnnotatedAnthropicMessage).__jaypieStructuredOutput = true;
       }
       return response;
+    };
+    try {
+      return annotate(await send(anthropicRequest));
     } catch (error) {
       if (signal?.aborted) return undefined as unknown as Anthropic.Message;
 
@@ -877,14 +924,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         this.rememberModelRejectsTemperature(anthropicRequest.model as string);
         const retryRequest = { ...anthropicRequest };
         delete retryRequest.temperature;
-        const response = (await anthropic.messages.create(
-          retryRequest as Anthropic.MessageCreateParams,
-          signal ? { signal } : undefined,
-        )) as AnnotatedAnthropicMessage;
-        if (wantsStructuredOutput) {
-          response.__jaypieStructuredOutput = true;
-        }
-        return response;
+        return annotate(await send(retryRequest));
       }
 
       // If the schema is over the union-parameter limit, retry this request
@@ -894,12 +934,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         log.debug(
           `[AnthropicAdapter] Model ${anthropicRequest.model as string} rejected the schema for too many union-typed parameters; falling back to legacy structured_output tool emulation for this request.`,
         );
-        return (await anthropic.messages.create(
-          this.toFallbackStructuredOutputRequest(
-            anthropicRequest,
-          ) as Anthropic.MessageCreateParams,
-          signal ? { signal } : undefined,
-        )) as Anthropic.Message;
+        return send(this.toFallbackStructuredOutputRequest(anthropicRequest));
       }
 
       // If the model rejected native structured output, cache it and retry
@@ -910,12 +945,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         log.warn(
           `[AnthropicAdapter] Model ${model} rejected native output_config; falling back to legacy structured_output tool emulation.`,
         );
-        const fallbackRequest =
-          this.toFallbackStructuredOutputRequest(anthropicRequest);
-        return (await anthropic.messages.create(
-          fallbackRequest as Anthropic.MessageCreateParams,
-          signal ? { signal } : undefined,
-        )) as Anthropic.Message;
+        return send(this.toFallbackStructuredOutputRequest(anthropicRequest));
       }
 
       throw error;
@@ -1062,7 +1092,7 @@ export class AnthropicAdapter extends BaseProviderAdapter {
         }
         // Extract final usage
         if (event.usage) {
-          usage = mergeDefinedUsage(usage, event.usage as AnthropicUsage);
+          usage = mergeDefinedFields(usage, event.usage as AnthropicUsage);
         }
       } else if (event.type === "message_stop") {
         // Emit done chunk with usage

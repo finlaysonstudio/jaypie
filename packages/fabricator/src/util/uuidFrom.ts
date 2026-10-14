@@ -29,6 +29,8 @@ export function uuidFrom(input: string | number): string {
 
   // Check if input is already a UUID
   if (isUuid(str)) {
+    // No logger dependency in fabricator; the warning is intentional
+    // eslint-disable-next-line no-console
     console.warn(
       `[uuidFrom] Input is already a UUID: ${str}. Returning input unchanged.`,
     );

@@ -59,7 +59,7 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
     it("JaypieLambda shares secrets at stack level, not construct level", () => {
       // After the fix, JaypieLambda uses Stack.of(this) for resolveSecrets
       // This means secrets are shared across all constructs in the same stack
-      const queuedLambda = new JaypieQueuedLambda(stack, "QueuedLambda", {
+      new JaypieQueuedLambda(stack, "QueuedLambda", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY"],
@@ -89,7 +89,7 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
 
       // Create JaypieQueuedLambda with the same secret
       // It will use Stack.of(this) internally, which is the same stack
-      const queuedLambda = new JaypieQueuedLambda(stack, "QueuedLambda", {
+      new JaypieQueuedLambda(stack, "QueuedLambda", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY"],
@@ -105,12 +105,12 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
   describe("resolveSecrets caching behavior", () => {
     it("caches secrets per scope - different scopes create different secrets", () => {
       // Create two child constructs to act as different scopes
-      const scope1 = new lambda.Function(stack, "Scope1", {
+      new lambda.Function(stack, "Scope1", {
         runtime: lambda.Runtime.NODEJS_20_X,
         handler: "index.handler",
         code: lambda.Code.fromInline("exports.handler = () => {}"),
       });
-      const scope2 = new lambda.Function(stack, "Scope2", {
+      new lambda.Function(stack, "Scope2", {
         runtime: lambda.Runtime.NODEJS_20_X,
         handler: "index.handler",
         code: lambda.Code.fromInline("exports.handler = () => {}"),
@@ -147,7 +147,7 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
 
   describe("JaypieLambda creates secrets in its own scope", () => {
     it("creates secrets under JaypieLambda scope, not parent scope", () => {
-      const jaypieLambda = new JaypieLambda(stack, "TestLambda", {
+      new JaypieLambda(stack, "TestLambda", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY"],
@@ -187,14 +187,14 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
       });
 
       // First construct uses both secrets
-      const lambda1 = new JaypieLambda(stack, "Lambda1", {
+      new JaypieLambda(stack, "Lambda1", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: [anthropicSecret],
       });
 
       // Second construct also uses both secrets
-      const lambda2 = new JaypieLambda(stack, "Lambda2", {
+      new JaypieLambda(stack, "Lambda2", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: [anthropicSecret, auth0Secret],
@@ -225,14 +225,14 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
       // and resolveSecrets is called with different scopes
 
       // First Lambda - uses ANTHROPIC_API_KEY
-      const lambda1 = new JaypieLambda(stack, "Lambda1", {
+      new JaypieLambda(stack, "Lambda1", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY"],
       });
 
       // Second Lambda - also uses ANTHROPIC_API_KEY plus AUTH0_SECRET
-      const lambda2 = new JaypieLambda(stack, "Lambda2", {
+      new JaypieLambda(stack, "Lambda2", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY", "AUTH0_SECRET"],
@@ -257,14 +257,14 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
 
     it("JaypieQueuedLambda and JaypieLambda with overlapping secrets at same stack scope", () => {
       // Create JaypieQueuedLambda first (this will create JaypieLambda internally)
-      const queuedLambda = new JaypieQueuedLambda(stack, "QueuedLambda", {
+      new JaypieQueuedLambda(stack, "QueuedLambda", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY"],
       });
 
       // Create JaypieLambda at the same stack level with overlapping secrets
-      const lambda2 = new JaypieLambda(stack, "Lambda2", {
+      new JaypieLambda(stack, "Lambda2", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: ["ANTHROPIC_API_KEY", "AUTH0_SECRET"],
@@ -299,13 +299,13 @@ describe("Issue #158: Shared Secrets Between Constructs", () => {
       });
 
       // Pass the same secret instances to both constructs
-      const queuedLambda = new JaypieQueuedLambda(stack, "QueuedLambda", {
+      new JaypieQueuedLambda(stack, "QueuedLambda", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: [anthropicSecret],
       });
 
-      const lambda2 = new JaypieLambda(stack, "Lambda2", {
+      new JaypieLambda(stack, "Lambda2", {
         code: lambda.Code.fromInline("exports.handler = () => {}"),
         handler: "index.handler",
         secrets: [anthropicSecret, auth0Secret],

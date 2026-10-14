@@ -26,6 +26,7 @@ export {
   JaypieDistribution,
   JaypieDistributionProps,
   JaypieWafConfig,
+  JaypieWafRateLimit,
   resolveWafRedactedFields,
   SecurityHeadersOverrides,
 } from "./JaypieDistribution";

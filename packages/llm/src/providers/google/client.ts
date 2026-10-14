@@ -105,7 +105,7 @@ function toRestBody(params: GenerateContentParams): JsonObject {
  * Concatenate the non-thought text parts of the first candidate, matching the
  * SDK's `response.text` convenience getter (consumed by `GoogleProvider.send`).
  */
-function responseText(response: GeminiRawResponse): string | undefined {
+export function responseText(response: GeminiRawResponse): string | undefined {
   const parts = response.candidates?.[0]?.content?.parts;
   if (!parts) return undefined;
   const text = parts

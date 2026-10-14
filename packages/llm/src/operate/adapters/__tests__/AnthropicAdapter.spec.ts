@@ -277,6 +277,7 @@ describe("AnthropicAdapter", () => {
           const result = anthropicAdapter.buildRequest(request);
 
           expect(result.max_tokens).toBe(16384);
+          expect(result.stream).toBe(false);
         });
 
         it("defaults streaming requests to the model maximum output", () => {
@@ -289,6 +290,7 @@ describe("AnthropicAdapter", () => {
           const result = anthropicAdapter.buildRequest(request);
 
           expect(result.max_tokens).toBe(128000);
+          expect(result.stream).toBe(true);
         });
 
         it("resolves streaming Claude Haiku to its lower maximum", () => {
@@ -2006,6 +2008,164 @@ describe("AnthropicAdapter", () => {
 
       const params = result as unknown as { output_config?: unknown };
       expect(params.output_config).toBeUndefined();
+    });
+  });
+
+  // Streamed transport for operate() (issue #603)
+  describe("executeStreamedRequest", () => {
+    async function* events(list: unknown[]) {
+      for (const event of list) yield event;
+    }
+    const streamEvents = () =>
+      events([
+        {
+          message: {
+            content: [],
+            id: "msg_1",
+            model: "claude-sonnet-4-6",
+            role: "assistant",
+            stop_reason: null,
+            type: "message",
+            usage: { input_tokens: 3, output_tokens: 1 },
+          },
+          type: "message_start",
+        },
+        {
+          content_block: { text: "", type: "text" },
+          index: 0,
+          type: "content_block_start",
+        },
+        {
+          delta: { text: "Hi", type: "text_delta" },
+          index: 0,
+          type: "content_block_delta",
+        },
+        { index: 0, type: "content_block_stop" },
+        {
+          delta: { stop_reason: "end_turn" },
+          type: "message_delta",
+          usage: { output_tokens: 2 },
+        },
+        { type: "message_stop" },
+      ]);
+
+    beforeEach(() => {
+      anthropicAdapter.clearRuntimeNoTemperatureModels();
+    });
+
+    it("sends stream: true and returns the accumulated message", async () => {
+      const mockCreate = vi.fn().mockResolvedValue(streamEvents());
+      const onActivity = vi.fn();
+      const controller = new AbortController();
+      const request = anthropicAdapter.buildRequest({
+        messages: [],
+        model: "claude-opus-4-8",
+        stream: true,
+      });
+
+      const result = await anthropicAdapter.executeStreamedRequest(
+        { messages: { create: mockCreate } },
+        request,
+        controller.signal,
+        { onActivity },
+      );
+
+      const [params, options] = mockCreate.mock.calls[0];
+      expect(params.stream).toBe(true);
+      expect(params.max_tokens).toBe(128000);
+      expect(options).toEqual({ signal: controller.signal });
+      expect(onActivity).toHaveBeenCalledTimes(6);
+      expect(result.content).toEqual([{ text: "Hi", type: "text" }]);
+      expect(result.usage).toEqual({ input_tokens: 3, output_tokens: 2 });
+      const parsed = anthropicAdapter.parseResponse(result);
+      expect(parsed.content).toBe("Hi");
+      expect(parsed.stopReason).toBe("end_turn");
+    });
+
+    it("sends a streamed-built request as non-streaming from executeRequest", async () => {
+      const mockCreate = vi.fn().mockResolvedValue({
+        content: [{ text: "Hi", type: "text" }],
+        stop_reason: "end_turn",
+        usage: { input_tokens: 1, output_tokens: 1 },
+      });
+      const request = anthropicAdapter.buildRequest({
+        messages: [],
+        model: "claude-opus-4-8",
+        stream: true,
+      });
+
+      await anthropicAdapter.executeRequest(
+        { messages: { create: mockCreate } },
+        request,
+      );
+
+      expect(mockCreate.mock.calls[0][0].stream).toBe(false);
+    });
+
+    it("retries without temperature on the streamed transport", async () => {
+      const { BadRequestError } =
+        await import("../../../providers/anthropic/client.js");
+      const error = new BadRequestError(
+        400,
+        "`temperature` is deprecated for this model.",
+      );
+      const mockCreate = vi
+        .fn()
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce(streamEvents());
+
+      const result = await anthropicAdapter.executeStreamedRequest(
+        { messages: { create: mockCreate } },
+        {
+          max_tokens: 1024,
+          messages: [],
+          model: "claude-opus-4-7",
+          stream: true,
+          temperature: 0,
+        },
+      );
+
+      expect(result.content).toEqual([{ text: "Hi", type: "text" }]);
+      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockCreate.mock.calls[1][0].temperature).toBeUndefined();
+      expect(mockCreate.mock.calls[1][0].stream).toBe(true);
+    });
+
+    it("annotates native structured output", async () => {
+      const mockCreate = vi.fn().mockResolvedValue(streamEvents());
+
+      const result = await anthropicAdapter.executeStreamedRequest(
+        { messages: { create: mockCreate } },
+        {
+          max_tokens: 1024,
+          messages: [],
+          model: "claude-opus-4-8",
+          output_config: { format: { schema: {}, type: "json_schema" } },
+        },
+      );
+
+      expect(
+        (result as unknown as { __jaypieStructuredOutput?: boolean })
+          .__jaypieStructuredOutput,
+      ).toBe(true);
+    });
+
+    it("returns undefined when the signal aborted mid-stream", async () => {
+      const controller = new AbortController();
+      async function* aborting() {
+        controller.abort("retry");
+        yield {};
+        throw new TypeError("terminated");
+      }
+      const mockCreate = vi.fn().mockResolvedValue(aborting());
+
+      const result = await anthropicAdapter.executeStreamedRequest(
+        { messages: { create: mockCreate } },
+        { max_tokens: 1024, messages: [], model: "claude-opus-4-8" },
+        controller.signal,
+      );
+
+      expect(result).toBeUndefined();
     });
   });
 });

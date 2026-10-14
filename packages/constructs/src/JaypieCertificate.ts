@@ -1,4 +1,4 @@
-import { CfnOutput, Fn, RemovalPolicy, Stack, Tags } from "aws-cdk-lib";
+import { CfnOutput, Fn, RemovalPolicy, Stack } from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";

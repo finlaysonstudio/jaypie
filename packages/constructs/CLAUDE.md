@@ -330,6 +330,12 @@ new JaypieDistribution(this, "Dist", {
   waf: { name: "api", rateLimitPerIp: 500 },
 });
 
+// Exempt known CIDRs (IPv4 and IPv6) from the per-IP rate rule
+new JaypieDistribution(this, "Dist", {
+  handler,
+  waf: { name: "api", rateLimit: { exemptIps: ["203.0.113.10/32"], perIp: 2000 } },
+});
+
 // Existing WebACL
 new JaypieDistribution(this, "Dist", {
   handler,
@@ -473,10 +479,10 @@ web.distributionDomainName; // d111111abcdef8.cloudfront.net
 |-----|---------|-------|
 | `Administrator` | 1h | `AdministratorAccess` |
 | `Developer` | 4h | `job-function/SystemAdministrator` plus `service:*` across the Jaypie services |
-| `Agent` | 8h | `ReadOnlyAccess` plus data-plane and operational writes, with identity change denied |
+| `Agent` | 8h | `ReadOnlyAccess` plus data-plane writes, with identity change and code execution withheld |
 | `Analyst` | 12h | `ReadOnlyAccess` |
 
-`Agent` exists for automated operators. It reads everything Analyst reads, writes items, objects, and messages, invokes and configures Lambdas, runs ECS tasks and Step Functions executions, and reads secret values. It cannot change identity or assume another role. Stack and resource deletion is not granted, and it is not denied either, so a customer managed policy linked to the set can add scoped grants.
+`Agent` exists for automated operators. It reads everything Analyst reads and writes items and messages. It cannot change identity, assume another role, or run code under a service execution role. Grants it lacks are not denied either (except privileged role passing), so a customer managed policy linked to the set can add scoped grants.
 
 ```typescript
 new JaypieSsoPermissions(this, "PermissionSets", {
@@ -488,10 +494,12 @@ new JaypieSsoPermissions(this, "PermissionSets", {
 Encoded specifics:
 
 - The inline policy holds three statements: `AgentWrite`, `AgentDenyIdentity`, and `AgentDenyPrivilegedPassRole`. The denies cover identity change and privileged role passing only.
+- A session-policy deny does not follow code into a service execution role (#570). `AgentWrite` therefore grants nothing that runs code under one: no `iam:PassRole`, Lambda invoke, code, configuration, version, alias, or event-source-mapping writes, ECS task definition, run, start, or service updates, `ecr:PutImage` (or layer uploads), `states:StartExecution`/`StartSyncExecution`, or `pipes:StartPipe`. To restore a specific workload, link a customer managed policy granting those actions on that workload's ARNs only. `AgentDenyPrivilegedPassRole` still blocks passing the SSO, organization, and CDK execution roles if such a policy grants `iam:PassRole`.
+- Account-wide `secretsmanager:GetSecretValue`, `ssm:PutParameter`, and `s3:PutObject` are not granted: they read credentials for principals above Agent, rewrite configuration workloads and CDK bootstrap read, and replace staged CDK assets. Grant them per resource through a linked policy.
 - Item-level deletes are granted (`s3:DeleteObject`, `dynamodb:DeleteItem`, `sqs:DeleteMessage`). Resource deletion, mass-expiry (`s3:PutLifecycleConfiguration`, `dynamodb:UpdateTimeToLive`, `sqs:PurgeQueue`), resource-policy writes, and CloudFormation writes are not granted by the set. No statement denies them, so a linked customer managed policy that grants one takes effect; scope such grants narrowly.
 - `sts:AssumeRole` is denied, which also blocks assuming the CDK bootstrap roles from an Agent session.
-- `lambda:UpdateFunctionConfiguration` plus `iam:PassRole` is the residual escalation path: repoint a function at a stronger role, then invoke it. `AgentDenyPrivilegedPassRole` blocks the SSO, organization, and CDK execution roles. Any other role Lambda may assume is still reachable, so scope `iam:PassRole` further if that matters.
-- `secretsmanager:GetSecretValue` is the one grant above Analyst's read surface. `ReadOnlyAccess` does not include it.
+- Residual triggers remain by design: `sqs:SendMessage*`, `sns:Publish`, `bedrock:Invoke*`, `bedrock-agentcore:Invoke*`, and `states:SendTask*` deliver input to code that already runs under its own role. A consumer of that input must treat it as untrusted.
+- Agent confines a session only when no broader permission set is reachable from it. A process holding the SSO token cache can call `GetRoleCredentials` for any role assigned to the user. Use a dedicated `agentGroupId` whose members hold Agent alone, or deliver Agent role credentials without the SSO cache.
 
 ### GitHub Actions Deploy Roles
 

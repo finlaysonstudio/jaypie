@@ -439,7 +439,7 @@ new JaypieDistribution(this, "Dist", {
 KnownBadInputsRuleSet, IP rate limiting, and WAF logging to S3 with Datadog
 forwarding.
 
-See **`skill("waf")`** for configuration: `rateLimitPerIp`, `webAclArn`,
+See **`skill("waf")`** for configuration: `rateLimit` (`perIp`, `exemptIps`), `rateLimitPerIp`, `webAclArn`,
 `logBucket`, `logRetention`, `managedRuleOverrides`, `managedRuleScopeDowns`,
 `redactedFields`, `redactedHeaders`, the `allow` path-scoped relaxation prop,
 and the rule-name ↔ label casing trap.

@@ -55,7 +55,7 @@ export class APIConnectionError extends AnthropicApiError {
   override name = "APIConnectionError";
 }
 
-function errorForStatus(
+export function errorForStatus(
   status: number,
   message: string,
   error?: { message?: string },

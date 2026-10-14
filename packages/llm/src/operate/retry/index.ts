@@ -17,6 +17,7 @@ export { isTransientNetworkError } from "./isTransientNetworkError.js";
 
 export { RetryExecutor } from "./RetryExecutor.js";
 export type {
+  AttemptControls,
   ErrorClassifier,
   ExecuteOptions,
   RetryContext,

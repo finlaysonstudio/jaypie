@@ -42,13 +42,15 @@ import {
 } from "./helpers";
 import { resolveDatadogForwarderFunction } from "./helpers/resolveDatadogForwarderFunction";
 import {
+  resolveWafRateLimit,
+  wafRateLimitRule,
+} from "./helpers/wafRateLimitRule";
+import {
   JaypieWafConfig,
   resolveWafRedactedFields,
   SecurityHeadersOverrides,
 } from "./JaypieDistribution";
 import { JaypieHostedZone } from "./JaypieHostedZone";
-
-const DEFAULT_RATE_LIMIT = 2000;
 
 const DEFAULT_MANAGED_RULES = [
   "AWSManagedRulesCommonRuleSet",
@@ -769,7 +771,8 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           managedRuleOverrides,
           managedRuleScopeDowns,
           managedRules = DEFAULT_MANAGED_RULES,
-          rateLimitPerIp = DEFAULT_RATE_LIMIT,
+          rateLimit,
+          rateLimitPerIp,
         } = wafConfig;
 
         // Fail synth on rule names AWS WAF would silently ignore (#362)
@@ -801,22 +804,13 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
           });
         }
 
-        rules.push({
-          name: "RateLimitPerIp",
-          priority,
-          action: { block: {} },
-          statement: {
-            rateBasedStatement: {
-              aggregateKeyType: "IP",
-              limit: rateLimitPerIp,
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: "RateLimitPerIp",
-            sampledRequestsEnabled: true,
-          },
-        });
+        rules.push(
+          wafRateLimitRule({
+            ...resolveWafRateLimit({ rateLimit, rateLimitPerIp }),
+            priority,
+            scope: this,
+          }),
+        );
 
         const webAclName = constructEnvName(`${wafConfig.name}-WebAcl`);
         const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {

@@ -65,7 +65,7 @@ export class APIUserAbortError extends OpenAiApiError {
   override name = "APIUserAbortError";
 }
 
-function errorForStatus(
+export function errorForStatus(
   status: number,
   message: string,
   error?: { message?: string },

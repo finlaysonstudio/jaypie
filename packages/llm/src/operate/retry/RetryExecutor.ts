@@ -42,6 +42,18 @@ export interface RetryExecutorConfig {
   policy?: RetryPolicy;
 }
 
+/**
+ * Per-attempt helpers handed to the operation alongside its signal.
+ */
+export interface AttemptControls {
+  /**
+   * Restart the attempt's deadline. A streamed transport calls it on every
+   * event it receives, which makes `timeout` an idle timeout; an operation
+   * that never calls it keeps a total deadline.
+   */
+  onActivity: () => void;
+}
+
 export interface ExecuteOptions {
   context: RetryContext;
   hooks?: LlmHooks;
@@ -49,7 +61,9 @@ export interface ExecuteOptions {
   signal?: AbortSignal;
   /**
    * Per-attempt deadline in milliseconds. A stalled attempt is aborted and
-   * throws {@link LlmTimeoutError}, retried on the transient budget.
+   * throws {@link LlmTimeoutError}, retried on the transient budget. An
+   * operation that reports activity (see {@link AttemptControls}) restarts
+   * the deadline each time, turning it into an idle timeout.
    */
   timeout?: number;
 }
@@ -114,7 +128,10 @@ export class RetryExecutor {
    * @throws BadGatewayError if all retries are exhausted or error is not retryable
    */
   async execute<T>(
-    operation: ((signal: AbortSignal) => Promise<T>) | (() => Promise<T>),
+    operation:
+      | ((signal: AbortSignal, controls: AttemptControls) => Promise<T>)
+      | ((signal: AbortSignal) => Promise<T>)
+      | (() => Promise<T>),
     options: ExecuteOptions,
   ): Promise<T> {
     const log = getLogger();
@@ -147,6 +164,7 @@ export class RetryExecutor {
           const result = await Promise.race([
             operation(
               combineAbortSignals({ controller, signal: options.signal }),
+              { onActivity: deadline.reset },
             ),
             deadline.expired,
           ]);

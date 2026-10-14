@@ -1776,4 +1776,112 @@ describe("GoogleAdapter", () => {
       expect(findUnsupportedKeywords(declarations)).toEqual([]);
     });
   });
+
+  // Streamed transport for operate() (issue #603)
+  describe("executeStreamedRequest", () => {
+    async function* chunks(list: unknown[]) {
+      for (const chunk of list) yield chunk;
+    }
+
+    it("streams with the model maximum and returns the merged response", async () => {
+      const adapter = new GoogleAdapter();
+      const mockStream = vi.fn().mockResolvedValue(
+        chunks([
+          {
+            candidates: [
+              { content: { parts: [{ text: "Hel" }], role: "model" } },
+            ],
+          },
+          {
+            candidates: [
+              {
+                content: { parts: [{ text: "lo" }], role: "model" },
+                finishReason: "STOP",
+              },
+            ],
+            usageMetadata: { candidatesTokenCount: 2, promptTokenCount: 3 },
+          },
+        ]),
+      );
+      const onActivity = vi.fn();
+      const built = adapter.buildRequest({
+        messages: [],
+        model: "gemini-3.1-pro-preview",
+        stream: true,
+      });
+
+      const result = await adapter.executeStreamedRequest(
+        { models: { generateContentStream: mockStream } },
+        built,
+        undefined,
+        { onActivity },
+      );
+
+      expect(mockStream.mock.calls[0][0].config.maxOutputTokens).toBe(65536);
+      expect(mockStream.mock.calls[0][1]).toBeUndefined();
+      expect(onActivity).toHaveBeenCalledTimes(2);
+      const parsed = adapter.parseResponse(result);
+      expect(parsed.content).toBe("Hello");
+      expect(parsed.stopReason).toBe("STOP");
+      expect(parsed.usage?.input).toBe(3);
+    });
+
+    it("falls back to the fake tool when the streamed combo is rejected", async () => {
+      const adapter = new GoogleAdapter();
+      const error = Object.assign(
+        new Error("responseJsonSchema is not supported with tools"),
+        { status: 400 },
+      );
+      const mockStream = vi
+        .fn()
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce(
+          chunks([
+            {
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      {
+                        functionCall: {
+                          args: { name: "Jane" },
+                          name: "structured_output",
+                        },
+                      },
+                    ],
+                    role: "model",
+                  },
+                  finishReason: "STOP",
+                },
+              ],
+            },
+          ]),
+        );
+      const built = adapter.buildRequest({
+        format: { properties: { name: { type: "string" } }, type: "object" },
+        messages: [],
+        model: "gemini-3.1-pro-preview",
+        stream: true,
+        tools: [
+          {
+            description: "Search",
+            name: "search",
+            parameters: { type: "object" },
+          },
+        ],
+      });
+
+      const result = await adapter.executeStreamedRequest(
+        { models: { generateContentStream: mockStream } },
+        built,
+      );
+
+      expect(mockStream).toHaveBeenCalledTimes(2);
+      expect(
+        mockStream.mock.calls[1][0].config.responseJsonSchema,
+      ).toBeUndefined();
+      expect(adapter.hasStructuredOutput(result)).toBe(true);
+      adapter.clearRuntimeNoStructuredOutputComboModels();
+    });
+  });
 });
