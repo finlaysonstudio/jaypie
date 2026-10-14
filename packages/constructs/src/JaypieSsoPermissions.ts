@@ -206,8 +206,11 @@ export class JaypieSsoPermissions extends Construct {
 
     // Agent sits between Analyst and Developer: every Analyst read, plus the
     // data-plane and operational writes an automated agent needs, minus
-    // identity change. Resource deletion is not granted and not denied, so a
-    // customer managed policy linked to the set can add scoped grants.
+    // identity change. A session-policy deny does not follow code into a
+    // service execution role, so nothing that runs code under one (invoke,
+    // update, run, start, pass role) is granted (#570). Resource deletion and
+    // those actions are not granted and not denied, so a customer managed
+    // policy linked to the set can add scoped grants.
     this.agentPermissionSet = new CfnPermissionSet(this, "AgentPermissionSet", {
       // Required
       instanceArn: iamIdentityCenterArn,
@@ -215,7 +218,7 @@ export class JaypieSsoPermissions extends Construct {
 
       // Optional
       description:
-        "Read access with data-plane and operational writes; no identity change",
+        "Read access with data-plane writes; no identity change or code execution",
       inlinePolicy: {
         Version: "2012-10-17",
         Statement: [
@@ -244,31 +247,15 @@ export class JaypieSsoPermissions extends Construct {
               "dynamodb:UpdateItem",
               "ecr:BatchCheckLayerAvailability",
               "ecr:BatchGetImage",
-              "ecr:CompleteLayerUpload",
               "ecr:GetAuthorizationToken",
               "ecr:GetDownloadUrlForLayer",
-              "ecr:InitiateLayerUpload",
-              "ecr:PutImage",
               "ecr:TagResource",
-              "ecr:UploadLayerPart",
-              "ecs:RegisterTaskDefinition",
-              "ecs:RunTask",
-              "ecs:StartTask",
               "ecs:StopTask",
               "ecs:TagResource",
-              "ecs:UpdateService",
               "iam:Get*",
               "iam:List*",
-              "iam:PassRole",
-              "lambda:CreateEventSourceMapping",
-              "lambda:Invoke*",
-              "lambda:PublishVersion",
               "lambda:PutFunctionConcurrency",
               "lambda:TagResource",
-              "lambda:UpdateAlias",
-              "lambda:UpdateEventSourceMapping",
-              "lambda:UpdateFunctionCode",
-              "lambda:UpdateFunctionConfiguration",
               "logs:CreateLogGroup",
               "logs:CreateLogStream",
               "logs:FilterLogEvents",
@@ -277,16 +264,13 @@ export class JaypieSsoPermissions extends Construct {
               "logs:StartQuery",
               "logs:StopQuery",
               "logs:TagResource",
-              "pipes:StartPipe",
               "pipes:StopPipe",
               "pipes:TagResource",
               "s3:AbortMultipartUpload",
               "s3:DeleteObject",
               "s3:DeleteObjectTagging",
-              "s3:PutObject",
               "s3:PutObjectTagging",
               "s3:RestoreObject",
-              "secretsmanager:GetSecretValue",
               "sns:Publish",
               "sns:TagResource",
               "sqs:ChangeMessageVisibility*",
@@ -296,10 +280,7 @@ export class JaypieSsoPermissions extends Construct {
               "sqs:TagQueue",
               "ssm:AddTagsToResource",
               "ssm:GetParameter*",
-              "ssm:PutParameter",
               "states:SendTask*",
-              "states:StartExecution",
-              "states:StartSyncExecution",
               "states:StopExecution",
               "states:TagResource",
               "tag:*",
@@ -366,9 +347,9 @@ export class JaypieSsoPermissions extends Construct {
             Resource: "*",
           },
           {
-            // lambda:UpdateFunctionConfiguration plus iam:PassRole would let a
-            // function be repointed at a more privileged role and invoked.
-            // These roles are the ones that would make that an escalation.
+            // Agent grants no iam:PassRole, but a linked customer managed
+            // policy may. These roles stay unpassable regardless, since
+            // attaching one to compute would escalate to it.
             Sid: "AgentDenyPrivilegedPassRole",
             Effect: "Deny",
             Action: ["iam:PassRole"],
