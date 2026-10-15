@@ -386,7 +386,13 @@ error (rate limit, 5xx, network flake, bad request) moves to the next entry at
 once: every entry, the last included, runs with `retry: { rateLimit: false,
 transient: false }`. When the whole chain fails, the primary runs once more
 with its full retry policy (the **linger pass**), and its error is final. A
-caller abort (`LlmAbortError`) is terminal and never falls over. The loop lives
+caller abort (`LlmAbortError`) is terminal and never falls over, and so is a
+caller `BadRequestError` from `@jaypie/errors` (empty file `data`, a missing
+local file, an invalid resume), since the input fails the same way on every
+model. Provider 400s are normalized to `LlmUnrecoverableError` and still fall
+over. A file part's `data` is present when it is not `undefined`/`null`:
+`data: ""` throws `BadRequestError` rather than loading `file` from S3 or disk
+(issue #626), and `loadLocalFile` turns ENOENT into `BadRequestError`. The loop lives
 in `src/util/runWithFallback.ts` and serves `operate`, `ocr`, and `question`.
 
 `timeout` (on the call or a fallback entry, which replaces the call's) is a

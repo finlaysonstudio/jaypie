@@ -1,3 +1,5 @@
+import { BadRequestError } from "@jaypie/errors";
+
 import {
   LlmInputContent,
   LlmInputContentFile,
@@ -42,8 +44,12 @@ export async function loadFileData(
   // Get the path from either file or image property
   const path = "file" in item ? item.file : item.image;
 
-  // Priority 1: Use provided data directly
-  if (item.data) {
+  // Priority 1: Use provided data directly. Presence is `!= null`, not
+  // truthiness: empty data is a 0-byte document, never a cue to load `path`
+  if (item.data !== undefined && item.data !== null) {
+    if (item.data === "") {
+      throw new BadRequestError(`File data is empty: ${path}`);
+    }
     return Buffer.from(item.data, "base64");
   }
 
