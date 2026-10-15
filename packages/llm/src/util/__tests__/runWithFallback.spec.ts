@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { BadRequestError } from "@jaypie/errors";
 import log from "@jaypie/logger";
 
 import { LlmTimeoutError } from "../../errors/LlmError.js";
@@ -131,6 +132,26 @@ describe("runWithFallback", () => {
       expect(tallyFailure).toHaveBeenCalledWith(
         expect.objectContaining({ failover: false }),
       );
+    });
+  });
+
+  describe("Error Conditions", () => {
+    it("rethrows a caller BadRequestError without failing over", async () => {
+      const attempt = vi
+        .fn()
+        .mockRejectedValue(new BadRequestError("File data is empty"));
+      const createInstance = vi.fn(() => "fallback");
+      await expect(
+        runWithFallback({
+          attempt,
+          chain: [{ model: "gpt-5", provider: "openai" }],
+          createInstance,
+          primary: "primary",
+          primaryProvider: "anthropic",
+        }),
+      ).rejects.toThrow(BadRequestError);
+      expect(attempt).toHaveBeenCalledTimes(1);
+      expect(createInstance).not.toHaveBeenCalled();
     });
   });
 

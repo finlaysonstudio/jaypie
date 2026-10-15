@@ -1,3 +1,4 @@
+import { BadRequestError } from "@jaypie/errors";
 import log from "@jaypie/logger";
 
 import { LlmAbortError, LlmIncompleteError } from "../errors/LlmError.js";
@@ -49,7 +50,10 @@ export interface FallbackAttemptContext<TInstance> {
  *
  * The attempt callback owns what "success" means, so the same loop serves
  * `operate` (which settles an exchange on success), `ocr`, and `question`.
- * A caller abort ({@link LlmAbortError}) is terminal and never falls over.
+ * A caller abort ({@link LlmAbortError}) is terminal and never falls over,
+ * as is a caller {@link BadRequestError} (empty file data, a missing local
+ * file, an invalid resume): the input fails the same way on every model.
+ * Provider 400s are normalized to `LlmUnrecoverableError` and still fall over.
  *
  * `shouldFailover` marks a returned result as a soft failure (operate's
  * incomplete response): the chain moves past it like a thrown error, but it
@@ -131,7 +135,7 @@ export async function runWithFallback<TInstance, TResult>({
         provider,
       });
     } catch (error) {
-      if (error instanceof LlmAbortError) {
+      if (error instanceof LlmAbortError || error instanceof BadRequestError) {
         throw error;
       }
       lastError = error as Error;

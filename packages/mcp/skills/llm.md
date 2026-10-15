@@ -656,6 +656,8 @@ const response = await Llm.operate(
 );
 ```
 
+Each item loads from `data` (base64) when present, else S3 (`bucket` or `CDK_ENV_BUCKET`), else the local path. `data: ""` is a 0-byte document and throws `BadRequestError`; it never falls through to S3 or disk. A missing local file also throws `BadRequestError`. Both are terminal: a fallback chain does not retry them.
+
 ## Placeholders and Data
 
 Substitute data into prompts:
@@ -810,7 +812,7 @@ for await (const chunk of Llm.stream(input, {
 
 ## Fallback Providers
 
-Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) never falls over.
+Configure a chain of fallback providers. Any error (rate limit, 5xx, network flake, bad request) moves to the next entry at once, with no retry or wait. When every entry has failed, the primary runs once more with its full retry policy; if that fails, the call throws. A caller abort (`LlmAbortError`) and a caller `BadRequestError` (empty file `data`, a missing local file, an invalid resume) never fall over; a provider 400 still does.
 
 A response the provider cut short (`status: "incomplete"` with `error.reason: "incomplete"`: an output token ceiling or a content filter) also moves to the next entry. When no entry finishes, the latest incomplete response is returned rather than an error, and a primary that cut off does not linger (the same model would cut off the same way). Loop stops (`max_turns`, `tool_errors`) never fall over:
 
