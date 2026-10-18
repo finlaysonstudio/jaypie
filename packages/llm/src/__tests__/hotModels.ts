@@ -30,6 +30,7 @@ export const HOT_MODELS = {
   ]),
   fireworks: exclude(Object.values(MODEL.FIREWORKS)),
   google: exclude([
+    MODEL.GEMINI_ARGON,
     MODEL.GEMINI_FLASH,
     MODEL.GEMINI_FLASH_LITE,
     MODEL.GEMINI_PRO,

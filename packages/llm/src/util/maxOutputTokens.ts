@@ -26,7 +26,7 @@ const MODEL_MAX_OUTPUT_TOKENS: { pattern: RegExp; tokens: number }[] = [
   { pattern: /haiku/, tokens: 64_000 },
   { pattern: /claude|fable|mythos|opus|sonnet/, tokens: 128_000 },
   // Google — https://ai.google.dev/gemini-api/docs/models
-  { pattern: /gemini-(2\.5|3)/, tokens: 65_536 },
+  { pattern: /gemini-(2\.5|3|4)/, tokens: 65_536 },
   { pattern: /gemini/, tokens: 8_192 },
   // Mistral — https://docs.mistral.ai/models/overview
   // Listed not because Mistral publishes a low ceiling (context is 256K) but
