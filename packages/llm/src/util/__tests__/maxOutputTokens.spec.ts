@@ -49,6 +49,7 @@ describe("maxOutputTokens", () => {
     it("resolves current Gemini models to 65536", () => {
       expect(maxOutputTokens("gemini-3.1-pro-preview")).toBe(65536);
       expect(maxOutputTokens("gemini-3.5-flash")).toBe(65536);
+      expect(maxOutputTokens("gemini-4-argon")).toBe(65536);
       expect(maxOutputTokens("gemini-3.1-flash-lite")).toBe(65536);
       expect(maxOutputTokens("gemini-2.5-pro")).toBe(65536);
     });

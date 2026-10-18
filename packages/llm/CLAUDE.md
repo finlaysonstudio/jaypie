@@ -159,7 +159,8 @@ The `effort` option (`lowest | low | medium | high | highest`, exported as
 five-point relative scale (only the anchored `medium` borrows a provider word).
 Each adapter's `buildRequest` translates it to the provider's native knob via
 `src/util/effort.ts` (OpenAI/Grok/Meta `reasoning.effort`, Anthropic
-`output_config.effort`, Gemini 3 `thinkingLevel`, Gemini 2.5 `thinkingBudget`,
+`output_config.effort`, Gemini 3/4 `thinkingLevel` (Gemini 4 rejects `MINIMAL`,
+so `lowest` collapses onto `LOW`), Gemini 2.5 `thinkingBudget`,
 OpenRouter `reasoning.effort`, Fireworks `reasoning_effort`), spreading the
 scale across the provider's range.
 It is threaded through `OperateRequest` by both loops and is gated per provider
@@ -204,7 +205,7 @@ so long generations do not silently truncate:
 
 - **Streamed transport** (`stream()`, and `operate()` on adapters with
   `executeStreamedRequest`): the model maximum — 128,000 for current Claude
-  models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+  models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x/4
 - **Non-streaming** (a request built without `stream`): capped at
   `PROVIDER.ANTHROPIC.MAX_TOKENS.DEFAULT` (16,384) — larger non-streaming
   responses risk HTTP timeouts. The deprecated Anthropic `send()` sends the
@@ -309,7 +310,7 @@ alias would hide the thing being explained:
 | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Provider keyword matching (`"gpt"`, `"claude"`, `"gemini"`)                           | The match runs against the id's characters; an alias shows nothing     |
 | `COST` keys and the alias-pricing rule                                                | `COST` is keyed by literal id by design, aliases deliberately unpriced |
-| Version-gated behavior (`xhigh` needs gpt-5.2+, `thinkingLevel` needs `^gemini-3`)    | The version boundary is the rule                                       |
+| Version-gated behavior (`xhigh` needs gpt-5.2+, `thinkingLevel` needs `^gemini-[34]`) | The version boundary is the rule                                       |
 | A documented per-model defect or exclusion (`mistral-medium-3-5`, `muse-glimmer-30b`) | The note is about that exact model and outlives its catalog membership |
 | Live-matrix evidence (sample counts against a specific id)                            | Evidence is only meaningful attached to what was measured              |
 | A constructor argument demonstrating that a raw string works                          | The point is that any string resolves, cataloged or not                |
@@ -919,7 +920,7 @@ const response = await Llm.operate("Greet the world", {
 **Google notes (Gemini models):**
 
 - Format-only requests use native `responseMimeType: "application/json"` + `responseSchema` (OpenAPI 3.0) by default, or `responseJsonSchema` (standard JSON Schema) when `providerOptions.useJsonSchema: true`.
-- Format **and** tools combined: native `responseJsonSchema` + tools is supported only on Gemini 3 (preview) and is enabled automatically when the model id matches `^gemini-3`. Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
+- Format **and** tools combined: native `responseJsonSchema` + tools is supported on Gemini 3 and 4 and is enabled automatically when the model id matches `^gemini-[34]` (verified live on `gemini-4-argon` 2026-10-18). Gemini 2.5 (including thinking) and earlier fall back to the `structured_output` fake-tool emulation with a system-prompt nudge.
 - A Gemini 3 model that 400s the combo is cached for the session and transparently retried via the fake-tool path. The error message must mention `responseJsonSchema`/`responseSchema`/`responseMime`/`function_call`/`tools` to trigger the fallback.
 - Compliance is enforced by the operate loop the same way Fireworks is: a `format` request that completes as prose is first parsed as JSON (fence-stripped), then re-asked on a corrective turn offering **only** the `structured_output` tool (`supportsStructuredOutputRetry`). That turn withholds the caller's tools and does not send the schema natively, so the demanded call is the sole way to answer.
 

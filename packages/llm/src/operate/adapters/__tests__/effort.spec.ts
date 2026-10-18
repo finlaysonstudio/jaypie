@@ -198,6 +198,20 @@ describe("effort mapping util", () => {
     });
   });
 
+  it("Gemini 4 thinkingLevel collapses lowest onto LOW", () => {
+    expect(toGeminiThinkingLevel(EFFORT.LOWEST, { minimal: false })).toEqual({
+      known: true,
+      papered: true,
+      value: "LOW",
+    });
+    expect(toGeminiThinkingLevel(EFFORT.LOW, { minimal: false }).value).toBe(
+      "LOW",
+    );
+    expect(
+      toGeminiThinkingLevel(EFFORT.HIGHEST, { minimal: false }).value,
+    ).toBe("HIGH");
+  });
+
   it("Gemini 2.5 thinkingBudget stays within the shared 24,576 cap", () => {
     expect(toGeminiThinkingBudget(EFFORT.LOWEST).value).toBe(512);
     expect(toGeminiThinkingBudget(EFFORT.HIGHEST).value).toBe(24576);
@@ -453,6 +467,13 @@ describe("GoogleAdapter effort", () => {
       requestFor("gemini-3.1-pro-preview", { effort: EFFORT.HIGHEST }),
     );
     expect(result.config?.thinkingConfig).toEqual({ thinkingLevel: "HIGH" });
+  });
+
+  it("sets thinkingLevel for Gemini 4 without MINIMAL", () => {
+    const result = googleAdapter.buildRequest(
+      requestFor("gemini-4-argon", { effort: EFFORT.LOWEST }),
+    );
+    expect(result.config?.thinkingConfig).toEqual({ thinkingLevel: "LOW" });
   });
 
   it("sets thinkingBudget for Gemini 2.5", () => {

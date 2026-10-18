@@ -226,7 +226,15 @@ const GEMINI_THINKING_LEVEL: Record<LlmEffort, LlmEffortMapping> = {
   [EFFORT.HIGHEST]: { known: true, papered: true, value: "HIGH" },
 };
 
-export function toGeminiThinkingLevel(effort: LlmEffort): LlmEffortMapping {
+export function toGeminiThinkingLevel(
+  effort: LlmEffort,
+  { minimal = true }: { minimal?: boolean } = {},
+): LlmEffortMapping {
+  // Gemini 4 rejects MINIMAL with a 400 (verified 2026-10-18 on
+  // gemini-4-argon), so `lowest` collapses onto LOW there.
+  if (!minimal && effort === EFFORT.LOWEST) {
+    return { known: true, papered: true, value: "LOW" };
+  }
   return GEMINI_THINKING_LEVEL[effort];
 }
 

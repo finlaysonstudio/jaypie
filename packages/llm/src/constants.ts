@@ -78,6 +78,7 @@ export const MODEL = {
     QWEN: "accounts/fireworks/models/qwen3p8-max",
   },
   // Google
+  GEMINI_ARGON: "gemini-4-argon",
   GEMINI_FLASH: "gemini-3.8-flash",
   GEMINI_FLASH_LITE: "gemini-3.5-flash-lite",
   GEMINI_PRO: "gemini-3.1-pro-preview",
@@ -480,6 +481,9 @@ export const COST: Record<string, LlmModelCost> = {
   // 2026-12-31. These are the standard rates that take over on 2027-01-01.
   "gemini-3.7-flash": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
   "gemini-3.8-flash": { cachedInputRead: 0.15, input: 1.5, output: 7.5 },
+  // Argon carries an introductory rate ($2/$10, cache $0.10) through
+  // 2026-11-30. These are the standard rates that take over on 2026-12-01.
+  "gemini-4-argon": { cachedInputRead: 0.2, input: 4.0, output: 20.0 },
   // OpenAI — https://developers.openai.com/api/docs/pricing
   "gpt-5.4": { cachedInputRead: 0.25, input: 2.5, output: 15.0 },
   "gpt-5.4-mini": { cachedInputRead: 0.075, input: 0.75, output: 4.5 },

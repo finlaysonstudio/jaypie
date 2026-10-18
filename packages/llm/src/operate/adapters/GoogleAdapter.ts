@@ -71,11 +71,14 @@ import {
 
 const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
 
-// Gemini 3 family supports combining tools (function calling) with native
-// structured output via `responseJsonSchema`. Earlier Gemini families
+// Gemini 3 and 4 families support combining tools (function calling) with
+// native structured output via `responseJsonSchema`. Earlier Gemini families
 // (including 2.5 thinking) do not support the combo and fall back to the
 // legacy `structured_output` fake-tool emulation.
-const GEMINI_3_PATTERN = /^gemini-3/;
+const GEMINI_3_PATTERN = /^gemini-[34]/;
+
+// Gemini 4 takes the same `thinkingLevel` enum as 3.x but rejects MINIMAL.
+const GEMINI_4_PATTERN = /^gemini-4/;
 
 // Reasoning-effort control differs by generation: Gemini 3.x takes the
 // `thinkingLevel` enum, Gemini 2.5 takes an integer `thinkingBudget`. Sending
@@ -143,7 +146,7 @@ export class GoogleAdapter extends BaseProviderAdapter {
   readonly defaultModel = PROVIDER.GOOGLE.DEFAULT;
 
   /**
-   * Gemini 3.x takes the `thinkingLevel` enum, 2.5 an integer
+   * Gemini 3.x and 4 take the `thinkingLevel` enum, 2.5 an integer
    * `thinkingBudget`; other models have no thinking control.
    */
   resolveEffort(
@@ -151,7 +154,9 @@ export class GoogleAdapter extends BaseProviderAdapter {
     { model }: { model: string },
   ): LlmEffortNative | undefined {
     if (GEMINI_3_PATTERN.test(model)) {
-      const mapping = toGeminiThinkingLevel(effort);
+      const mapping = toGeminiThinkingLevel(effort, {
+        minimal: !GEMINI_4_PATTERN.test(model),
+      });
       return {
         mapping,
         native: { thinkingConfig: { thinkingLevel: mapping.value } },

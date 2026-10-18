@@ -24,7 +24,7 @@ across releases; the id behind it moves whenever the provider ships a successor.
 | Anthropic  | `MODEL.SONNET`, `MODEL.OPUS`, `MODEL.HAIKU`, `MODEL.FABLE`                                           | `ANTHROPIC_API_KEY`                 |
 | Bedrock    | `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`                                                                  | (AWS credentials)                   |
 | Fireworks  | `MODEL.FIREWORKS.*` (`DEEPSEEK`, `GLM`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`) | `FIREWORKS_API_KEY`                 |
-| Google     | `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO`                                  | `GOOGLE_API_KEY`                    |
+| Google     | `MODEL.GEMINI_ARGON`, `MODEL.GEMINI_FLASH`, `MODEL.GEMINI_FLASH_LITE`, `MODEL.GEMINI_PRO`            | `GOOGLE_API_KEY`                    |
 | Meta       | `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`                                                   | `META_API_KEY` (or `MODEL_API_KEY`) |
 | Mistral    | `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `SMALL`, `OCR`)                                                | `MISTRAL_API_KEY`                   |
 | OpenAI     | `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.LUNA`, `MODEL.TERRA`                                              | `OPENAI_API_KEY`                    |

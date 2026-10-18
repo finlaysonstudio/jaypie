@@ -59,7 +59,7 @@ LlamaCloud serves LlamaParse, which extracts documents and generates no text. Th
 ### Model Constants
 
 - **`PROVIDER.<name>.DEFAULT`** — the single default model per provider (above), used when no `model` is given.
-- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `MIMO`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
+- **`LLM.MODEL.*`** — the named model catalog (e.g. `MODEL.SONNET`, `MODEL.ASTRA`, `MODEL.SOL`, `MODEL.GEMINI_ARGON`, `MODEL.GEMINI_FLASH`, `MODEL.GROK`, `MODEL.MUSE_SPARK`, `MODEL.MUSE_SPARK_CONTRIBUTOR`, `MODEL.NOVA_PRO`, `MODEL.NOVA_LITE`), plus three nested subtrees: `MODEL.FIREWORKS.*` for Fireworks serverless models (`DEEPSEEK`, `DEEPSEEK_FLASH`, `GLM`, `GLM_FLASH`, `GPT_OSS`, `INKLING`, `KIMI`, `MINIMAX`, `NEMOTRON`, `QWEN`), `MODEL.MISTRAL.*` (`LARGE`, `MEDIUM`, `OCR`, `SMALL`), `MODEL.LLAMAPARSE.*` for LlamaParse tiers (`FAST`, `COST_EFFECTIVE`, `AGENTIC`, `AGENTIC_PLUS`), and `MODEL.OPENROUTER.*` for provider-prefixed routes (`GLM`, `LUNA`, `MIMO`, `SONNET`). Pick specific models from here. `MODEL.MISTRAL.OCR` and `MODEL.LLAMAPARSE.*` are document-extraction engines reached through `Llm.ocr`, not chat completions: they are priced per page in `LLM.PAGE_COST` (USD per 1,000 pages, keyed by literal id) and carry no `COST` entry. Amazon's Nova models are first-class ids served over Bedrock; Bedrock's third-party routes are not catalogued — pass the literal id (e.g. `us.anthropic.claude-sonnet-4-6`) and `determineModelProvider` resolves it to `bedrock`.
 - `MODEL.MUSE_SPARK` and `MODEL.MUSE_SPARK_CONTRIBUTOR` are the same Meta model at two tiers. The contributor tier is roughly a tenth of the price because prompts and completions may train Meta models; it is limited to 100 RPM and does not accept `reasoning.effort: "max"`. It is an explicit opt-in: `PROVIDER.META.DEFAULT` is `MODEL.MUSE_SPARK`.
 - The catalog is the **single source of truth for CI coverage**: `packages/llm/test/models.ts` derives the live capability matrix from `MODEL.*` plus each `PROVIDER.*.DEFAULT`, and the workflow shards it by provider. Adding a model to `MODEL.*` puts it under test; no id list exists anywhere else.
 - **Deprecated:** the size-tier map `PROVIDER.<name>.MODEL.{DEFAULT,LARGE,SMALL,TINY}`, the `DEFAULT.MODEL` bundle, and `ALL` are `@deprecated` and retired in 2.0 — use `PROVIDER.*.DEFAULT` for defaults and `MODEL.*` for named models.
@@ -1198,13 +1198,13 @@ await Llm.operate("Solve this step by step", {
 Per-provider translation (`medium`/`high` stay aligned across providers; ends
 collapse where a provider has fewer rungs):
 
-| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | Meta `reasoning.effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
-| --------- | ------------------------- | -------------------------------- | ------------------------ | --------------------------- | ----------------------- | ----------------------- | ----------------------------- | ---------------------------- | -------------------------- |
-| `lowest`  | minimal                   | low                              | MINIMAL                  | 512                         | low                     | minimal                 | minimal                       | low                          | none                       |
-| `low`     | low                       | low                              | LOW                      | 4096                        | low                     | low                     | low                           | low                          | high                       |
-| `medium`  | medium                    | medium                           | MEDIUM                   | 8192                        | medium                  | medium                  | medium                        | medium                       | high                       |
-| `high`    | high                      | high                             | HIGH                     | 16384                       | high                    | high                    | high                          | high                         | high                       |
-| `highest` | xhigh                     | max                              | HIGH                     | 24576                       | high                    | max                     | xhigh                         | high                         | high                       |
+| `effort`  | OpenAI `reasoning.effort` | Anthropic `output_config.effort` | Gemini 3/4 `thinkingLevel` | Gemini 2.5 `thinkingBudget` | Grok `reasoning_effort` | Meta `reasoning.effort` | OpenRouter `reasoning.effort` | Fireworks `reasoning_effort` | Mistral `reasoning_effort` |
+| --------- | ------------------------- | -------------------------------- | -------------------------- | --------------------------- | ----------------------- | ----------------------- | ----------------------------- | ---------------------------- | -------------------------- |
+| `lowest`  | minimal                   | low                              | MINIMAL                    | 512                         | low                     | minimal                 | minimal                       | low                          | none                       |
+| `low`     | low                       | low                              | LOW                        | 4096                        | low                     | low                     | low                           | low                          | high                       |
+| `medium`  | medium                    | medium                           | MEDIUM                     | 8192                        | medium                  | medium                  | medium                        | medium                       | high                       |
+| `high`    | high                      | high                             | HIGH                       | 16384                       | high                    | high                    | high                          | high                         | high                       |
+| `highest` | xhigh                     | max                              | HIGH                       | 24576                       | high                    | max                     | xhigh                         | high                         | high                       |
 
 When a neutral level has no distinct native rung and collapses onto a neighbor
 it is "papered over." Papering that follows from the provider's native scale
@@ -1226,8 +1226,9 @@ erroring):
   gpt-5.4 through gpt-5, and gpt-6+ takes `max` for `highest` (else clamped).
 - **Anthropic** — only Claude 4.5+ / 5 models (`output_config.effort`); merges
   alongside a structured-output `format` config.
-- **Google** — `thinkingLevel` for Gemini 3.x, `thinkingBudget` for Gemini 2.5;
-  other models get nothing.
+- **Google** — `thinkingLevel` for Gemini 3.x and 4, `thinkingBudget` for
+  Gemini 2.5; other models get nothing. Gemini 4 rejects `MINIMAL`, so
+  `lowest` collapses onto `LOW` there.
 - **xAI** — only models whose name advertises reasoning (a `*-reasoning`
   suffix); a bare version name and `*-non-reasoning` are skipped.
 - **Meta** — every `muse-spark` id; merges with the auto `reasoning.summary`.
@@ -1368,7 +1369,7 @@ silently truncate:
 
 - **Streamed transport** (`stream()`, and `operate()` on Anthropic, Google,
   Mistral, OpenAI, xAI, and Meta): the model maximum — e.g., 128,000 for
-  current Claude models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x
+  current Claude models (64,000 for Haiku 4.5), 65,536 for Gemini 2.5/3.x/4
 - **Non-streaming**: an adapter request built without the streamed
   transport is capped at 16,384 (larger non-streaming responses risk HTTP
   timeouts). The deprecated `send()` on Anthropic sends 16,384 as well
