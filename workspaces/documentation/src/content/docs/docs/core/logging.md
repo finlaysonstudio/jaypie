@@ -233,6 +233,8 @@ log.teardown();
 
 `log.report()` only accumulates data while a session is active (after `setup()`, before `teardown()`); calling it outside a session logs a warning and is a no-op. Warn and error calls made during the session are counted automatically and included in the final report.
 
+The session is process-wide. Lambda runs one request per process, so each invocation owns it. Overlapping requests in one process (a local Express server, concurrent supertest calls) share it: `init()` at the start of a newer request resets an older request's open session and logs a warning. Per-request sessions are planned for Jaypie 2.0.
+
 `log.report()` records values once. Plain objects merge recursively, so separate calls can fill sibling keys under one parent (`report({ agent: { a: {...} } })` then `report({ agent: { b: {...} } })` keeps both). Arrays and scalars are leaves: the last write wins, and a changed leaf logs `[logger] Overwriting report key: <dotted.path>` at `debug`. Use `log.tally()` for data that accumulates — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively. Outside an active session `log.tally()` silently no-ops, so libraries can tally unconditionally.
 
 ```typescript

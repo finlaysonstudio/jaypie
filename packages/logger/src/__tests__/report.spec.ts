@@ -116,6 +116,28 @@ describe("report", () => {
       logger.report({ requests: 1 });
       expect(warnSpy).toHaveBeenCalled();
     });
+
+    it("warns when init() is called while a session is active", () => {
+      const logger = new JaypieLogger({ level: "trace" });
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      logger.setup();
+      logger.init();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0][0])).toContain(
+        "init() called while session active",
+      );
+      expect(logger.sessionActive).toBe(false);
+    });
+
+    it("does not warn when init() is called after teardown()", () => {
+      const logger = new JaypieLogger({ level: "trace" });
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "info").mockImplementation(() => {});
+      logger.setup();
+      logger.teardown();
+      logger.init();
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe("reportMerge", () => {

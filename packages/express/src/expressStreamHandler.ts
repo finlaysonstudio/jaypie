@@ -464,6 +464,11 @@ function expressStreamHandler(
       }
       logger.report(reportData);
 
+      // End log session before awaiting the metric so a concurrent request's
+      // session cannot be ended by this request's teardown (#629)
+      logger.teardown();
+      logger.untag("handler");
+
       // Submit metric if Datadog is configured
       if (hasDatadogEnv()) {
         let metricPrefix = "project";
@@ -483,10 +488,6 @@ function expressStreamHandler(
           },
         });
       }
-
-      // End log session and clean up
-      logger.teardown();
-      logger.untag("handler");
     }
   };
 }
