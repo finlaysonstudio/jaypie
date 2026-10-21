@@ -122,6 +122,8 @@ log.teardown();
 // => { report: { userId: "456", itemCount: 3, log: { warn: false, warns: 0, error: false, errors: 0 } } }
 ```
 
+The session is process-wide. Lambda runs one request per process, so each invocation owns it. Overlapping requests in one process (a local Express server, concurrent supertest calls) share it: `init()` at the start of a newer request resets an older request's open session and warns `[logger] init() called while session active; session reset`. Handlers end the session before awaiting the Datadog response metric so the metric round trip does not widen the overlap. Per-request sessions are planned for Jaypie 2.0 (#630).
+
 `log.report()` records values once. Plain objects merge recursively, so separate calls can fill sibling keys under one parent (`report({ agent: { a: {...} } })` then `report({ agent: { b: {...} } })` keeps both). Arrays and scalars are leaves: the last write wins, and a changed leaf logs `[logger] Overwriting report key: <dotted.path>` at `debug`. Use `log.tally()` for data that accumulates — keys combine instead: numbers sum, strings collect into an array of strings, booleans AND, and objects merge recursively.
 
 ```typescript

@@ -132,6 +132,7 @@ log.teardown();                                           // Emits report, reset
 - `tally(data)` merges combining data into the report: numbers sum, strings collect into an array of strings, booleans AND, objects merge recursively (`src/tallyMerge.ts`); silently no-ops without an active session so libraries can tally unconditionally (`@jaypie/llm` tallies an `llm` key automatically)
 - `sessionActive` is a read-only boolean, true between `setup()` and `teardown()`; libraries guard optional `report()`/`tally()` calls with it (compare against `false`, since an older logger reports `undefined`)
 - Warn and error calls are auto-counted during an active session
+- The session is process-wide: `init()` resets it and warns `[logger] init() called while session active; session reset` when one is open (overlapping requests in one process). Per-request sessions are planned for Jaypie 2.0 (#630)
 
 ### Serialization Limits
 

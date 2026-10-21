@@ -175,6 +175,9 @@ export class JaypieLogger {
   }
 
   public init(): void {
+    // TODO: Jaypie 2.0 should scope sessions per request (AsyncLocalStorage)
+    // so overlapping requests in one process cannot end each other's sessions (#630)
+    const sessionWasActive = this._sessionActive;
     _resetDatadogTransport();
     for (const logger of this._loggers) {
       if ("init" in logger && typeof logger.init === "function") {
@@ -250,6 +253,10 @@ export class JaypieLogger {
         };
       }
     });
+
+    if (sessionWasActive) {
+      this.warn("[logger] init() called while session active; session reset");
+    }
   }
 
   public lib({
