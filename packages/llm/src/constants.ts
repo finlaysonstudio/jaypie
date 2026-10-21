@@ -150,7 +150,7 @@ export const MODEL = {
   GROK: "grok-4.7",
   // OpenRouter (provider-prefixed routes; traversed by the OpenRouter hot test)
   OPENROUTER: {
-    GLM: "z-ai/glm-5.2",
+    GLM: "z-ai/glm-5.3-flash",
     LUNA: "openai/gpt-6-luna",
     MIMO: "xiaomi/mimo-v2.6-flash",
     SONNET: "anthropic/claude-sonnet-5.5",

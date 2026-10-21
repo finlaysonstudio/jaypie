@@ -109,6 +109,11 @@ export class LambdaResponseStreaming extends Writable {
     // Also bind internal Writable methods that are called via prototype chain
     this._write = this._write.bind(this);
     this._final = this._final.bind(this);
+    // Writable's destroy, not OutgoingMessage's: autoDestroy calls destroy()
+    // after finish, and Node 24.22+ OutgoingMessage.destroy reads internal
+    // state (kChunkedBuffer) this mock never initializes
+    this.destroy = this.destroy.bind(this);
+    this._destroy = this._destroy.bind(this);
   }
 
   //
