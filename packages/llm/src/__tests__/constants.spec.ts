@@ -123,7 +123,7 @@ describe("Constants", () => {
 
     it("Exposes an OpenRouter subtree of provider-prefixed routes", () => {
       expect(MODEL.OPENROUTER).toBeObject();
-      expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.2");
+      expect(MODEL.OPENROUTER.GLM).toBe("z-ai/glm-5.3-flash");
       expect(MODEL.OPENROUTER.LUNA).toBe("openai/gpt-6-luna");
       expect(MODEL.OPENROUTER.SONNET).toBe("anthropic/claude-sonnet-5.5");
     });
