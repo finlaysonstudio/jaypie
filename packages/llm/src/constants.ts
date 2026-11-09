@@ -41,11 +41,11 @@ export const MODEL = {
   NOVA_LITE: "us.amazon.nova-2-lite-v1:0",
   NOVA_PRO: "amazon.nova-pro-v1:0",
   // Anthropic
-  FABLE: "claude-fable-5-1",
+  FABLE: "claude-fable-5-2",
   OPUS: "claude-opus-5-5",
   SONNET: "claude-sonnet-5-5",
   HAIKU: "claude-haiku-5-5",
-  MYTHOS: "claude-mythos-5",
+  MYTHOS: "claude-mythos-5-2",
   // Fireworks (serverless open models; ids provided by operator)
   FIREWORKS: {
     // deepseek-v4-pro-0813 left serverless on 2026-09-26 (supportsServerless:
@@ -261,6 +261,13 @@ export const COST: Record<string, LlmModelCost> = {
     input: 10.0,
     output: 50.0,
   },
+  // Fable 5.2 drops to $8/$40; cache reads stay at 0.025x input ($0.20/MTok).
+  "claude-fable-5-2": {
+    cachedInputRead: 0.2,
+    cachedInputWrite: { "1h": 16.0, "5m": 10.0 },
+    input: 8.0,
+    output: 40.0,
+  },
   "claude-haiku-4-5": {
     cachedInputRead: 0.1,
     cachedInputWrite: { "1h": 2.0, "5m": 1.25 },
@@ -280,6 +287,19 @@ export const COST: Record<string, LlmModelCost> = {
     cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
     input: 10.0,
     output: 50.0,
+  },
+  // Mythos tracks Fable's pricing release for release.
+  "claude-mythos-5-1": {
+    cachedInputRead: 0.25,
+    cachedInputWrite: { "1h": 20.0, "5m": 12.5 },
+    input: 10.0,
+    output: 50.0,
+  },
+  "claude-mythos-5-2": {
+    cachedInputRead: 0.2,
+    cachedInputWrite: { "1h": 16.0, "5m": 10.0 },
+    input: 8.0,
+    output: 40.0,
   },
   "claude-opus-4-1": {
     cachedInputRead: 1.5,
