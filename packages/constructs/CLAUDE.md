@@ -458,6 +458,22 @@ CloudFront permits one function per event type.
 new JaypieWebDeploymentBucket(this, "App", { component: "app", host, spa: true, zone });
 ```
 
+`host` accepts an array, matching `JaypieDistribution`. The first entry stays
+primary (certificate `domainName`, un-suffixed `AliasRecord` ID, `.host`); the
+rest become certificate SANs, and every entry joins `domainNames` and gets an A
+record (`.hosts`). A `{ host, zone }` entry puts a host in its own hosted zone;
+`resolveCertificate` then validates through `fromDnsMultiZone` via its `zones`
+option. A caller `certificate` still gets every host aliased and recorded. A
+host with no zone throws when the construct creates the certificate (#634).
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", {
+  component: "app",
+  host: [{ component: "app" }, { host: "www.tenant-domain.com", zone: tenantZone }],
+  zone,
+});
+```
+
 The distribution is unconditional. Without a `host` and `zone` the construct
 skips the certificate and the Route53 alias record and creates everything else,
 so the site serves on the CloudFront default domain. `distribution` and

@@ -25,6 +25,12 @@ export interface ResolveCertificateOptions {
   subjectAlternativeNames?: string[];
   /** Hosted zone for DNS validation (required if certificate is true) */
   zone: route53.IHostedZone;
+  /**
+   * Validation zones keyed by domain name, for names outside `zone`. Names
+   * missing from the map validate through `zone`. Only used when certificate
+   * is true.
+   */
+  zones?: Record<string, route53.IHostedZone>;
 }
 
 /**
@@ -74,6 +80,7 @@ export function resolveCertificate(
     roleTag = CDK.ROLE.API,
     subjectAlternativeNames = [],
     zone,
+    zones = {},
   } = options;
 
   // false = no certificate
@@ -130,13 +137,27 @@ export function resolveCertificate(
   // Create certificate at STACK level (not construct level!)
   // This is the key difference - the certificate's lifecycle is tied to the stack,
   // not to the individual construct that requested it
+  // A single zone keeps fromDns; names spread across zones validate each in
+  // its own zone
+  const validationZones = Object.fromEntries(
+    [domainName, ...alternativeNames].map((validationName) => [
+      validationName,
+      zones[validationName] ?? zone,
+    ]),
+  );
+  const isMultiZone = Object.values(validationZones).some(
+    (validationZone) => validationZone !== zone,
+  );
+
   const sanitizedDomain = sanitizeDomainForId(domainName);
   const cert = new acm.Certificate(stack, `${name}-${sanitizedDomain}`, {
     domainName,
     ...(alternativeNames.length > 0
       ? { subjectAlternativeNames: alternativeNames }
       : {}),
-    validation: acm.CertificateValidation.fromDns(zone),
+    validation: isMultiZone
+      ? acm.CertificateValidation.fromDnsMultiZone(validationZones)
+      : acm.CertificateValidation.fromDns(zone),
   });
   Tags.of(cert).add(CDK.TAG.ROLE, roleTag);
 

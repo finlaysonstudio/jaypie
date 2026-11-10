@@ -248,6 +248,19 @@ new JaypieWebDeploymentBucket(this, "Web", {
 });
 ```
 
+`host` also accepts an array. The first entry is primary; every entry joins the distribution's `domainNames`, the certificate, and gets an alias record. A `{ host, zone }` entry places a host in its own hosted zone:
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", {
+  component: "app",
+  host: [
+    "app.example.com",
+    { host: "www.tenant-domain.com", zone: "tenant-domain.com" },
+  ],
+  zone: "example.com",
+});
+```
+
 ### Bucket Naming
 
 The bucket name defaults to `constructEnvName(component)`, and `component` defaults to `"web"` — independent of the construct id and of `host`. Two instances in one account and region collide on `<env>-<key>-web-<nonce>`, so give the second one a `component` (or an explicit `name`):
