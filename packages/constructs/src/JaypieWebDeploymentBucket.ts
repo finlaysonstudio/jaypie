@@ -96,6 +96,31 @@ export type JaypieWebDeploymentBucketWafConfig = Omit<
   name?: string;
 };
 
+type JaypieWebDeploymentBucketZone =
+  string | route53.IHostedZone | JaypieHostedZone;
+
+/**
+ * A host paired with the hosted zone that validates its certificate entry and
+ * holds its alias record. Hosts without a `zone` use the construct's `zone`.
+ */
+export interface JaypieWebDeploymentBucketHost {
+  host: string | HostConfig;
+  zone?: JaypieWebDeploymentBucketZone;
+}
+
+type JaypieWebDeploymentBucketHostEntry =
+  string | HostConfig | JaypieWebDeploymentBucketHost;
+
+function isHostWithZone(
+  entry: HostConfig | JaypieWebDeploymentBucketHost,
+): entry is JaypieWebDeploymentBucketHost {
+  return "host" in entry;
+}
+
+function sanitizeHostForId(host: string): string {
+  return host.replace(/\./g, "-").replace(/[^a-zA-Z0-9-]/g, "");
+}
+
 export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
   /**
    * SSL certificate for the CloudFront distribution
@@ -155,8 +180,25 @@ export interface JaypieWebDeploymentBucketProps extends s3.BucketProps {
    * @example
    * // Config object - resolves using envHostname()
    * host: { subdomain: "app" }
+   *
+   * An array serves several hosts from the one distribution. The first entry
+   * is primary: it supplies the certificate's `domainName` and the un-suffixed
+   * alias record construct ID. Remaining entries become certificate subject
+   * alternative names. Every entry lands in `domainNames` and gets an alias
+   * record. Duplicates collapse.
+   *
+   * A `{ host, zone }` entry names the hosted zone for a host outside `zone`;
+   * its certificate validation and alias record land there.
+   *
+   * @example
+   * // Tenant domain in its own hosted zone
+   * host: [
+   *   { component: "app" },
+   *   { host: "www.tenant-domain.com", zone: "tenant-domain.com" },
+   * ]
    */
-  host?: string | HostConfig;
+  host?:
+    JaypieWebDeploymentBucketHostEntry | JaypieWebDeploymentBucketHostEntry[];
   /**
    * External log bucket for CloudFront access logs.
    * - IBucket: Use existing bucket directly
@@ -286,6 +328,10 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
   public readonly distributionDomainName: string;
   public readonly certificate?: acm.ICertificate;
   public readonly distribution: cloudfront.Distribution;
+  /** The primary host, equal to `hosts[0]` */
+  public readonly host?: string;
+  /** Every resolved host, primary first */
+  public readonly hosts: string[];
   public readonly logBucket?: s3.IBucket;
   public readonly responseHeadersPolicy?: cloudfront.IResponseHeadersPolicy;
   public readonly spaFunction?: cloudfront.Function;
@@ -350,19 +396,42 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       );
     }
 
-    // Determine host from props or environment
-    let host: string | undefined;
-    if (typeof propsHost === "string") {
-      host = propsHost;
-    } else if (typeof propsHost === "object") {
-      try {
-        host = envHostname(propsHost);
-      } catch {
-        host = undefined;
+    // Determine hosts from props or environment. The first entry is primary.
+    const hostEntries: Array<{
+      host: string;
+      zone?: JaypieWebDeploymentBucketZone;
+    }> = [];
+    if (propsHost !== undefined) {
+      const entries = Array.isArray(propsHost) ? propsHost : [propsHost];
+      for (const entry of entries) {
+        const withZone =
+          typeof entry === "object" && entry !== null && isHostWithZone(entry)
+            ? entry
+            : undefined;
+        const hostInput = withZone
+          ? withZone.host
+          : (entry as string | HostConfig);
+        const entryZone = withZone?.zone;
+        let resolved: string | undefined;
+        if (typeof hostInput === "string") {
+          resolved = hostInput;
+        } else if (typeof hostInput === "object" && hostInput !== null) {
+          try {
+            resolved = envHostname(hostInput);
+          } catch {
+            resolved = undefined;
+          }
+        }
+        if (
+          resolved &&
+          !hostEntries.some((hostEntry) => hostEntry.host === resolved)
+        ) {
+          hostEntries.push({ host: resolved, zone: entryZone });
+        }
       }
     } else {
       try {
-        host =
+        const envHost =
           process.env.CDK_ENV_WEB_HOST ||
           mergeDomain(
             process.env.CDK_ENV_WEB_SUBDOMAIN || "",
@@ -370,14 +439,22 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
               process.env.CDK_ENV_HOSTED_ZONE ||
               "",
           );
+        if (envHost) hostEntries.push({ host: envHost });
       } catch {
-        host = undefined;
+        // No host from environment
       }
     }
 
-    if (host && !isValidHostname(host)) {
-      throw new ConfigurationError("Host is not a valid hostname");
+    for (const hostEntry of hostEntries) {
+      if (!isValidHostname(hostEntry.host)) {
+        throw new ConfigurationError("Host is not a valid hostname");
+      }
     }
+
+    const hosts = hostEntries.map((hostEntry) => hostEntry.host);
+    const host = hosts[0];
+    this.host = host;
+    this.hosts = hosts;
 
     // Determine zone from props or environment
     const zone =
@@ -524,24 +601,53 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     // Resolve the hosted zone and certificate when a host and zone are
     // available. Without them the distribution still gets created; it simply
     // serves on the CloudFront default domain with no alias record (#500).
+    // Each host resolves its own zone, falling back to `zone`. Lookups are
+    // shared by zone name; the default zone keeps the "HostedZone" id.
+    const lookedUpZones = new Map<string, route53.IHostedZone>();
+    const resolveZone = (
+      zoneInput: JaypieWebDeploymentBucketZone,
+    ): route53.IHostedZone => {
+      if (zoneInput instanceof JaypieHostedZone) return zoneInput.hostedZone;
+      if (typeof zoneInput !== "string") return zoneInput;
+      const cached = lookedUpZones.get(zoneInput);
+      if (cached) return cached;
+      const lookupId =
+        zoneInput === zone
+          ? "HostedZone"
+          : `HostedZone-${sanitizeHostForId(zoneInput)}`;
+      const lookedUp = route53.HostedZone.fromLookup(this, lookupId, {
+        domainName: zoneInput,
+      });
+      lookedUpZones.set(zoneInput, lookedUp);
+      return lookedUp;
+    };
+
+    const hostZones = new Map<string, route53.IHostedZone>();
+    const primaryZoneInput = hostEntries[0]?.zone ?? zone;
     let hostedZone: route53.IHostedZone | undefined;
-    if (host && zone) {
-      if (typeof zone === "string") {
-        hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
-          domainName: zone,
-        });
-      } else if (zone instanceof JaypieHostedZone) {
-        hostedZone = zone.hostedZone;
-      } else {
-        hostedZone = zone;
+    if (host && primaryZoneInput) {
+      const createsCertificate =
+        certificateProp === undefined || certificateProp === true;
+      for (const hostEntry of hostEntries) {
+        const hostZoneInput = hostEntry.zone ?? zone;
+        if (hostZoneInput) {
+          hostZones.set(hostEntry.host, resolveZone(hostZoneInput));
+        } else if (createsCertificate) {
+          throw new ConfigurationError(
+            `Host ${hostEntry.host} has no zone to validate its certificate`,
+          );
+        }
       }
+      hostedZone = hostZones.get(host) as route53.IHostedZone;
 
       // Use resolveCertificate to create certificate at stack level (enables reuse when swapping constructs)
       this.certificate = resolveCertificate(this, {
         certificate: certificateProp,
         domainName: host,
         roleTag,
+        subjectAlternativeNames: hosts.slice(1),
         zone: hostedZone,
+        zones: Object.fromEntries(hostZones),
       });
 
       if (this.certificate) {
@@ -715,7 +821,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
       },
       ...(originAccessControlProp ? { defaultRootObject: "index.html" } : {}),
       ...(host && this.certificate
-        ? { certificate: this.certificate, domainNames: [host] }
+        ? { certificate: this.certificate, domainNames: hosts }
         : {}),
       ...(accessLogBucket
         ? {
@@ -727,17 +833,22 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
     });
     Tags.of(this.distribution).add(CDK.TAG.ROLE, roleTag);
 
-    // Create DNS record when a hosted zone is available
-    if (host && hostedZone) {
-      const record = new route53.ARecord(this, "AliasRecord", {
-        recordName: host,
+    // Create a DNS record for each host with a hosted zone. The primary host
+    // keeps the un-suffixed construct ID so adding a second host does not
+    // replace the record an existing deployment already owns.
+    hosts.forEach((recordHost, index) => {
+      const recordZone = hostZones.get(recordHost);
+      if (!recordZone) return;
+      const suffix = index === 0 ? "" : `-${sanitizeHostForId(recordHost)}`;
+      const record = new route53.ARecord(this, `AliasRecord${suffix}`, {
+        recordName: recordHost,
         target: route53.RecordTarget.fromAlias(
           new route53Targets.CloudFrontTarget(this.distribution),
         ),
-        zone: hostedZone,
+        zone: recordZone,
       });
       Tags.of(record).add(CDK.TAG.ROLE, CDK.ROLE.NETWORKING);
-    }
+    });
 
     this.distributionDomainName = this.distribution.distributionDomainName;
 

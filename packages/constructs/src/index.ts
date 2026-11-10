@@ -81,7 +81,10 @@ export {
   JaypieStaticWebBucketProps,
 } from "./JaypieStaticWebBucket";
 export { JaypieTraceSigningKeySecret } from "./JaypieTraceSigningKeySecret";
-export { JaypieWebDeploymentBucket } from "./JaypieWebDeploymentBucket";
+export {
+  JaypieWebDeploymentBucket,
+  JaypieWebDeploymentBucketHost,
+} from "./JaypieWebDeploymentBucket";
 export { JaypieWebSocket, JaypieWebSocketProps } from "./JaypieWebSocket";
 export { JaypieWebSocketLambda } from "./JaypieWebSocketLambda";
 export {

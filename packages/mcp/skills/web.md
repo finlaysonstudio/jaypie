@@ -35,7 +35,7 @@ new JaypieWebDeploymentBucket(this, "Web", {
 
 | Prop | Type | Default |
 |------|------|---------|
-| `host` | `string \| HostConfig` | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` — `HostConfig` is resolved via `envHostname()` |
+| `host` | `string \| HostConfig \| { host, zone }`, or an array of these | `mergeDomain(CDK_ENV_WEB_SUBDOMAIN, CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE)` — `HostConfig` is resolved via `envHostname()`; see [Multiple Hosts](#multiple-hosts) |
 | `zone` | `string \| IHostedZone \| JaypieHostedZone` | `CDK_ENV_WEB_HOSTED_ZONE \|\| CDK_ENV_HOSTED_ZONE` |
 | `certificate` | `boolean \| ICertificate` | `true` (creates via `resolveCertificate`) |
 | `component` | `string` | `"web"` — name component for the default bucket name |
@@ -179,6 +179,25 @@ new JaypieWebDeploymentBucket(this, "Web", {
 ### DNS
 
 Creates an A record alias to the distribution when both a `host` and a `zone` resolve. Tags the record with `CDK.ROLE.NETWORKING`.
+
+#### Multiple Hosts
+
+`host` accepts an array. The first entry is primary: it supplies the certificate's `domainName`, the un-suffixed `AliasRecord` construct ID, and `construct.host`. Remaining entries become certificate subject alternative names. Every entry lands in `domainNames` and gets an A record. Duplicates collapse. `construct.hosts` exposes the resolved list.
+
+A `{ host, zone }` entry names the hosted zone for a host outside `zone` (for example a tenant-owned domain). Its certificate validation and alias record land in that zone; the created certificate validates through `fromDnsMultiZone` when hosts span zones.
+
+```typescript
+new JaypieWebDeploymentBucket(this, "App", {
+  component: "app",
+  host: [
+    { component: "app" },
+    { host: "www.tenant-domain.com", zone: "tenant-domain.com" },
+  ],
+  zone: "example.com",
+});
+```
+
+A caller-supplied `certificate` must cover every host; the construct still sets every host in `domainNames` and creates each record. A host with no zone (its own or `zone`) throws `ConfigurationError` when the construct creates the certificate, and gets no record otherwise.
 
 #### Without a Hosted Zone
 
