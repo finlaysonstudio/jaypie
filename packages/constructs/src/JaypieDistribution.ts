@@ -21,6 +21,7 @@ import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 import {
+  cacheControlHeaders,
   assertValidWafRuleNames,
   constructEnvName,
   constructLogBucket,
@@ -258,6 +259,14 @@ export interface JaypieWafConfig {
 }
 
 export interface SecurityHeadersOverrides {
+  /**
+   * Cache-Control sent to viewers, replacing the origin's header.
+   * - string: send this value
+   * - false: pass the origin's Cache-Control through unchanged
+   * @default JaypieDistribution: "no-store, no-cache, must-revalidate, proxy-revalidate";
+   * JaypieWebDeploymentBucket: false (the deploy sets Cache-Control per object)
+   */
+  cacheControl?: string | false;
   contentSecurityPolicy?: string;
   frameOption?: cloudfront.HeadersFrameOption;
   hstsIncludeSubdomains?: boolean;
@@ -646,11 +655,9 @@ export class JaypieDistribution
         {
           customHeadersBehavior: {
             customHeaders: [
-              {
-                header: "Cache-Control",
-                override: true,
-                value: "no-store, no-cache, must-revalidate, proxy-revalidate",
-              },
+              ...cacheControlHeaders(
+                overrides.cacheControl ?? CDK.SECURITY_HEADERS.CACHE_CONTROL,
+              ),
               {
                 header: "Cross-Origin-Embedder-Policy",
                 override: true,

@@ -101,6 +101,7 @@ export const CDK = {
     INFRASTRUCTURE: "infrastructure",
   },
   SECURITY_HEADERS: {
+    CACHE_CONTROL: "no-store, no-cache, must-revalidate, proxy-revalidate",
     CONTENT_SECURITY_POLICY:
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
     HSTS_MAX_AGE: 63072000, // 2 years

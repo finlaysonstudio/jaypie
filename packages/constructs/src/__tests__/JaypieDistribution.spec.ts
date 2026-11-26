@@ -1267,6 +1267,51 @@ describe("JaypieDistribution", () => {
       });
     });
 
+    it("overrides Cache-Control with securityHeaders.cacheControl", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        securityHeaders: { cacheControl: "public, max-age=60" },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cache-Control",
+                Override: true,
+                Value: "public, max-age=60",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
+    it("passes origin Cache-Control through when cacheControl is false", () => {
+      const stack = new Stack();
+      const bucket = new s3.Bucket(stack, "TestBucket");
+      const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
+      new JaypieDistribution(stack, "TestDistribution", {
+        handler: origin,
+        securityHeaders: { cacheControl: false },
+      });
+      const policies = JSON.stringify(
+        Template.fromStack(stack).findResources(
+          "AWS::CloudFront::ResponseHeadersPolicy",
+        ),
+      );
+
+      expect(policies).not.toContain("Cache-Control");
+      expect(policies).toContain("Cross-Origin-Opener-Policy");
+    });
+
     it("sets Cross-Origin-Embedder-Policy custom header", () => {
       const stack = new Stack();
       const bucket = new s3.Bucket(stack, "TestBucket");

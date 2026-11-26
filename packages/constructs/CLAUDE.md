@@ -278,6 +278,8 @@ new JaypieDistribution(this, "Distribution", {
 
 **Default headers**: Cache-Control, HSTS, X-Content-Type-Options (nosniff), X-Frame-Options (DENY), Referrer-Policy, Content-Security-Policy, Permissions-Policy, Cross-Origin-Embedder-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Resource-Policy, Server removal.
 
+**Cache-Control**: `JaypieDistribution` overrides it with `no-store, no-cache, must-revalidate, proxy-revalidate`. `JaypieWebDeploymentBucket` passes the S3 object's Cache-Control through, so the deploy's per-object headers (immutable fingerprinted assets, revalidated documents) reach browsers. Set `securityHeaders.cacheControl` to a string to override, or `false` to pass the origin's header through.
+
 ```typescript
 // Defaults enabled (no config needed)
 new JaypieDistribution(this, "Dist", { handler });

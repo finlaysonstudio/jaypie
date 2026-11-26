@@ -27,6 +27,7 @@ import { ConfigurationError } from "@jaypie/errors";
 
 import { CDK } from "./constants";
 import {
+  cacheControlHeaders,
   assertValidWafRuleNames,
   constructEnvName,
   constructLogBucket,
@@ -671,11 +672,7 @@ export class JaypieWebDeploymentBucket extends Construct implements s3.IBucket {
         {
           customHeadersBehavior: {
             customHeaders: [
-              {
-                header: "Cache-Control",
-                override: true,
-                value: "no-store, no-cache, must-revalidate, proxy-revalidate",
-              },
+              ...cacheControlHeaders(overrides.cacheControl ?? false),
               {
                 header: "Cross-Origin-Embedder-Policy",
                 override: true,
