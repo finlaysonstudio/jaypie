@@ -630,6 +630,48 @@ describe("JaypieWebDeploymentBucket", () => {
       template.resourceCountIs("AWS::CloudFront::ResponseHeadersPolicy", 0);
     });
 
+    it("leaves Cache-Control to the S3 objects by default", () => {
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+      });
+      const policies = JSON.stringify(
+        Template.fromStack(stack).findResources(
+          "AWS::CloudFront::ResponseHeadersPolicy",
+        ),
+      );
+
+      expect(policies).not.toContain("Cache-Control");
+      expect(policies).toContain("Cross-Origin-Opener-Policy");
+    });
+
+    it("overrides Cache-Control with securityHeaders.cacheControl", () => {
+      const { stack, zone } = makeStack();
+
+      new JaypieWebDeploymentBucket(stack, "Web", {
+        host: "app.example.com",
+        zone,
+        securityHeaders: { cacheControl: "no-store" },
+      });
+      const template = Template.fromStack(stack);
+
+      template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+        ResponseHeadersPolicyConfig: {
+          CustomHeadersConfig: {
+            Items: Match.arrayWith([
+              Match.objectLike({
+                Header: "Cache-Control",
+                Override: true,
+                Value: "no-store",
+              }),
+            ]),
+          },
+        },
+      });
+    });
+
     it("merges securityHeaders overrides with defaults", () => {
       const { stack, zone } = makeStack();
 

@@ -66,7 +66,7 @@ Changing `component` or `name` on a deployed stack renames the bucket, which rep
 
 ### CloudFront
 
-- Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`. `CACHING_DISABLED` outside production; `CACHING_OPTIMIZED` in production (`isProductionEnv()`), so hashed assets get edge cache. The response headers policy sets `Cache-Control: no-store` so browsers still revalidate.
+- Default behavior: S3 static website origin, `REDIRECT_TO_HTTPS`. `CACHING_DISABLED` outside production; `CACHING_OPTIMIZED` in production (`isProductionEnv()`), so hashed assets get edge cache. The response headers policy leaves Cache-Control to each S3 object, so the deploy's headers apply: immutable for fingerprinted assets, `max-age=0, must-revalidate` for documents. Set `securityHeaders.cacheControl` to force a value.
 - No `/*` behavior is created. Paths registered afterward with `distribution.addBehavior("/app/*", origin)` are evaluated ahead of the default behavior and match in every environment — a static site and a Lambda surface can share one distribution.
 - Access logs land in a CloudFront log bucket with Datadog forwarding by default. Set `destination: false` to skip notifications, or pass `logBucket: <existing>` to reuse a bucket.
 - The construct-created log buckets block all public access, enforce SSL, are versioned, use SSE-S3, retain objects for `logRetention` (365 days by default), and carry `RemovalPolicy.RETAIN` with no auto-delete. They survive stack deletion; delete them by hand when tearing an environment down.

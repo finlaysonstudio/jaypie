@@ -400,7 +400,7 @@ The main use is a zero-downtime hostname cutover, where `deleteExistingRecord` m
 
 `JaypieDistribution` ships with default security response headers via a `ResponseHeadersPolicy` (analogous to `helmet` for Express):
 
-- Cache-Control (no-store, no-cache, must-revalidate, proxy-revalidate)
+- Cache-Control (no-store, no-cache, must-revalidate, proxy-revalidate); `JaypieWebDeploymentBucket` omits it and passes the S3 object's header through
 - HSTS (2-year max-age, includeSubDomains, preload)
 - X-Content-Type-Options (nosniff)
 - X-Frame-Options (DENY)
@@ -423,6 +423,12 @@ new JaypieDistribution(this, "Dist", {
     contentSecurityPolicy: "default-src 'self';",
     frameOption: HeadersFrameOption.SAMEORIGIN,
   },
+});
+
+// Cache-Control: a string overrides the origin; false passes the origin's through
+new JaypieDistribution(this, "Dist", {
+  handler,
+  securityHeaders: { cacheControl: false },
 });
 
 // Full custom policy override
