@@ -65,8 +65,9 @@ new JaypieLambda(this, "Api", {
 | `code` | `string` | - | Path to code directory |
 | `handler` | `string` | - | Handler function (file.export) |
 | `secrets` | `JaypieEnvSecret[]` | - | Secrets to inject |
-| `timeout` | `Duration` | 30s | Function timeout |
-| `memorySize` | `number` | 128 | Memory in MB |
+| `timeout` | `Duration` | 900s | Function timeout |
+| `memorySize` | `number` | 1024 | Memory in MB |
+| `logRemovalPolicy` | `RemovalPolicy` | `DESTROY` | Removal policy for the created log group; ignored when `logGroup` is supplied |
 | `environment` | `object` | - | Additional env vars |
 | `vpc` | `IVpc` | - | VPC for function |
 

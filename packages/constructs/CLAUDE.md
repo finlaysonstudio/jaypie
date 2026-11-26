@@ -611,6 +611,8 @@ CDK owns indexes (#552). `JaypieDynamoDb` sorts `indexes` by resolved name so `i
 
 `JaypieMigration` forwards `logGroup`, `logRetention`, and `reservedConcurrentExecutions` to the wrapped `JaypieLambda` (#565). Pass `logGroup` when a compliance baseline requires a KMS-encrypted group or 12-month retention; `logRetention` is inert when `logGroup` is supplied (#568). The migration Lambda serves as both `onEventHandler` and `isCompleteHandler`, so `reservedConcurrentExecutions: 0` throws at synth.
 
+`JaypieMigration` forwards `memorySize` and `ephemeralStorageSize`, and defaults `logRemovalPolicy` to `RETAIN` so the migration log group survives a rollback after a failed create (#638). `JaypieLambda` accepts `logRemovalPolicy` for the log group it creates (default `DESTROY`).
+
 TTL is enabled on the `ttl` attribute by default (matching `@jaypie/dynamodb`'s `DEFAULT_TTL_ATTRIBUTE`). Pass `timeToLiveAttribute: "<name>"` to use a different attribute, or `timeToLiveAttribute: false` to disable TTL. The construct attribute name and the runtime write attribute must match, or expiry silently never fires.
 
 ### Next.js Deployment
