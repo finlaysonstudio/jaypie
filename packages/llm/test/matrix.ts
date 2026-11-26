@@ -20,6 +20,7 @@
 //   APP_CAPABILITIES comma-separated subset of capabilities to run
 //   APP_FORCE        run cells expected to "skip" and report what they do
 //   APP_RPS          requests/second ceiling, overriding test/rateLimit.ts
+//   APP_RETRIES      extra attempts for a cell that misses its expectation (2)
 //   APP_TIMEOUT      seconds a single cell may run before it is abandoned (180)
 //   APP_USER         user tag forwarded to provider calls
 //   LOG_LEVEL        set to "warn" or higher to silence Jaypie trace/debug
@@ -29,7 +30,7 @@
 // OPENAI_API_KEY, GOOGLE_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY).
 //
 import { config } from "dotenv";
-import { existsSync } from "fs";
+import { appendFileSync, existsSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
@@ -102,6 +103,18 @@ const CELL_TIMEOUT_SECONDS =
     ? Number(process.env.APP_TIMEOUT)
     : DEFAULT_CELL_TIMEOUT_SECONDS;
 const CELL_TIMEOUT_MS = CELL_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND;
+// Extra attempts for a cell that misses its expectation or settles without a
+// verdict. Live providers flake (a refusal, a rate limit, a turn budget that
+// did not converge), and the same cell answers on the next call. Attempts that
+// precede a pass are reported under FLAKY so a cell that keeps needing them
+// stays visible.
+const DEFAULT_RETRIES = 2;
+const RETRIES =
+  process.env.APP_RETRIES !== undefined &&
+  Number.isInteger(Number(process.env.APP_RETRIES)) &&
+  Number(process.env.APP_RETRIES) >= 0
+    ? Number(process.env.APP_RETRIES)
+    : DEFAULT_RETRIES;
 
 //
 //
@@ -243,6 +256,15 @@ export function errorResult(error: unknown): CapabilityResult {
   if (error instanceof CellTimeoutError) {
     return { ok: false, detail: error.message, inconclusive: true };
   }
+  // A cut-off that brought nothing back throws `LlmIncompleteError` instead of
+  // settling, so an empty refusal arrives here rather than at `earlyResult`.
+  // The error carries the settled response; read its stop reason the same way.
+  const refused = refusalResult(
+    error && typeof error === "object"
+      ? (error as { response?: LlmOperateResponse }).response
+      : undefined,
+  );
+  if (refused) return refused;
   const reason =
     error && typeof error === "object"
       ? (error as { reason?: string }).reason
@@ -273,16 +295,29 @@ const REFUSAL_STOP_REASON = "refusal";
 export function earlyResult(
   result: LlmOperateResponse,
 ): CapabilityResult | undefined {
-  const stopReason = result.exchange?.response.stopReason;
-  if (stopReason === REFUSAL_STOP_REASON) {
-    return {
-      ok: false,
-      detail: `provider refused (stop reason '${stopReason}')`,
-      inconclusive: true,
-    };
-  }
+  const refused = refusalResult(result);
+  if (refused) return refused;
   if (result.error) return errorResult(result.error);
   return undefined;
+}
+
+/**
+ * An inconclusive result when `response` ended on a provider refusal. Reads
+ * the raw stop reason on the exchange envelope, then the standardized one on
+ * the response, so a refusal is recognized whichever the path recorded.
+ */
+function refusalResult(
+  response: LlmOperateResponse | undefined,
+): CapabilityResult | undefined {
+  if (!response) return undefined;
+  const stopReason =
+    response.exchange?.response.stopReason ?? response.stopReason;
+  if (stopReason !== REFUSAL_STOP_REASON) return undefined;
+  return {
+    ok: false,
+    detail: `provider refused (stop reason '${stopReason}')`,
+    inconclusive: true,
+  };
 }
 
 async function runPlain(llm: Llm): Promise<CapabilityResult> {
@@ -519,6 +554,39 @@ export function classifyActual(
   return "ok";
 }
 
+/**
+ * Whether a finished attempt earns another. A cell that met its expectation
+ * with a verdict is settled; a mismatch or an inconclusive run (refusal, turn
+ * budget, deadline) is retried, because a live provider answers the same
+ * request differently from one call to the next.
+ */
+export function shouldRetry(cell: CellResult): boolean {
+  if (cell.expected === "skip") return false;
+  return !cell.matches || cell.actual !== cell.expected;
+}
+
+/**
+ * Run a cell up to `1 + RETRIES` times, keeping the first attempt that meets
+ * its expectation. Every attempt before it is recorded on `retries`, so a
+ * cell that passed only on a retry still reaches the FLAKY report.
+ */
+export async function runWithRetries(
+  attempt: () => Promise<CellResult>,
+  { retries = RETRIES }: { retries?: number } = {},
+): Promise<CellResult> {
+  const failures: string[] = [];
+  let cell = await attempt();
+  for (let i = 0; i < retries && shouldRetry(cell); i++) {
+    failures.push(describeAttempt(cell));
+    cell = await attempt();
+  }
+  return failures.length > 0 ? { ...cell, retries: failures } : cell;
+}
+
+function describeAttempt(cell: CellResult): string {
+  return cell.detail ? `${cell.actual}: ${cell.detail}` : cell.actual;
+}
+
 async function runCell(
   model: ModelConfig,
   capability: Capability,
@@ -529,6 +597,14 @@ async function runCell(
     return { actual: "skip", expected, matches: true, warnings: [] };
   }
 
+  return runWithRetries(() => runAttempt(model, capability, expected));
+}
+
+async function runAttempt(
+  model: ModelConfig,
+  capability: Capability,
+  expected: ExpectedOutcome,
+): Promise<CellResult> {
   const llm = paced(
     observed(new Llm(model.provider, { model: model.model })),
     model,
@@ -684,6 +760,46 @@ function formatIssues(
   return issues;
 }
 
+/**
+ * Cells that needed more than one attempt, with what each earlier attempt did.
+ * A cell listed here passed in the end (or failed every attempt, in which case
+ * it is also in ISSUES); either way the retries are the record of the flake.
+ */
+export function formatFlaky(
+  models: readonly ModelConfig[],
+  rows: Map<string, Map<Capability, CellResult>>,
+): string[] {
+  const lines: string[] = [];
+  for (const model of models) {
+    const label = model.label || model.model;
+    const cells = rows.get(label);
+    if (!cells) continue;
+    for (const [cap, cell] of cells) {
+      if (!cell.retries || cell.retries.length === 0) continue;
+      const attempts = cell.retries.length + 1;
+      const verdict = shouldRetry(cell)
+        ? `still ${cell.actual} after ${attempts} attempts`
+        : `${cell.actual} on attempt ${attempts}`;
+      lines.push(`[${label} / ${cap}] ${verdict}`);
+      cell.retries.forEach((retry, index) =>
+        lines.push(`  • attempt ${index + 1}: ${retry}`),
+      );
+    }
+  }
+  return lines;
+}
+
+/** Append markdown to the GitHub Actions job summary when one is available. */
+function writeStepSummary(markdown: string): void {
+  const path = process.env.GITHUB_STEP_SUMMARY;
+  if (!path) return;
+  try {
+    appendFileSync(path, `${markdown}\n`);
+  } catch {
+    // A summary is a convenience; the log still carries the record
+  }
+}
+
 //
 //
 // Main
@@ -749,7 +865,10 @@ async function main(): Promise<void> {
       cells.set(capability, cell);
       const status = cellSymbol(cell, collective);
       const note = cell.detail ? ` (${cell.detail})` : "";
-      console.log(`${status}${note}`);
+      const retried = cell.retries
+        ? ` [${cell.retries.length + 1} attempts]`
+        : "";
+      console.log(`${status}${note}${retried}`);
     }
     rows.set(label, cells);
   }
@@ -765,6 +884,23 @@ async function main(): Promise<void> {
     console.log("       ISSUES");
     console.log("========================================");
     for (const line of issues) console.log(line);
+  }
+
+  const flaky = formatFlaky(models, rows);
+  if (flaky.length > 0) {
+    console.log("\n========================================");
+    console.log("       FLAKY");
+    console.log("========================================");
+    for (const line of flaky) console.log(line);
+    writeStepSummary(
+      [
+        `### LLM matrix flaky cells (${process.env.APP_GROUP || "all"})`,
+        "",
+        "```",
+        ...flaky,
+        "```",
+      ].join("\n"),
+    );
   }
 
   // Collective blocks are judged as a whole rather than cell by cell.

@@ -23,6 +23,8 @@ export interface CellResult {
   matches: boolean;
   warnings: string[];
   detail?: string;
+  /** What each attempt before this one did, when the cell was retried. */
+  retries?: string[];
 }
 
 export interface Collective {

@@ -54,7 +54,16 @@ export const MODEL = {
     DEEPSEEK_FLASH: "accounts/fireworks/models/deepseek-v4p1-flash",
     GLM: "accounts/fireworks/models/glm-5p3",
     GLM_FLASH: "accounts/fireworks/models/glm-5p3-flash",
+    /**
+     * @deprecated Fireworks retired gpt-oss-120b from serverless on
+     * 2026-11-07; requests return "Model not found". Use a dedicated
+     * deployment, or another `MODEL.FIREWORKS.*` id.
+     */
     GPT_OSS: "accounts/fireworks/models/gpt-oss-120b",
+    /**
+     * @deprecated Fireworks retired inkling from serverless on 2026-11-07;
+     * requests return "Model not found". Use another `MODEL.FIREWORKS.*` id.
+     */
     INKLING: "accounts/fireworks/models/inkling",
     KIMI: "accounts/fireworks/models/kimi-k3",
     MINIMAX: "accounts/fireworks/models/minimax-m3",
