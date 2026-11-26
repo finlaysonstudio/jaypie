@@ -1512,8 +1512,10 @@ Integration tests in `test/` directory require API keys:
 `npm run test:matrix -w packages/llm` runs every catalog model through every
 capability against the real API. It loads the repo-root `.env` itself. Env
 knobs: `APP_MODELS`, `APP_GROUP`, `APP_CAPABILITIES`, `APP_USER`, `APP_FORCE`
-(run cells pinned to `skip` and report what they do), `APP_RPS`, `APP_TIMEOUT`
-(seconds a single cell may run before it is abandoned, default 180).
+(run cells pinned to `skip` and report what they do), `APP_RETRIES` (extra
+attempts for a cell that misses its expectation, default 2), `APP_RPS`,
+`APP_TIMEOUT` (seconds a single cell may run before it is abandoned, default
+180).
 
 **Collective evaluation** (`test/collective.ts`) governs how a run passes.
 Most models are judged cell by cell against `MATRIX_EXPECT`. Bedrock,
@@ -1556,8 +1558,24 @@ not the model's capability, and the same cell answers on the next call. The
 (2026-09-05) and answered on every local run of the same fixture, including
 after the CI key was rotated. The stop reason only reaches the result on the
 exchange envelope, so the matrix requests one on every call (`observed`) and
-`earlyResult` reads it. The cell reports ⚠️ with the stop reason in ISSUES,
-so a model that keeps refusing stays visible.
+`earlyResult` reads it. A refusal that brought back no text does not settle:
+`Llm.operate` throws `LlmIncompleteError` for an empty cut-off, so
+`errorResult` reads the stop reason from the error's `response` the same way.
+Without that, `claude-sonnet-5-5 / tools` failed the merge run of #639 on
+`Model stopped before finishing: refusal` (run 45872115484). The cell reports
+⚠️ with the stop reason in ISSUES, so a model that keeps refusing stays
+visible.
+
+**Retries.** A cell that misses its expectation, or settles inconclusive, runs
+again up to `APP_RETRIES` more times (default 2) and keeps the first attempt
+that meets its expectation. Every earlier attempt is recorded on the cell
+(`CellResult.retries`) and printed under FLAKY, and appended to the GitHub
+Actions job summary when `GITHUB_STEP_SUMMARY` is set, so a cell that only
+passes on a retry stays visible. A deterministic failure (a retired model's
+404) still fails after three attempts. `test/ocr.ts` retries a failed test the
+same way and reports its own FLAKY block; its text checks collapse whitespace
+first, because LlamaParse fast once returned "Mock Page" split by whitespace
+the raw match missed.
 
 An inconclusive or force-run cell prints in ISSUES tagged `unverified`, since a
 cell excused from the mismatch count would otherwise leave no summary line.

@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -39,6 +39,19 @@ const DEFAULT_DOCUMENTS = [
   join(__dirname, "fixtures/page.png"),
 ];
 
+/**
+ * Extra attempts for a test that fails. Engines answer the same page
+ * differently from one call to the next; a test that passes only on a retry
+ * is reported under FLAKY.
+ */
+const DEFAULT_RETRIES = 2;
+const RETRIES =
+  process.env.APP_RETRIES !== undefined &&
+  Number.isInteger(Number(process.env.APP_RETRIES)) &&
+  Number(process.env.APP_RETRIES) >= 0
+    ? Number(process.env.APP_RETRIES)
+    : DEFAULT_RETRIES;
+
 /** Strings the fixture pages contain; a caller-supplied document skips these */
 const EXPECTED_FIXTURE_TEXT = ["mock page"];
 
@@ -64,6 +77,11 @@ const MODELS: Array<{ label: string; model: string }> = [
 // Helpers
 //
 
+/** Lowercase with every run of whitespace collapsed to one space. */
+export function normalizeText(text: string): string {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 function fail(message: string): string[] {
   console.error(`  ✗ ${message}`);
   return [message];
@@ -80,7 +98,10 @@ function validate(response: LlmOcrResponse, expected: string[]): string[] {
   if (response.usage.pages < 1) {
     errors.push(...fail(`usage.pages is ${response.usage.pages}`));
   }
-  const lower = response.markdown.toLowerCase();
+  // Collapse whitespace before matching: an engine that breaks a heading
+  // across lines, or spaces it with a non-breaking space, still read the text
+  // (LlamaParse fast printed "Mock Page" yet failed the raw match).
+  const lower = normalizeText(response.markdown);
   for (const text of expected) {
     if (!lower.includes(text)) {
       errors.push(...fail(`markdown does not contain "${text}"`));
@@ -185,6 +206,32 @@ async function testFallback(document: string): Promise<boolean> {
   }
 }
 
+/** Run `test` until it passes or the retries run out. */
+export async function withRetries(
+  test: () => Promise<boolean>,
+  { retries = RETRIES }: { retries?: number } = {},
+): Promise<{ count: number; passed: boolean }> {
+  let count = 1;
+  let passed = await test();
+  while (!passed && count <= retries) {
+    count++;
+    console.log(`  ↻ retrying (attempt ${count} of ${retries + 1})`);
+    passed = await test();
+  }
+  return { count, passed };
+}
+
+/** Append markdown to the GitHub Actions job summary when one is available. */
+function writeStepSummary(markdown: string): void {
+  const path = process.env.GITHUB_STEP_SUMMARY;
+  if (!path) return;
+  try {
+    appendFileSync(path, `${markdown}\n`);
+  } catch {
+    // A summary is a convenience; the log still carries the record
+  }
+}
+
 //
 //
 // Main
@@ -203,21 +250,41 @@ async function main(): Promise<void> {
 
   let passed = 0;
   let failed = 0;
-  for (const entry of selected) {
-    for (const document of documents) {
-      if (await testDocument({ ...entry, document, expected })) {
-        passed++;
-      } else {
-        failed++;
-      }
-    }
-  }
-  if (!only && !custom) {
-    if (await testFallback(documents[0])) {
+  const flaky: string[] = [];
+  const run = async (name: string, test: () => Promise<boolean>) => {
+    const attempts = await withRetries(test);
+    if (attempts.passed) {
       passed++;
     } else {
       failed++;
     }
+    if (attempts.count > 1) {
+      flaky.push(
+        attempts.passed
+          ? `[${name}] passed on attempt ${attempts.count}`
+          : `[${name}] still failing after ${attempts.count} attempts`,
+      );
+    }
+  };
+  for (const entry of selected) {
+    for (const document of documents) {
+      await run(`${entry.label} / ${document.split("/").pop()}`, () =>
+        testDocument({ ...entry, document, expected }),
+      );
+    }
+  }
+  if (!only && !custom) {
+    await run("fallback chain", () => testFallback(documents[0]));
+  }
+
+  if (flaky.length > 0) {
+    console.log("\n\n========================================");
+    console.log("       FLAKY");
+    console.log("========================================");
+    for (const line of flaky) console.log(line);
+    writeStepSummary(
+      ["### OCR flaky tests", "", "```", ...flaky, "```"].join("\n"),
+    );
   }
 
   console.log("\n\n========================================");

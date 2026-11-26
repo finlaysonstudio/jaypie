@@ -62,6 +62,10 @@ export const CAPABILITIES: readonly Capability[] = [
 // MODEL.* ids the live matrix skips: unavailable, or deprecated aliases
 // superseded by a first-class name.
 const MATRIX_EXCLUDE = new Set<string>([
+  // Retired from Fireworks serverless on 2026-11-07 ("Model not found").
+  // The constants stay, deprecated, so callers get a type hint before a 404.
+  MODEL.FIREWORKS.GPT_OSS,
+  MODEL.FIREWORKS.INKLING,
   MODEL.MYTHOS,
   MODEL.GPT,
   MODEL.GPT_MINI,
@@ -104,10 +108,8 @@ const MATRIX_EXPECT: Record<
   [MODEL.FIREWORKS.DEEPSEEK_FLASH]: { pdf: "skip" },
   [MODEL.FIREWORKS.GLM]: { pdf: "skip", image: "skip" },
   [MODEL.FIREWORKS.GLM_FLASH]: { pdf: "skip" },
-  [MODEL.FIREWORKS.GPT_OSS]: { pdf: "skip", image: "skip" },
-  // INKLING and KIMI both advertise supports_image_input (Fireworks models API,
-  // 2026-08-02), so neither skips the image cell.
-  [MODEL.FIREWORKS.INKLING]: { pdf: "skip" },
+  // KIMI advertises supports_image_input (Fireworks models API, 2026-08-02),
+  // so it does not skip the image cell.
   [MODEL.FIREWORKS.KIMI]: { pdf: "skip" },
   // minimax-m3 advertises no image input (Fireworks models API, 2026-09-10).
   [MODEL.FIREWORKS.MINIMAX]: { pdf: "skip", image: "skip" },
