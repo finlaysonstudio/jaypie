@@ -42,6 +42,32 @@ describe("JaypieLambda", () => {
   });
 
   describe("Features", () => {
+    it("destroys the created log group by default", () => {
+      const stack = new Stack();
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+      const template = Template.fromStack(stack);
+      template.hasResource("AWS::Logs::LogGroup", {
+        DeletionPolicy: "Delete",
+      });
+    });
+
+    it("applies logRemovalPolicy to the created log group (issue #638)", () => {
+      const stack = new Stack();
+      new JaypieLambda(stack, "TestConstruct", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        logRemovalPolicy: RemovalPolicy.RETAIN,
+      });
+      const template = Template.fromStack(stack);
+      template.hasResource("AWS::Logs::LogGroup", {
+        DeletionPolicy: "Retain",
+        UpdateReplacePolicy: "Retain",
+      });
+    });
+
     it("adds role tag when provided", () => {
       const stack = new Stack();
       const construct = new JaypieLambda(stack, "TestConstruct", {

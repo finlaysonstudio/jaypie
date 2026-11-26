@@ -33,10 +33,13 @@ new JaypieMigration(this, "SeedData", {
 |------|------|---------|-------------|
 | `code` | `lambda.Code \| string` | *required* | Path to bundled migration code or CDK Code object |
 | `dependencies` | `Construct[]` | `[]` | Constructs that must be created before the migration runs |
+| `ephemeralStorageSize` | `cdk.Size` | Lambda default (512 MiB) | `/tmp` storage for the migration Lambda |
 | `environment` | `Record<string, string> \| (Record<string, string> \| string)[]` | - | Environment variables for the migration Lambda |
 | `handler` | `string` | `"index.handler"` | Lambda entry point |
 | `logGroup` | `logs.ILogGroup` | - | Log group for the migration Lambda; forwarded to `JaypieLambda`. Supply one to control KMS encryption and retention |
+| `logRemovalPolicy` | `cdk.RemovalPolicy` | `RETAIN` | Removal policy for the log group `JaypieLambda` creates. Ignored when `logGroup` is supplied |
 | `logRetention` | `logs.RetentionDays \| number` | `90` days | Retention for the log group `JaypieLambda` creates. Ignored when `logGroup` is supplied |
+| `memorySize` | `number` | `1024` | Memory in MB for the migration Lambda. Raise it for loaders that parse large source files |
 | `queryInterval` | `cdk.Duration` | `Duration.seconds(60)` | Polling interval between `isCompleteHandler` invocations |
 | `reservedConcurrentExecutions` | `number` | - | Reserved concurrency for the migration Lambda. `0` throws at synth; `1` leaves no headroom if onEvent overlaps a waiter poll |
 | `secrets` | `SecretsArrayItem[]` | `[]` | Secrets to make available to the Lambda |
@@ -48,7 +51,9 @@ new JaypieMigration(this, "SeedData", {
 
 - **Timeout**: 15 minutes per invocation (Lambda max); `totalTimeout` controls the end-to-end ceiling across all polling invocations (default 2 hours)
 - **Role**: Tagged as `CDK.ROLE.PROCESSING`
-- **Logging**: `logGroup`, `logRetention`, and `reservedConcurrentExecutions` forward to the wrapped `JaypieLambda`. Pass `logGroup` when a compliance baseline requires a KMS-encrypted group or 12-month retention. The `cr.Provider` framework functions keep service-created log groups
+- **Sizing**: `memorySize` and `ephemeralStorageSize` forward to the wrapped `JaypieLambda` (#638). An out-of-memory migration surfaces in CloudFormation only as `An unhandled error occurred and the request was unable to complete`; the real error is in the migration log group
+- **Log group survives rollback**: the log group `JaypieLambda` creates defaults to `RemovalPolicy.RETAIN`, so a failed create keeps the migration's logs readable (#638). The group has no fixed name, so a retained group never blocks the next create; each failed create leaves one group behind, expiring under `logRetention`. Pass `logRemovalPolicy: RemovalPolicy.DESTROY` to delete it with the stack
+- **Logging**: `logGroup`, `logRemovalPolicy`, `logRetention`, and `reservedConcurrentExecutions` forward to the wrapped `JaypieLambda`. Pass `logGroup` when a compliance baseline requires a KMS-encrypted group or 12-month retention. The `cr.Provider` framework functions keep service-created log groups
 - **`logRetention` is inert when `logGroup` is supplied.** `JaypieLambda` resolves `logGroup ?? new logs.LogGroup(..., { retention: logRetention })`, so passing both silently drops the retention value. Set retention on the group you pass. Jaypie 2.0 will throw on that combination (#568)
 - **Concurrency**: the migration Lambda is both `onEventHandler` and `isCompleteHandler`. `reservedConcurrentExecutions: 0` blocks every invocation and throws `ConfigurationError` at synth
 - **Execution**: Uses `cr.Provider` with both `onEventHandler` and `isCompleteHandler` pointing to the same Lambda. The `onEventHandler` returns `PhysicalResourceId` immediately; the migration code runs in `isCompleteHandler` invocations, which are polled by Step Functions until `IsComplete: true`. `Delete` requests skip the migration entirely.

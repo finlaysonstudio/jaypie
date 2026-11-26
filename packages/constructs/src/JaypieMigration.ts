@@ -25,14 +25,24 @@ export interface JaypieMigrationProps {
   code: lambda.Code | string;
   /** Constructs that must be created before the migration runs */
   dependencies?: Construct[];
+  /** Ephemeral /tmp storage for the migration Lambda. Default: Lambda default (512 MiB). */
+  ephemeralStorageSize?: cdk.Size;
   /** Environment variables for the migration Lambda */
   environment?: Record<string, string> | (Record<string, string> | string)[];
   /** Lambda handler entry point */
   handler?: string;
   /** Log group for the migration Lambda. Defaults to a group created by JaypieLambda. */
   logGroup?: logs.ILogGroup;
+  /**
+   * Removal policy for the JaypieLambda-created log group. Default: RETAIN,
+   * so the migration's logs survive a rollback after a failed create.
+   * Ignored when logGroup is provided.
+   */
+  logRemovalPolicy?: cdk.RemovalPolicy;
   /** Retention for the JaypieLambda-created log group. Ignored when logGroup is provided. */
   logRetention?: logs.RetentionDays | number;
+  /** Memory for the migration Lambda in MB. Default: JaypieLambda default (1024). */
+  memorySize?: number;
   /** Polling interval between isCompleteHandler invocations. Default: 60 seconds. */
   queryInterval?: cdk.Duration;
   /**
@@ -66,9 +76,12 @@ export class JaypieMigration extends Construct {
       code,
       dependencies = [],
       environment,
+      ephemeralStorageSize,
       handler = "index.handler",
       logGroup,
+      logRemovalPolicy = cdk.RemovalPolicy.RETAIN,
       logRetention,
+      memorySize,
       queryInterval = cdk.Duration.seconds(60),
       reservedConcurrentExecutions,
       secrets = [],
@@ -90,9 +103,12 @@ export class JaypieMigration extends Construct {
       code,
       description: "DynamoDB migration custom resource",
       environment,
+      ephemeralStorageSize,
       handler,
       logGroup,
+      logRemovalPolicy,
       logRetention,
+      memorySize,
       reservedConcurrentExecutions,
       roleTag: CDK.ROLE.PROCESSING,
       secrets,

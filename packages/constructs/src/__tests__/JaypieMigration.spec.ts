@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConfigurationError } from "@jaypie/errors";
-import { Duration, Stack } from "aws-cdk-lib";
+import { Duration, RemovalPolicy, Size, Stack } from "aws-cdk-lib";
 import { Annotations, Match, Template } from "aws-cdk-lib/assertions";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
@@ -391,6 +391,70 @@ describe("JaypieMigration", () => {
             reservedConcurrentExecutions: 0,
           }),
       ).toThrow(ConfigurationError);
+    });
+  });
+  describe("Sizing and Log Retention (issue #638)", () => {
+    const findMigrationLambda = (template: Template) =>
+      Object.values(template.findResources("AWS::Lambda::Function")).find(
+        (resource: any) => resource.Properties?.Handler === "index.handler",
+      ) as any;
+
+    it("forwards memorySize to the wrapped Lambda", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        memorySize: 3008,
+      });
+
+      const template = Template.fromStack(stack);
+      expect(findMigrationLambda(template)?.Properties?.MemorySize).toBe(3008);
+    });
+
+    it("forwards ephemeralStorageSize to the wrapped Lambda", () => {
+      const stack = new Stack();
+      new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        ephemeralStorageSize: Size.gibibytes(2),
+        handler: "index.handler",
+      });
+
+      const template = Template.fromStack(stack);
+      expect(
+        findMigrationLambda(template)?.Properties?.EphemeralStorage?.Size,
+      ).toBe(2048);
+    });
+
+    it("retains the created log group by default so a failed create keeps its logs", () => {
+      const stack = new Stack();
+      const migration = new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+      });
+
+      const logGroup = migration.lambda.node.findChild("LogGroup").node
+        .defaultChild as logs.CfnLogGroup;
+      const template = Template.fromStack(stack);
+      const resource =
+        template.toJSON().Resources[stack.getLogicalId(logGroup)];
+      expect(resource.DeletionPolicy).toBe("Retain");
+      expect(resource.UpdateReplacePolicy).toBe("Retain");
+    });
+
+    it("accepts logRemovalPolicy to override the retained default", () => {
+      const stack = new Stack();
+      const migration = new JaypieMigration(stack, "TestMigration", {
+        code: lambda.Code.fromInline("exports.handler = () => {}"),
+        handler: "index.handler",
+        logRemovalPolicy: RemovalPolicy.DESTROY,
+      });
+
+      const logGroup = migration.lambda.node.findChild("LogGroup").node
+        .defaultChild as logs.CfnLogGroup;
+      const template = Template.fromStack(stack);
+      const resource =
+        template.toJSON().Resources[stack.getLogicalId(logGroup)];
+      expect(resource.DeletionPolicy).toBe("Delete");
     });
   });
 });

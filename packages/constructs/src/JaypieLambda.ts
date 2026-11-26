@@ -55,6 +55,8 @@ export interface JaypieLambdaProps {
   initialPolicy?: iam.PolicyStatement[];
   layers?: lambda.ILayerVersion[];
   logGroup?: logs.ILogGroup;
+  /** Removal policy for the created log group. Default: DESTROY. Ignored when logGroup is provided. */
+  logRemovalPolicy?: RemovalPolicy;
   logRetention?: logs.RetentionDays | number;
   maxEventAge?: Duration;
   memorySize?: number;
@@ -135,6 +137,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       initialPolicy,
       layers = [],
       logGroup,
+      logRemovalPolicy = RemovalPolicy.DESTROY,
       logRetention = CDK.LAMBDA.LOG_RETENTION,
       maxEventAge,
       memorySize = CDK.LAMBDA.MEMORY_SIZE,
@@ -229,7 +232,7 @@ export class JaypieLambda extends Construct implements lambda.IFunction {
       logGroup ??
       new logs.LogGroup(this, "LogGroup", {
         retention: logRetention as logs.RetentionDays,
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: logRemovalPolicy,
       });
 
     // Create Lambda Function
